@@ -1,0 +1,6 @@
+telegram:
+  enabled: true  # ✅ ВКЛЮЧЕНО
+  token: "8386259231:AAEfYe1g--jKB_RfMUJNNMwMx-aqKGYd4IY"
+  chat_id: "619886717"
+  auto_signals: true
+  auto_alerts: true

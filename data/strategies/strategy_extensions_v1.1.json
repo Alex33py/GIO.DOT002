@@ -1,0 +1,199 @@
+{
+  "version": "1.1",
+  "description": "Strategy selection rules and market regime detection for GIO Bot",
+  "author": "GIO Team",
+  "last_updated": "2025-10-11",
+
+  "metadata": {
+    "total_strategies": 5,
+    "market_regimes": 5,
+    "validation_levels": 6
+  },
+
+  "strategy_selector": {
+    "description": "Maps market regimes to appropriate strategies",
+    "market_regime": {
+      "trending": ["momentum", "breakout"],
+      "ranging": ["mean_reversion", "counter_trend"],
+      "squeezing": ["squeeze", "breakout"],
+      "expanding": ["momentum", "squeeze"],
+      "neutral": ["mean_reversion", "counter_trend", "squeeze"]
+    },
+    "all_weather": [
+      "momentum",
+      "mean_reversion"
+    ]
+  },
+
+  "market_regime_detection": {
+    "description": "Rules for detecting current market regime",
+    "regimes": {
+      "trending": {
+        "conditions": {
+          "adx": {"operator": ">", "value": 30},
+          "volume_ratio": {"operator": ">", "value": 1.5}
+        },
+        "description": "Strong directional movement with high volume"
+      },
+      "ranging": {
+        "conditions": {
+          "adx": {"operator": "<=", "value": 20},
+          "bb_width_percentile": {"operator": "<=", "value": 40},
+          "volume_ratio": {"operator": "<", "value": 0.8}
+        },
+        "description": "Sideways price action within defined range"
+      },
+      "squeezing": {
+        "conditions": {
+          "adx": {"operator": "<", "value": 20},
+          "bb_width_percentile": {"operator": "<", "value": 30},
+          "volume_ratio": {"operator": "<", "value": 0.8}
+        },
+        "description": "Volatility contraction, potential breakout ahead"
+      },
+      "expanding": {
+        "conditions": {
+          "bb_width_percentile": {"operator": ">", "value": 60},
+          "volume_ratio": {"operator": ">", "value": 1.8}
+        },
+        "description": "Volatility expansion, momentum building"
+      },
+      "neutral": {
+        "conditions": {
+          "adx": {"operator": ">=", "value": 20, "and": {"operator": "<=", "value": 30}},
+          "bb_width_percentile": {"operator": ">=", "value": 40, "and": {"operator": "<=", "value": 60}}
+        },
+        "description": "Mixed signals, no clear direction"
+      }
+    }
+  },
+
+  "global_rules": {
+    "description": "Global validation and confidence adjustment rules",
+
+    "confidence_adjustment": {
+      "high_confidence_triggers": [
+        {"condition": "volume >= volume_ma20 * 2.0", "boost": 0.2},
+        {"condition": "cvd_trend_confirmed == true", "boost": 0.15},
+        {"condition": "trend_4h == trend_1h", "boost": 0.1},
+        {"condition": "cluster_stacked_imbalance >= 3", "boost": 0.1}
+      ],
+      "low_confidence_penalties": [
+        {"condition": "rsi_divergence == true", "penalty": -0.15},
+        {"condition": "news_sentiment_conflict == true", "penalty": -0.2},
+        {"condition": "volume < volume_ma20 * 0.7", "penalty": -0.1}
+      ]
+    },
+
+    "validation_levels": {
+      "1": {"name": "basic_conditions", "weight": 1.0, "required": true},
+      "2": {"name": "volume_confirmation", "weight": 0.9, "required": true},
+      "3": {"name": "cluster_orderflow", "weight": 0.8, "required": true},
+      "4": {"name": "multi_timeframe_alignment", "weight": 0.7, "required": false},
+      "5": {"name": "news_sentiment", "weight": 0.6, "required": false},
+      "6": {"name": "divergence_confirmation", "weight": 0.5, "required": false}
+    },
+
+    "risk_profiles": {
+      "aggressive": {
+        "position_multiplier": 1.0,
+        "sl_multiplier": 1.0,
+        "tp_multiplier": 1.2,
+        "min_confidence": "medium",
+        "max_concurrent_trades": 5
+      },
+      "moderate": {
+        "position_multiplier": 0.8,
+        "sl_multiplier": 0.9,
+        "tp_multiplier": 1.0,
+        "min_confidence": "medium",
+        "max_concurrent_trades": 3
+      },
+      "defensive": {
+        "position_multiplier": 0.6,
+        "sl_multiplier": 0.8,
+        "tp_multiplier": 0.9,
+        "min_confidence": "high",
+        "max_concurrent_trades": 2
+      }
+    }
+  },
+
+  "condition_validator": {
+    "description": "Required metrics for each strategy type",
+    "required_metrics": [
+      "price",
+      "volume",
+      "volume_ma20",
+      "adx",
+      "atr",
+      "poc",
+      "vwap"
+    ],
+    "strategy_specific": {
+      "momentum": {
+        "required": ["macd", "rsi", "trend_1h", "trend_4h", "cvd_trend"],
+        "optional": ["funding_rate", "long_short_ratio", "oi_change"]
+      },
+      "counter_trend": {
+        "required": ["rsi", "cvd_divergence", "trend_1d", "trend_1h"],
+        "optional": ["funding_rate", "extreme_detection"]
+      },
+      "mean_reversion": {
+        "required": ["rsi", "bb_upper", "bb_lower", "poc", "val", "vah"],
+        "optional": ["rsi_divergence", "extreme_detection"]
+      },
+      "squeeze": {
+        "required": ["bb_width", "bb_width_20ma", "bb_width_percentile", "atr_percentile"],
+        "optional": ["volume_expansion"]
+      },
+      "breakout": {
+        "required": ["breakout_level", "retest_success", "volume_ratio"],
+        "optional": ["delta_support_on_retest"]
+      }
+    }
+  },
+
+  "strategy_metadata": {
+    "momentum": {
+      "description": "Trend-following strategy in strong directional markets",
+      "best_market_regime": ["trending", "expanding"],
+      "avg_win_rate": 0.68,
+      "avg_risk_reward": 2.5,
+      "recommended_timeframes": ["1H", "4H"],
+      "typical_trade_duration": "4-24 hours"
+    },
+    "counter_trend": {
+      "description": "Reversal strategy against prevailing trend",
+      "best_market_regime": ["ranging", "neutral"],
+      "avg_win_rate": 0.58,
+      "avg_risk_reward": 2.0,
+      "recommended_timeframes": ["1H", "4H"],
+      "typical_trade_duration": "2-12 hours"
+    },
+    "mean_reversion": {
+      "description": "Return to average in ranging markets",
+      "best_market_regime": ["ranging", "neutral"],
+      "avg_win_rate": 0.65,
+      "avg_risk_reward": 1.8,
+      "recommended_timeframes": ["1H"],
+      "typical_trade_duration": "1-8 hours"
+    },
+    "squeeze": {
+      "description": "Volatility breakout from consolidation",
+      "best_market_regime": ["squeezing", "expanding"],
+      "avg_win_rate": 0.62,
+      "avg_risk_reward": 2.2,
+      "recommended_timeframes": ["1H", "4H"],
+      "typical_trade_duration": "2-12 hours"
+    },
+    "breakout": {
+      "description": "Continuation after confirmed level break",
+      "best_market_regime": ["trending", "expanding"],
+      "avg_win_rate": 0.70,
+      "avg_risk_reward": 2.8,
+      "recommended_timeframes": ["4H", "1D"],
+      "typical_trade_duration": "6-48 hours"
+    }
+  }
+}

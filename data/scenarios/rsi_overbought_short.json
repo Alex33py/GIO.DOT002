@@ -1,0 +1,32 @@
+{
+  "name": "RSI Overbought Short",
+  "signal_type": "SELL",
+  "conditions": {
+    "technical": {
+      "rsi_range": [
+        70,
+        85
+      ],
+      "trend_direction": "bearish",
+      "bollinger_position": "upper_band"
+    },
+    "volume": {
+      "min_volume_24h": 1000000
+    },
+    "news": {
+      "overall_sentiment": "neutral",
+      "min_confidence": 0.3
+    }
+  },
+  "risk_management": {
+    "max_risk_per_trade": 2.0,
+    "atr_stop_multiplier": 2.0,
+    "profit_target_rr": 2.0
+  },
+  "metadata": {
+    "description": "Продажа при перекупленности по RSI",
+    "timeframe": "1h-4h",
+    "success_rate_target": 60.0,
+    "created_by": "system_default"
+  }
+}

@@ -1,0 +1,844 @@
+{
+  "version": "2.0",
+  "description": "GIO Bot Enhanced Scenarios - 12 market patterns with detailed validation",
+  "author": "GIO Team",
+  "last_updated": "2025-10-11",
+
+  "metadata": {
+    "total_scenarios": 12,
+    "strategies": ["momentum", "counter_trend", "mean_reversion", "squeeze", "breakout"],
+    "market_regimes": ["trending", "ranging", "squeezing", "expanding", "neutral"]
+  },
+
+  "scenarios": [
+    {
+      "id": "SCN_001",
+      "name": "Momentum Long (Strong)",
+      "description": "Strong bullish momentum with multi-timeframe alignment",
+      "strategy": "momentum",
+      "phase": "continuation",
+      "side": "long",
+      "market_regime": ["trending", "expanding"],
+
+      "mtf": {
+        "mode": "majority",
+        "required_alignment": 2,
+        "conditions": {
+          "1D": ["bullish", "neutral"],
+          "4H": ["bullish"],
+          "1H": ["bullish"]
+        }
+      },
+
+      "volume_profile": {
+        "required": ["price>=poc", "price>=vwap"],
+        "optional": ["volume_node_above_price==true"]
+      },
+
+      "metrics": {
+        "funding": {"operator": ">=", "value": 0},
+        "long_short_ratio": {"operator": ">=", "value": 1.05},
+        "oi_change": "up",
+        "cvd_trend": "up",
+        "adx": {"operator": ">", "value": 30},
+        "volume_ratio": {"operator": ">=", "value": 1.5}
+      },
+
+      "clusters": {
+        "mode": "all",
+        "conditions": [
+          "cluster_poc_shift_up==true",
+          "cluster_stacked_imbalance_up>=2",
+          "cluster_delta_buy_volume>=2.0"
+        ]
+      },
+
+      "triggers": {
+        "mode": "weighted",
+        "conditions": {
+          "bullish_continuation_candle": 0.3,
+          "volume>=volume_ma20*1.5": 0.4,
+          "macd_above_signal": 0.3
+        },
+        "min_score": 0.75
+      },
+
+      "news": {
+        "sentiment_band": "bullish",
+        "veto_conditions": ["high_impact==true", "veto_long==true"]
+      },
+
+      "tactic": {
+        "name": "momentum_aggr",
+        "sl": {"type": "dynamic", "value": "max(1.8%, atr*1.0)"},
+        "tp1": {"type": "fixed", "value": 3.0},
+        "tp2": {"type": "fixed", "value": 6.0},
+        "tp3": {"type": "trailing", "value": "atr*0.8"},
+        "position_size": 1.0
+      },
+
+      "risk_profile": "aggressive",
+      "confidence_base": "high"
+    },
+
+    {
+      "id": "SCN_002",
+      "name": "Momentum Long (Standard)",
+      "description": "Moderate bullish momentum with pullback entry",
+      "strategy": "momentum",
+      "phase": "pullback",
+      "side": "long",
+      "market_regime": ["trending", "neutral"],
+
+      "mtf": {
+        "mode": "majority",
+        "required_alignment": 2,
+        "conditions": {
+          "1D": ["bullish", "neutral"],
+          "4H": ["bullish"],
+          "1H": ["bullish", "neutral"]
+        }
+      },
+
+      "volume_profile": {
+        "required": ["price>=vwap", "pullback_to_poc==true"],
+        "optional": ["immediate_reclaim==true"]
+      },
+
+      "metrics": {
+        "funding": {"operator": ">=", "value": 0},
+        "long_short_ratio": {"operator": ">=", "value": 1.0},
+        "oi_change": "up",
+        "cvd_trend": "up",
+        "adx": {"operator": ">", "value": 25},
+        "volume_ratio": {"operator": ">=", "value": 1.3}
+      },
+
+      "clusters": {
+        "mode": "any",
+        "conditions": [
+          "cluster_poc_shift_up==true",
+          "cluster_delta_buy_volume>=1.5"
+        ]
+      },
+
+      "triggers": {
+        "mode": "weighted",
+        "conditions": {
+          "bullish_reversal_candle": 0.3,
+          "volume>=volume_ma20*1.3": 0.4,
+          "rsi_above_50": 0.3
+        },
+        "min_score": 0.7
+      },
+
+      "news": {
+        "sentiment_band": "bullish",
+        "veto_conditions": ["high_impact==true", "veto_long==true"]
+      },
+
+      "tactic": {
+        "name": "momentum_mod",
+        "sl": {"type": "dynamic", "value": "max(1.5%, atr*0.9)"},
+        "tp1": {"type": "fixed", "value": 2.5},
+        "tp2": {"type": "fixed", "value": 5.0},
+        "tp3": {"type": "trailing", "value": "atr*0.7"},
+        "position_size": 0.8
+      },
+
+      "risk_profile": "moderate",
+      "confidence_base": "medium"
+    },
+
+    {
+      "id": "SCN_003",
+      "name": "Momentum Short (Strong)",
+      "description": "Strong bearish momentum with multi-timeframe alignment",
+      "strategy": "momentum",
+      "phase": "continuation",
+      "side": "short",
+      "market_regime": ["trending", "expanding"],
+
+      "mtf": {
+        "mode": "majority",
+        "required_alignment": 2,
+        "conditions": {
+          "1D": ["bearish", "neutral"],
+          "4H": ["bearish"],
+          "1H": ["bearish"]
+        }
+      },
+
+      "volume_profile": {
+        "required": ["price<=poc", "retest_of_breakdown==true"],
+        "optional": ["delta_resist_on_retest==true"]
+      },
+
+      "metrics": {
+        "funding": {"operator": "<=", "value": 0},
+        "long_short_ratio": {"operator": "<=", "value": 0.95},
+        "oi_change": "up",
+        "cvd_trend": "down",
+        "adx": {"operator": ">", "value": 30},
+        "volume_ratio": {"operator": ">=", "value": 1.5}
+      },
+
+      "clusters": {
+        "mode": "all",
+        "conditions": [
+          "cluster_poc_shift_down==true",
+          "cluster_stacked_imbalance_down>=2",
+          "cluster_delta_sell_volume>=2.0"
+        ]
+      },
+
+      "triggers": {
+        "mode": "weighted",
+        "conditions": {
+          "bearish_continuation_candle": 0.3,
+          "volume>=volume_ma20*1.5": 0.4,
+          "macd_below_signal": 0.3
+        },
+        "min_score": 0.75
+      },
+
+      "news": {
+        "sentiment_band": "bearish",
+        "veto_conditions": ["high_impact==true", "veto_short==true"]
+      },
+
+      "tactic": {
+        "name": "momentum_aggr",
+        "sl": {"type": "dynamic", "value": "max(1.8%, atr*1.0)"},
+        "tp1": {"type": "fixed", "value": 3.0},
+        "tp2": {"type": "fixed", "value": 6.0},
+        "tp3": {"type": "trailing", "value": "atr*0.8"},
+        "position_size": 1.0
+      },
+
+      "risk_profile": "aggressive",
+      "confidence_base": "high"
+    },
+
+    {
+      "id": "SCN_004",
+      "name": "Momentum Short (Standard)",
+      "description": "Moderate bearish momentum with pullback entry",
+      "strategy": "momentum",
+      "phase": "pullback",
+      "side": "short",
+      "market_regime": ["trending", "neutral"],
+
+      "mtf": {
+        "mode": "majority",
+        "required_alignment": 2,
+        "conditions": {
+          "1D": ["bearish", "neutral"],
+          "4H": ["bearish"],
+          "1H": ["bearish", "neutral"]
+        }
+      },
+
+      "volume_profile": {
+        "required": ["price<=vwap", "pullback_to_poc==true"],
+        "optional": ["immediate_reject==true"]
+      },
+
+      "metrics": {
+        "funding": {"operator": "<=", "value": 0},
+        "long_short_ratio": {"operator": "<=", "value": 1.0},
+        "oi_change": "up",
+        "cvd_trend": "down",
+        "adx": {"operator": ">", "value": 25},
+        "volume_ratio": {"operator": ">=", "value": 1.3}
+      },
+
+      "clusters": {
+        "mode": "any",
+        "conditions": [
+          "cluster_poc_shift_down==true",
+          "cluster_delta_sell_volume>=1.5"
+        ]
+      },
+
+      "triggers": {
+        "mode": "weighted",
+        "conditions": {
+          "bearish_reversal_candle": 0.3,
+          "volume>=volume_ma20*1.3": 0.4,
+          "rsi_below_50": 0.3
+        },
+        "min_score": 0.7
+      },
+
+      "news": {
+        "sentiment_band": "bearish",
+        "veto_conditions": ["high_impact==true", "veto_short==true"]
+      },
+
+      "tactic": {
+        "name": "momentum_mod",
+        "sl": {"type": "dynamic", "value": "max(1.5%, atr*0.9)"},
+        "tp1": {"type": "fixed", "value": 2.5},
+        "tp2": {"type": "fixed", "value": 5.0},
+        "tp3": {"type": "trailing", "value": "atr*0.7"},
+        "position_size": 0.8
+      },
+
+      "risk_profile": "moderate",
+      "confidence_base": "medium"
+    },
+
+    {
+      "id": "SCN_005",
+      "name": "Counter Trend Long",
+      "description": "Counter-trend long in daily bearish / hourly bullish reversal",
+      "strategy": "counter_trend",
+      "phase": "reversal",
+      "side": "long",
+      "market_regime": ["ranging", "neutral"],
+
+      "mtf": {
+        "mode": "counter_trend",
+        "required_alignment": 1,
+        "conditions": {
+          "1D": ["bearish"],
+          "4H": ["bearish", "neutral"],
+          "1H": ["bullish"]
+        }
+      },
+
+      "volume_profile": {
+        "required": ["price<=val*0.995", "volume_fading==true"],
+        "optional": ["volume_spike_on_reversal==true"]
+      },
+
+      "metrics": {
+        "funding": {"operator": "<=", "value": 0.02},
+        "long_short_ratio": {"operator": "<=", "value": 1.05},
+        "oi_change": "down",
+        "cvd_trend": "divergence_positive",
+        "rsi": {"operator": "<=", "value": 35}
+      },
+
+      "clusters": {
+        "mode": "all",
+        "conditions": [
+          "cluster_absorption_low==true",
+          "cluster_stacked_imbalance_up>=2",
+          "cluster_poc_shift_up==true"
+        ]
+      },
+
+      "triggers": {
+        "mode": "weighted",
+        "conditions": {
+          "hammer_or_bullish_engulfing": 0.3,
+          "volume>=volume_ma20*1.8": 0.4,
+          "cvd_slope_positive": 0.3
+        },
+        "min_score": 0.75
+      },
+
+      "news": {
+        "sentiment_band": "neutral",
+        "veto_conditions": ["high_impact==true"]
+      },
+
+      "tactic": {
+        "name": "counter_def",
+        "sl": {"type": "dynamic", "value": "max(1.2%, atr*0.8)"},
+        "tp1": {"type": "fixed", "value": 2.0},
+        "tp2": {"type": "fixed", "value": 3.5},
+        "tp3": {"type": "poc", "value": "close_at_poc"},
+        "position_size": 0.6
+      },
+
+      "risk_profile": "defensive",
+      "confidence_base": "medium"
+    },
+
+    {
+      "id": "SCN_006",
+      "name": "Counter Trend Short",
+      "description": "Counter-trend short in daily bullish / hourly bearish reversal",
+      "strategy": "counter_trend",
+      "phase": "reversal",
+      "side": "short",
+      "market_regime": ["ranging", "neutral"],
+
+      "mtf": {
+        "mode": "counter_trend",
+        "required_alignment": 1,
+        "conditions": {
+          "1D": ["bullish"],
+          "4H": ["bullish", "neutral"],
+          "1H": ["bearish"]
+        }
+      },
+
+      "volume_profile": {
+        "required": ["price>=vah*1.005", "volume_fading==true"],
+        "optional": ["volume_spike_on_reversal==true"]
+      },
+
+      "metrics": {
+        "funding": {"operator": ">=", "value": -0.02},
+        "long_short_ratio": {"operator": ">=", "value": 0.95},
+        "oi_change": "down",
+        "cvd_trend": "divergence_negative",
+        "rsi": {"operator": ">=", "value": 65}
+      },
+
+      "clusters": {
+        "mode": "all",
+        "conditions": [
+          "cluster_absorption_high==true",
+          "cluster_stacked_imbalance_down>=2",
+          "cluster_poc_shift_down==true"
+        ]
+      },
+
+      "triggers": {
+        "mode": "weighted",
+        "conditions": {
+          "shooting_star_or_bearish_engulfing": 0.3,
+          "volume>=volume_ma20*1.8": 0.4,
+          "cvd_slope_negative": 0.3
+        },
+        "min_score": 0.75
+      },
+
+      "news": {
+        "sentiment_band": "neutral",
+        "veto_conditions": ["high_impact==true"]
+      },
+
+      "tactic": {
+        "name": "counter_def",
+        "sl": {"type": "dynamic", "value": "max(1.2%, atr*0.8)"},
+        "tp1": {"type": "fixed", "value": 2.0},
+        "tp2": {"type": "fixed", "value": 3.5},
+        "tp3": {"type": "poc", "value": "close_at_poc"},
+        "position_size": 0.6
+      },
+
+      "risk_profile": "defensive",
+      "confidence_base": "medium"
+    },
+
+    {
+      "id": "SCN_007",
+      "name": "Mean Reversion Long",
+      "description": "Oversold mean reversion to POC in ranging market",
+      "strategy": "mean_reversion",
+      "phase": "reversion",
+      "side": "long",
+      "market_regime": ["ranging", "neutral"],
+
+      "mtf": {
+        "mode": "correction_in_range",
+        "required_alignment": 1,
+        "conditions": {
+          "1D": ["neutral"],
+          "4H": ["neutral"],
+          "1H": ["neutral", "bearish"]
+        }
+      },
+
+      "volume_profile": {
+        "required": [
+          "price<=val",
+          "abs(price-poc)>=atr*0.8",
+          "volume<=volume_ma20*1.1",
+          "price>=recent_support"
+        ],
+        "optional": ["rsi_oversold==true", "bb_lower_touch==true"]
+      },
+
+      "metrics": {
+        "oi_change": "flat_or_decreasing",
+        "cvd_divergence": "positive",
+        "rsi": {"operator": "<=", "value": 30},
+        "bb_width_percentile": {"operator": "<=", "value": 40}
+      },
+
+      "clusters": {
+        "mode": "all",
+        "conditions": [
+          "cluster_absorption_low==true",
+          "cluster_poc_shift_up==true",
+          "cluster_delta_buy_volume>=1.5"
+        ]
+      },
+
+      "triggers": {
+        "mode": "weighted",
+        "conditions": {
+          "bullish_reversal_candle": 0.3,
+          "volume>=volume_ma20*1.5": 0.4,
+          "rsi_bullish_divergence": 0.3
+        },
+        "min_score": 0.7
+      },
+
+      "news": {
+        "sentiment_band": "neutral",
+        "veto_conditions": ["high_impact==true"]
+      },
+
+      "tactic": {
+        "name": "mean_rev_def",
+        "sl": {"type": "dynamic", "value": "max(0.9%, atr*0.7)"},
+        "tp1": {"type": "fixed", "value": 1.5},
+        "tp2": {"type": "fixed", "value": 2.5},
+        "tp3": {"type": "trailing", "value": "fractal_trail"},
+        "position_size": 0.7
+      },
+
+      "risk_profile": "moderate",
+      "confidence_base": "medium"
+    },
+
+    {
+      "id": "SCN_008",
+      "name": "Mean Reversion Short",
+      "description": "Overbought mean reversion to POC in ranging market",
+      "strategy": "mean_reversion",
+      "phase": "reversion",
+      "side": "short",
+      "market_regime": ["ranging", "neutral"],
+
+      "mtf": {
+        "mode": "correction_in_range",
+        "required_alignment": 1,
+        "conditions": {
+          "1D": ["neutral"],
+          "4H": ["neutral"],
+          "1H": ["neutral", "bullish"]
+        }
+      },
+
+      "volume_profile": {
+        "required": [
+          "price>=vah",
+          "abs(price-poc)>=atr*0.8",
+          "volume<=volume_ma20*1.1",
+          "price<=recent_resistance"
+        ],
+        "optional": ["rsi_overbought==true", "bb_upper_touch==true"]
+      },
+
+      "metrics": {
+        "oi_change": "flat_or_decreasing",
+        "cvd_divergence": "negative",
+        "rsi": {"operator": ">=", "value": 70},
+        "bb_width_percentile": {"operator": "<=", "value": 40}
+      },
+
+      "clusters": {
+        "mode": "all",
+        "conditions": [
+          "cluster_absorption_high==true",
+          "cluster_poc_shift_down==true",
+          "cluster_delta_sell_volume>=1.5"
+        ]
+      },
+
+      "triggers": {
+        "mode": "weighted",
+        "conditions": {
+          "bearish_reversal_candle": 0.3,
+          "volume>=volume_ma20*1.5": 0.4,
+          "rsi_bearish_divergence": 0.3
+        },
+        "min_score": 0.7
+      },
+
+      "news": {
+        "sentiment_band": "neutral",
+        "veto_conditions": ["high_impact==true"]
+      },
+
+      "tactic": {
+        "name": "mean_rev_def",
+        "sl": {"type": "dynamic", "value": "max(0.9%, atr*0.7)"},
+        "tp1": {"type": "fixed", "value": 1.5},
+        "tp2": {"type": "fixed", "value": 2.5},
+        "tp3": {"type": "trailing", "value": "fractal_trail"},
+        "position_size": 0.7
+      },
+
+      "risk_profile": "moderate",
+      "confidence_base": "medium"
+    },
+
+    {
+      "id": "SCN_009",
+      "name": "Squeeze Long",
+      "description": "Bollinger Band squeeze breakout to upside",
+      "strategy": "squeeze",
+      "phase": "expansion",
+      "side": "long",
+      "market_regime": ["squeezing", "expanding"],
+
+      "mtf": {
+        "mode": "majority",
+        "required_alignment": 2,
+        "conditions": {
+          "1D": ["bullish", "neutral"],
+          "4H": ["bullish", "neutral"],
+          "1H": ["bullish"]
+        }
+      },
+
+      "volume_profile": {
+        "required": ["bb_width<=bb_width_20ma*0.7"],
+        "optional": ["volume_expansion==true"]
+      },
+
+      "metrics": {
+        "oi_change": "up",
+        "cvd_trend": "up",
+        "bb_width_percentile": {"operator": "<=", "value": 30},
+        "atr_percentile": {"operator": "<=", "value": 40}
+      },
+
+      "clusters": {
+        "mode": "all",
+        "conditions": [
+          "cluster_stacked_imbalance_up>=3",
+          "cluster_poc_shift_up==true"
+        ]
+      },
+
+      "triggers": {
+        "mode": "weighted",
+        "conditions": {
+          "breakout_bar": 0.3,
+          "volume>=volume_ma20*1.5": 0.4,
+          "macd_above_signal": 0.3
+        },
+        "min_score": 0.7
+      },
+
+      "news": {
+        "sentiment_band": "bullish",
+        "veto_conditions": ["high_impact==true", "veto_long==true"]
+      },
+
+      "tactic": {
+        "name": "squeeze_mod",
+        "sl": {"type": "dynamic", "value": "max(1.6%, atr*0.9)"},
+        "tp1": {"type": "fixed", "value": 3.0},
+        "tp2": {"type": "fixed", "value": 5.0},
+        "tp3": {"type": "trailing", "value": "atr_trail"},
+        "position_size": 0.8
+      },
+
+      "risk_profile": "moderate",
+      "confidence_base": "medium"
+    },
+
+    {
+      "id": "SCN_010",
+      "name": "Squeeze Short",
+      "description": "Bollinger Band squeeze breakdown to downside",
+      "strategy": "squeeze",
+      "phase": "expansion",
+      "side": "short",
+      "market_regime": ["squeezing", "expanding"],
+
+      "mtf": {
+        "mode": "majority",
+        "required_alignment": 2,
+        "conditions": {
+          "1D": ["bearish", "neutral"],
+          "4H": ["bearish", "neutral"],
+          "1H": ["bearish"]
+        }
+      },
+
+      "volume_profile": {
+        "required": ["bb_width<=bb_width_20ma*0.7"],
+        "optional": ["volume_expansion==true"]
+      },
+
+      "metrics": {
+        "oi_change": "up",
+        "cvd_trend": "down",
+        "bb_width_percentile": {"operator": "<=", "value": 30},
+        "atr_percentile": {"operator": "<=", "value": 40}
+      },
+
+      "clusters": {
+        "mode": "all",
+        "conditions": [
+          "cluster_stacked_imbalance_down>=3",
+          "cluster_poc_shift_down==true"
+        ]
+      },
+
+      "triggers": {
+        "mode": "weighted",
+        "conditions": {
+          "breakdown_bar": 0.3,
+          "volume>=volume_ma20*1.5": 0.4,
+          "macd_below_signal": 0.3
+        },
+        "min_score": 0.7
+      },
+
+      "news": {
+        "sentiment_band": "bearish",
+        "veto_conditions": ["high_impact==true", "veto_short==true"]
+      },
+
+      "tactic": {
+        "name": "squeeze_mod",
+        "sl": {"type": "dynamic", "value": "max(1.6%, atr*0.9)"},
+        "tp1": {"type": "fixed", "value": 3.0},
+        "tp2": {"type": "fixed", "value": 5.0},
+        "tp3": {"type": "trailing", "value": "atr_trail"},
+        "position_size": 0.8
+      },
+
+      "risk_profile": "moderate",
+      "confidence_base": "medium"
+    },
+
+    {
+      "id": "SCN_011",
+      "name": "Breakout Long",
+      "description": "Breakout retest confirmed - continuation long",
+      "strategy": "breakout",
+      "phase": "retest",
+      "side": "long",
+      "market_regime": ["trending", "expanding"],
+
+      "mtf": {
+        "mode": "breakout_retest",
+        "required_alignment": 2,
+        "conditions": {
+          "1D": ["bullish", "neutral"],
+          "4H": ["bullish"],
+          "1H": ["bullish", "neutral"]
+        }
+      },
+
+      "volume_profile": {
+        "required": ["breakout_high==true", "retest_success==true"],
+        "optional": ["delta_support_on_retest==true"]
+      },
+
+      "metrics": {
+        "funding": {"operator": ">=", "value": 0},
+        "long_short_ratio": {"operator": ">=", "value": 1.02},
+        "oi_change": "up",
+        "cvd_trend": "up"
+      },
+
+      "clusters": {
+        "mode": "all",
+        "conditions": [
+          "cluster_stacked_imbalance_up>=3",
+          "cluster_poc_shift_up==true"
+        ]
+      },
+
+      "triggers": {
+        "mode": "weighted",
+        "conditions": {
+          "breakout_retest_candle": 0.3,
+          "volume>=volume_ma20*1.5": 0.4,
+          "macd_above_signal": 0.3
+        },
+        "min_score": 0.75
+      },
+
+      "news": {
+        "sentiment_band": "bullish",
+        "veto_conditions": ["high_impact==true", "veto_long==true"]
+      },
+
+      "tactic": {
+        "name": "breakout_mod",
+        "sl": {"type": "level", "value": "below_breakout"},
+        "tp1": {"type": "fixed", "value": 2.2},
+        "tp2": {"type": "fixed", "value": 4.5},
+        "tp3": {"type": "trailing", "value": "retest_trail"},
+        "position_size": 0.85
+      },
+
+      "risk_profile": "moderate",
+      "confidence_base": "high"
+    },
+
+    {
+      "id": "SCN_012",
+      "name": "Breakout Short",
+      "description": "Breakdown retest confirmed - continuation short",
+      "strategy": "breakout",
+      "phase": "retest",
+      "side": "short",
+      "market_regime": ["trending", "expanding"],
+
+      "mtf": {
+        "mode": "breakout_retest",
+        "required_alignment": 2,
+        "conditions": {
+          "1D": ["bearish", "neutral"],
+          "4H": ["bearish"],
+          "1H": ["bearish", "neutral"]
+        }
+      },
+
+      "volume_profile": {
+        "required": ["breakdown_low==true", "retest_success==true"],
+        "optional": ["delta_resist_on_retest==true"]
+      },
+
+      "metrics": {
+        "funding": {"operator": "<=", "value": 0},
+        "long_short_ratio": {"operator": "<=", "value": 0.98},
+        "oi_change": "up",
+        "cvd_trend": "down"
+      },
+
+      "clusters": {
+        "mode": "all",
+        "conditions": [
+          "cluster_stacked_imbalance_down>=3",
+          "cluster_poc_shift_down==true"
+        ]
+      },
+
+      "triggers": {
+        "mode": "weighted",
+        "conditions": {
+          "breakdown_retest_candle": 0.3,
+          "volume>=volume_ma20*1.5": 0.4,
+          "macd_below_signal": 0.3
+        },
+        "min_score": 0.75
+      },
+
+      "news": {
+        "sentiment_band": "bearish",
+        "veto_conditions": ["high_impact==true", "veto_short==true"]
+      },
+
+      "tactic": {
+        "name": "breakout_mod",
+        "sl": {"type": "level", "value": "above_breakdown"},
+        "tp1": {"type": "fixed", "value": 2.2},
+        "tp2": {"type": "fixed", "value": 4.5},
+        "tp3": {"type": "trailing", "value": "retest_trail"},
+        "position_size": 0.85
+      },
+
+      "risk_profile": "moderate",
+      "confidence_base": "high"
+    }
+  ]
+}

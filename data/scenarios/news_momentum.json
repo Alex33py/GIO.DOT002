@@ -1,0 +1,39 @@
+{
+  "name": "News Momentum Trade",
+  "signal_type": "BUY",
+  "conditions": {
+    "news": {
+      "overall_sentiment": "bullish",
+      "min_confidence": 0.7,
+      "min_news_count": 3
+    },
+    "technical": {
+      "rsi_range": [
+        40,
+        75
+      ],
+      "trend_direction": "bullish"
+    },
+    "volume": {
+      "volume_spike_required": true,
+      "min_volume_24h": 2000000
+    },
+    "price": {
+      "price_change_24h": {
+        "min": -5,
+        "max": 15
+      }
+    }
+  },
+  "risk_management": {
+    "max_risk_per_trade": 3.0,
+    "atr_stop_multiplier": 2.5,
+    "profit_target_rr": 1.8
+  },
+  "metadata": {
+    "description": "Торговля по новостному импульсу",
+    "timeframe": "30m-2h",
+    "success_rate_target": 55.0,
+    "created_by": "system_default"
+  }
+}

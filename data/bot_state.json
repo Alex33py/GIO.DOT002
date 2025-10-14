@@ -1,0 +1,22 @@
+{
+  "timestamp": 1759346729804,
+  "bot_state": {
+    "performance_stats": {
+      "signals_generated": 0,
+      "signals_vetoed": 0,
+      "deals_executed": 0,
+      "risky_entries": 0,
+      "uptime_start": 1759346695032
+    },
+    "uptime_hours": 0.01,
+    "memory_usage_mb": 82.59375,
+    "active_signals_count": 0,
+    "completed_signals_count": 0,
+    "candles_cache_size": {
+      "1m": 100
+    },
+    "veto_stats": {
+      "error": "No veto decisions in last 24 hours"
+    }
+  }
+}

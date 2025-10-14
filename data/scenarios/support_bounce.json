@@ -1,0 +1,32 @@
+{
+  "name": "Support Level Bounce",
+  "signal_type": "BUY",
+  "conditions": {
+    "price": {
+      "support_test": true,
+      "moving_average_position": "above_sma20"
+    },
+    "technical": {
+      "rsi_range": [
+        30,
+        60
+      ],
+      "macd_signal": "bullish_crossover"
+    },
+    "volume": {
+      "volume_spike_required": true,
+      "poc_interaction": "near_poc"
+    }
+  },
+  "risk_management": {
+    "max_risk_per_trade": 1.5,
+    "atr_stop_multiplier": 1.5,
+    "profit_target_rr": 2.5
+  },
+  "metadata": {
+    "description": "Отскок от уровня поддержки с подтверждением",
+    "timeframe": "1h-8h",
+    "success_rate_target": 70.0,
+    "created_by": "system_default"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "Resistance Level Rejection",
+  "signal_type": "SELL",
+  "conditions": {
+    "price": {
+      "resistance_test": true,
+      "moving_average_position": "below_sma20"
+    },
+    "technical": {
+      "rsi_range": [
+        50,
+        80
+      ],
+      "macd_signal": "bearish_crossover"
+    },
+    "volume": {
+      "volume_spike_required": true
+    }
+  },
+  "risk_management": {
+    "max_risk_per_trade": 1.5,
+    "atr_stop_multiplier": 1.5,
+    "profit_target_rr": 2.5
+  },
+  "metadata": {
+    "description": "Отбой от уровня сопротивления",
+    "timeframe": "1h-8h",
+    "success_rate_target": 68.0,
+    "created_by": "system_default"
+  }
+}
