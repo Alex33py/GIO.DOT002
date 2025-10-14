@@ -65,6 +65,7 @@ from analytics.mtf_analyzer import MultiTimeframeAnalyzer
 from analytics.volume_profile import EnhancedVolumeProfileCalculator
 from analytics.enhanced_sentiment_analyzer import UnifiedSentimentAnalyzer
 from analytics.cluster_detector import ClusterDetector
+from analytics.whale_activity_tracker import WhaleActivityTracker
 
 # Filters
 from filters.multi_tf_filter import MultiTimeframeFilter
@@ -408,6 +409,7 @@ class GIOCryptoBot:
             try:
                 from analytics.cluster_detector import ClusterDetector
 
+
                 logger.info("🔍 DEBUG: ClusterDetector импортирован успешно")
 
                 logger.info("🔍 DEBUG: Создание экземпляра ClusterDetector...")
@@ -427,6 +429,11 @@ class GIOCryptoBot:
                 self.cluster_detector = None
 
             logger.info("🔍 DEBUG: Завершение инициализации Cluster Detector")
+
+            # 4️⃣.5 Whale Activity Tracker
+            logger.info("4️⃣.5 Инициализация Whale Activity Tracker...")
+            self.whale_tracker = WhaleActivityTracker(window_minutes=15)
+            logger.info("   ✅ Whale Activity Tracker инициализирован (15min window)")
 
             # 5. Системы принятия решений
             logger.info("5️⃣ Инициализация систем принятия решений...")
@@ -658,26 +665,22 @@ class GIOCryptoBot:
 
                     if telegram_bot_instance:
                         self.dashboard_commands = DashboardCommands(
-                            telegram_bot_instance, self  # AsyncTeleBot instance
+                            telegram_bot_instance, self
                         )
-                        logger.info(
-                            "   ✅ Dashboard Commands зарегистрированы (/market)"
-                        )
+                        logger.info("✅ Dashboard Commands зарегистрированы (/market)")
                     else:
                         logger.warning(
-                            "   ⚠️ Telegram bot instance не найден в telegram_handler"
+                            "⚠️ Telegram bot instance не найден в telegram_handler"
                         )
                 else:
                     logger.warning(
-                        "   ⚠️ telegram_handler не найден, пропускаем регистрацию /market"
+                        "⚠️ telegram_handler не найден, пропускаем регистрацию /market"
                     )
 
             except ImportError as e:
                 logger.warning(f"   ⚠️ Dashboard модули не найдены: {e}")
             except Exception as e:
-                logger.error(
-                    f"   ❌ Ошибка инициализации Dashboard: {e}", exc_info=True
-                )
+                logger.error(f"❌ Ошибка инициализации Dashboard: {e}", exc_info=True)
 
             # 9. Планировщик
             # logger.info("9️⃣ Настройка планировщика...")
@@ -730,6 +733,18 @@ class GIOCryptoBot:
             side = "SELL" if trade["is_buyer_maker"] else "BUY"
             value = trade["quantity"] * trade["price"]
 
+            # Нормализуем символ (BTC-USDT -> BTCUSDT)
+            symbol_normalized = symbol.replace("-", "")
+
+            # ✅ Whale Tracker: добавляем КАЖДУЮ сделку (фильтр внутри tracker)
+            if hasattr(self, "whale_tracker"):
+                self.whale_tracker.add_trade(
+                    symbol=symbol_normalized,
+                    side=side,
+                    size=trade["quantity"],
+                    price=trade["price"],
+                )
+
             # Логируем только ОЧЕНЬ крупные сделки > $50k
             if value > 50000:
                 logger.info(
@@ -741,8 +756,6 @@ class GIOCryptoBot:
                 # ✅ ИСПРАВЛЕНО: Сохраняем в large_trades_cache для Whale Tracking
                 if not hasattr(self, "large_trades_cache"):
                     self.large_trades_cache = {}
-
-                symbol_normalized = symbol.replace("-", "")  # BTC-USDT -> BTCUSDT
 
                 if symbol_normalized not in self.large_trades_cache:
                     self.large_trades_cache[symbol_normalized] = []

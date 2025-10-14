@@ -11,6 +11,7 @@ import time
 from typing import Optional, Dict, List
 from datetime import datetime, timedelta
 from telegram import Update
+from telegram_handlers.gio_dashboard_handler import GIODashboardHandler
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.constants import ParseMode
 from config.settings import logger, TELEGRAM_CONFIG, DATA_DIR
@@ -30,6 +31,7 @@ class TelegramBotHandler:
         self.auto_signals = TELEGRAM_CONFIG.get("auto_signals", True)
         self.application = None
         self.is_running = False
+        self.gio_dashboard = GIODashboardHandler(bot_instance)
 
         if not self.enabled:
             logger.warning("⚠️ Telegram bot disabled")
@@ -65,11 +67,9 @@ class TelegramBotHandler:
             self.application.add_handler(
                 CommandHandler("analyze_batching", self.cmd_analyze_batching)
             )
-
             self.application.add_handler(
                 CommandHandler("analyze_batching", self.cmd_analyze_batching)
             )
-
             self.application.add_handler(CommandHandler("pairs", self.cmd_pairs))
             self.application.add_handler(CommandHandler("add", self.cmd_add))
             self.application.add_handler(CommandHandler("remove", self.cmd_remove))
@@ -85,6 +85,16 @@ class TelegramBotHandler:
             self.application.add_handler(CommandHandler("market", self.cmd_market))
             self.application.add_handler(CommandHandler("advanced", self.cmd_advanced))
             self.application.add_handler(CommandHandler("whale", self.cmd_whale))
+            self.application.add_handler(
+                CommandHandler("gio", self.gio_dashboard.cmd_gio)
+            )
+
+            from telegram_handlers.market_overview_handler import MarketOverviewHandler
+
+            self.market_overview_handler = MarketOverviewHandler(self.bot_instance)
+            self.application.add_handler(
+                CommandHandler("overview", self.market_overview_handler.cmd_overview)
+            )
 
             logger.info("✅ Telegram bot команды зарегистрированы")
             return True
@@ -209,6 +219,10 @@ class TelegramBotHandler:
             logger.info(f"📋 cmd_help вызвана (user_id={user_id}, username={username})")
 
             text = """📋 ДОСТУПНЫЕ КОМАНДЫ:
+
+    🎯 GIO Intelligence: ⭐ НОВОЕ
+    • /gio [SYMBOL] — Unified Market Intelligence Dashboard
+    • /overview — Multi-Symbol Market Overview (8 активов)
 
     📊 Дашборды: ⭐ НОВОЕ
     • /market [SYMBOL] — Главный дашборд рынка
