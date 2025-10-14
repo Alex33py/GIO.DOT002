@@ -96,6 +96,28 @@ class TelegramBotHandler:
                 CommandHandler("overview", self.market_overview_handler.cmd_overview)
             )
 
+            # Correlation commands
+            self.application.add_handler(
+                CommandHandler(
+                    "correlation", self.bot_instance.correlation_handler.cmd_correlation
+                )
+            )
+            self.application.add_handler(
+                CommandHandler(
+                    "corrpair",
+                    self.bot_instance.correlation_handler.cmd_correlation_pair,
+                )
+            )
+            logger.info("   ✅ Correlation handlers зарегистрированы")
+
+            # Liquidity commands
+            self.application.add_handler(
+                CommandHandler(
+                    "liquidity", self.bot_instance.liquidity_handler.cmd_liquidity
+                )
+            )
+            logger.info("   ✅ Liquidity handler зарегистрирован")
+
             logger.info("✅ Telegram bot команды зарегистрированы")
             return True
         except Exception as e:
@@ -220,16 +242,23 @@ class TelegramBotHandler:
 
             text = """📋 ДОСТУПНЫЕ КОМАНДЫ:
 
-    🎯 GIO Intelligence: ⭐ НОВОЕ
+    🎯 GIO Intelligence:  НОВОЕ
     • /gio [SYMBOL] — Unified Market Intelligence Dashboard
     • /overview — Multi-Symbol Market Overview (8 активов)
 
-    📊 Дашборды: ⭐ НОВОЕ
+    📊 Дашборды:  НОВОЕ
     • /market [SYMBOL] — Главный дашборд рынка
     • /advanced SYMBOL — Продвинутые индикаторы
 
-    🎯 Сценарии: ⭐ НОВОЕ
+    🎯 Сценарии:  НОВОЕ
     • /scenario SYMBOL — Текущий сценарий ММ и фаза
+
+    📈 Корреляция:  НОВОЕ
+    • /correlation — Матрица корреляций топ-5 активов
+    • /corrpair SYMBOL1 SYMBOL2 — Корреляция между двумя активами
+
+    💧 Ликвидность:  НОВОЕ
+    • /liquidity [SYMBOL] — Анализ глубины ликвидности и whale walls
 
     📊 Аналитика сигналов:
     • /signal_stats — Статистика отслеживаемых сигналов
@@ -237,7 +266,7 @@ class TelegramBotHandler:
     • /signal_history [days] — История сигналов
     • /stats [days] — Общая статистика
 
-    🔍 Фильтры: ⭐ НОВОЕ
+    🔍 Фильтры:  НОВОЕ
     • /filters — Статус фильтров
     • /mtf SYMBOL — Multi-Timeframe тренды
 

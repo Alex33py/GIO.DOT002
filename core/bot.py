@@ -66,6 +66,12 @@ from analytics.volume_profile import EnhancedVolumeProfileCalculator
 from analytics.enhanced_sentiment_analyzer import UnifiedSentimentAnalyzer
 from analytics.cluster_detector import ClusterDetector
 from analytics.whale_activity_tracker import WhaleActivityTracker
+from analytics.market_heat_indicator import MarketHeatIndicator
+from analytics.correlation_analyzer import CorrelationAnalyzer
+from handlers.correlation_handler import CorrelationHandler
+from analytics.liquidity_depth_analyzer import LiquidityDepthAnalyzer
+from handlers.liquidity_handler import LiquidityHandler
+
 
 # Filters
 from filters.multi_tf_filter import MultiTimeframeFilter
@@ -409,7 +415,6 @@ class GIOCryptoBot:
             try:
                 from analytics.cluster_detector import ClusterDetector
 
-
                 logger.info("🔍 DEBUG: ClusterDetector импортирован успешно")
 
                 logger.info("🔍 DEBUG: Создание экземпляра ClusterDetector...")
@@ -434,6 +439,18 @@ class GIOCryptoBot:
             logger.info("4️⃣.5 Инициализация Whale Activity Tracker...")
             self.whale_tracker = WhaleActivityTracker(window_minutes=15)
             logger.info("   ✅ Whale Activity Tracker инициализирован (15min window)")
+
+            # Market Heat Indicator
+            self.market_heat_indicator = MarketHeatIndicator()
+            logger.info("✅ MarketHeatIndicator инициализирован")
+
+            # Correlation Analyzer
+            self.correlation_analyzer = CorrelationAnalyzer(self)
+            logger.info("✅ CorrelationAnalyzer инициализирован")
+
+            # Liquidity Depth Analyzer
+            self.liquidity_depth_analyzer = LiquidityDepthAnalyzer(self)
+            logger.info("✅ LiquidityDepthAnalyzer инициализирован")
 
             # 5. Системы принятия решений
             logger.info("5️⃣ Инициализация систем принятия решений...")
@@ -681,6 +698,26 @@ class GIOCryptoBot:
                 logger.warning(f"   ⚠️ Dashboard модули не найдены: {e}")
             except Exception as e:
                 logger.error(f"❌ Ошибка инициализации Dashboard: {e}", exc_info=True)
+
+            # 8️⃣.7 Инициализация Correlation Handler  ← ДОБАВИТЬ ЭТО
+            logger.info("8️⃣.7 Инициализация Correlation Handler...")
+            try:
+                self.correlation_handler = CorrelationHandler(self)
+                logger.info("   ✅ CorrelationHandler инициализирован")
+            except Exception as e:
+                logger.error(
+                    f"❌ Ошибка инициализации CorrelationHandler: {e}", exc_info=True
+                )
+
+            # 8️⃣.8 Инициализация Liquidity Handler
+            logger.info("8️⃣.8 Инициализация Liquidity Handler...")
+            try:
+                self.liquidity_handler = LiquidityHandler(self)
+                logger.info("   ✅ LiquidityHandler инициализирован")
+            except Exception as e:
+                logger.error(
+                    f"❌ Ошибка инициализации LiquidityHandler: {e}", exc_info=True
+                )
 
             # 9. Планировщик
             # logger.info("9️⃣ Настройка планировщика...")

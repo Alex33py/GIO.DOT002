@@ -106,6 +106,72 @@ class GIODashboardHandler:
                 lines.append("└─ ⚠️ Данные недоступны")
                 lines.append("")
 
+            # MARKET HEAT
+            lines.append("🔥 MARKET HEAT")
+            try:
+                if hasattr(self.bot, "market_heat_indicator"):
+                    # Получаем данные для heat calculation
+                    ticker = await self.bot.bybit_connector.get_ticker(symbol)
+                    vp_data = await self.get_volume_profile_data(symbol)
+
+                    if ticker and vp_data:
+                        price = float(ticker.get("lastPrice", 0))
+                        volume = float(ticker.get("volume24h", 0))
+                        price_change = float(ticker.get("price24hPcnt", 0)) * 100
+
+                        # Получаем OI change
+                        oi_change = 0
+                        try:
+                            if hasattr(self.bot.bybit_connector, "get_open_interest"):
+                                oi_data = (
+                                    await self.bot.bybit_connector.get_open_interest(
+                                        symbol
+                                    )
+                                )
+                                oi_change = (
+                                    oi_data.get("openInterestDelta", 0)
+                                    if oi_data
+                                    else 0
+                                )
+                        except:
+                            pass
+
+                        # Собираем features для heat indicator
+                        features = {
+                            "price": price,
+                            "atr": vp_data.get("atr", price * 0.02),  # Default 2% ATR
+                            "volume": volume,
+                            "volume_ma20": volume * 0.8,  # Примерная MA
+                            "price_change_pct": abs(price_change),
+                            "open_interest_delta_pct": abs(oi_change),
+                        }
+
+                        heat_data = self.bot.market_heat_indicator.calculate_heat(
+                            features
+                        )
+                        heat_info = self.bot.market_heat_indicator.format_heat_info(
+                            heat_data
+                        )
+
+                        lines.append(f"├─ Heat: {heat_info}")
+                        lines.append(
+                            f"├─ Volatility: {heat_data['components']['volatility']:.0f}/25"
+                        )
+                        lines.append(
+                            f"├─ Volume: {heat_data['components']['volume']:.0f}/25"
+                        )
+                        lines.append(
+                            f"└─ Movement: {heat_data['components']['price_movement']:.0f}/25"
+                        )
+                    else:
+                        lines.append("└─ ⚠️ Данные недоступны")
+                else:
+                    lines.append("└─ ⚠️ Heat indicator не инициализирован")
+            except Exception as e:
+                logger.error(f"Market heat error: {e}")
+                lines.append("└─ ⚠️ Heat calculation error")
+            lines.append("")
+
             # === 2. MARKET PHASE ===
             lines.append("🎯 MARKET PHASE")
             try:

@@ -581,6 +581,65 @@ class EnhancedBybitConnector:
             logger.error(f"❌ Ошибка get_trades для {symbol}: {e}")
             return None
 
+    async def get_orderbook(self, symbol: str, limit: int = 50) -> Optional[Dict]:
+        """
+        Получить L2 orderbook (bids/asks) для symbol
+
+        Args:
+            symbol: Торговая пара (например, "BTCUSDT")
+            limit: Количество уровней (по умолчанию 50)
+
+        Returns:
+            {
+                "bids": [[price, size], ...],
+                "asks": [[price, size], ...],
+                "timestamp": 1697040000000
+            }
+        """
+        try:
+            # Используем внутренний метод _get_orderbook
+            orderbook_data = await self._get_orderbook(symbol, limit)
+
+            if not orderbook_data:
+                logger.warning(f"⚠️ Пустой orderbook для {symbol}")
+                return None
+
+            # Преобразуем формат из внутреннего в простой
+            bids = []
+            asks = []
+
+            # Извлекаем bids
+            for bid in orderbook_data.get("bids", []):
+                if isinstance(bid, dict):
+                    bids.append([bid["price"], bid["size"]])
+                elif isinstance(bid, list) and len(bid) >= 2:
+                    bids.append([float(bid[0]), float(bid[1])])
+
+            # Извлекаем asks
+            for ask in orderbook_data.get("asks", []):
+                if isinstance(ask, dict):
+                    asks.append([ask["price"], ask["size"]])
+                elif isinstance(ask, list) and len(ask) >= 2:
+                    asks.append([float(ask[0]), float(ask[1])])
+
+            if not bids or not asks:
+                logger.warning(f"⚠️ Orderbook пуст для {symbol}")
+                return None
+
+            result = {
+                "bids": bids,
+                "asks": asks,
+                "timestamp": orderbook_data.get("timestamp", current_epoch_ms()),
+            }
+
+            logger.debug(f"✅ Orderbook {symbol}: {len(bids)} bids, {len(asks)} asks")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"❌ get_orderbook error для {symbol}: {e}")
+            return None
+
     async def _get_recent_trades(self, symbol: str, limit: int = 100) -> Optional[Dict]:
         """Получение последних сделок"""
         try:
@@ -1232,6 +1291,7 @@ class EnhancedBybitConnector:
         return self.cache.get_detailed_stats()
 
         # Не бросаем исключение, чтобы shutdown мог продолжиться
+
     def get_cache_statistics(self) -> Dict:
         """
         Получить статистику кэша
@@ -1239,7 +1299,7 @@ class EnhancedBybitConnector:
         Returns:
             Dict со статистикой кэша
         """
-        if hasattr(self, 'cache') and self.cache:
+        if hasattr(self, "cache") and self.cache:
             return self.cache.get_statistics()
         return {"hit_rate": 0.0, "total_items": 0, "total_size_mb": 0.0}
 
@@ -1251,7 +1311,6 @@ class EnhancedBybitConnector:
             Dict со статистикой для всех endpoints
         """
         return self.rate_limiter.get_all_stats()
-
 
     def get_rate_limiter_stats(self) -> Dict:
         """

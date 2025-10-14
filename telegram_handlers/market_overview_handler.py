@@ -133,11 +133,12 @@ class MarketOverviewHandler:
                 # Форматируем цену (убираем USDT)
                 symbol_short = symbol.replace("USDT", "")
 
-                # Форматируем строку
+                # Форматируем строку с heat indicator
                 line = (
                     f"{price_emoji} {symbol_short}: "
                     f"${data['price']:,.2f} ({data['change']:+.2f}%) | "
-                    f"{phase_emoji} {phase_name} ({data['confidence']:.0f}%)"
+                    f"{phase_emoji} {phase_name} ({data['confidence']:.0f}%) | "  # ← ДОБАВИЛ " | " В КОНЦЕ
+                    f"{data['heat_emoji']}"
                 )
 
                 lines.append(line)
@@ -177,7 +178,7 @@ class MarketOverviewHandler:
                 # ИСПРАВЛЕНО: используем get_market_data вместо extract_features
                 market_data = await self.bot.get_market_data(symbol)
 
-                if market_data and hasattr(self.bot, 'market_phase_detector'):
+                if market_data and hasattr(self.bot, "market_phase_detector"):
                     # Получаем Volume Profile
                     vp = market_data.get("volume_profile", {})
 
@@ -186,8 +187,12 @@ class MarketOverviewHandler:
                     oi_change = oi_data.get("openInterestDelta", 0) if oi_data else 0
 
                     # Получаем Funding
-                    funding_data = await self.bot.bybit_connector.get_funding_rate(symbol)
-                    funding_rate = funding_data.get("fundingRate", 0) if funding_data else 0
+                    funding_data = await self.bot.bybit_connector.get_funding_rate(
+                        symbol
+                    )
+                    funding_rate = (
+                        funding_data.get("fundingRate", 0) if funding_data else 0
+                    )
 
                     # Собираем features для phase detector
                     features = {
@@ -230,6 +235,31 @@ class MarketOverviewHandler:
                 else:
                     data["phase"] = "BEARISH_COMPRESSION"
                     data["confidence"] = 70.0
+
+            # 3. Market Heat
+            try:
+                if hasattr(self.bot, "market_heat_indicator"):
+                    features_for_heat = {
+                        "price": data["price"],
+                        "atr": 1.0,  # Default
+                        "volume": 1000000,  # Default
+                        "volume_ma20": 1000000,
+                        "price_change_pct": data["change"],
+                        "open_interest_delta_pct": 0,
+                    }
+
+                    heat_data = self.bot.market_heat_indicator.calculate_heat(
+                        features_for_heat
+                    )
+                    data["heat_emoji"] = heat_data["heat_emoji"]
+                    data["heat_score"] = heat_data["heat_score"]
+                else:
+                    data["heat_emoji"] = "⚪"
+                    data["heat_score"] = 0
+            except Exception as e:
+                logger.warning(f"Heat calculation failed for {symbol}: {e}")
+                data["heat_emoji"] = "⚪"
+                data["heat_score"] = 0
 
             return data
 
