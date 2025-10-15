@@ -1,15 +1,7 @@
 {
   "version": "1.0",
-  "last_updated": "2025-10-05T23:54:51.042855",
+  "last_updated": "2025-10-15T11:47:30.867147",
   "tracked_symbols": [
-    {
-      "symbol": "BTCUSDT",
-      "enabled": true,
-      "priority": 1,
-      "min_volume_24h": 1000000000,
-      "max_leverage": 10,
-      "notes": "Bitcoin - основная пара"
-    },
     {
       "symbol": "XRPUSDT",
       "enabled": true,
@@ -17,6 +9,14 @@
       "min_volume_24h": 50000000,
       "max_leverage": 10,
       "notes": "Добавлена Alexander_Sementsov33 2025-10-05 23:50"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "enabled": true,
+      "priority": 99,
+      "min_volume_24h": 50000000,
+      "max_leverage": 10,
+      "notes": "Добавлена Alexander_Sementsov33 2025-10-15 11:47"
     }
   ],
   "scanner_settings": {

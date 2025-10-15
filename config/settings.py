@@ -29,7 +29,7 @@ SCENARIOS_DIR = DATA_DIR / "scenarios"
 CACHE_DIR = DATA_DIR / "cache"
 
 # Путь к базе данных
-DATABASE_PATH = str(DATA_DIR / "gio_bot.db")
+DATABASE_PATH = str(DATA_DIR / "gio_crypto_bot.db")
 
 # Создание необходимых директорий
 for directory in [DATA_DIR, LOGS_DIR, SCENARIOS_DIR, CACHE_DIR]:
@@ -207,11 +207,10 @@ PERFORMANCE_CONFIG = {
 # ============================================================================
 TESTING_CONFIG = {"enable_tests": True, "test_mode": False, "mock_api_responses": False}
 
-# ============================================================================
 # КОНСТАНТЫ ДЛЯ СОВМЕСТИМОСТИ
-# ============================================================================
 MAX_MEMORY_MB = MEMORY_CONFIG["max_memory_mb"]
-DB_FILE = DATABASE_PATH
+DB_FILE = str(DATA_DIR / "gio_crypto_bot.db")
+
 
 # Настройки Volume Profile
 VOLUME_PROFILE_LEVELS_COUNT = 50

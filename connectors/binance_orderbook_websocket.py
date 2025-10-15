@@ -1,105 +1,103 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Binance Orderbook WebSocket - Real-time L2 orderbook stream
+Binance Orderbook WebSocket
+Получение данных orderbook через WebSocket с robust connection management
 """
 
 import asyncio
-import json
-import time  # ← ДОБАВЛЕНО!
-from typing import Optional, Dict, List
-import websockets
+import time
+from typing import List, Dict, Optional
+from utils.websocket_manager import WebSocketManager
 from config.settings import logger
 
 
 class BinanceOrderbookWebSocket:
     """
-    WebSocket коннектор для Binance Orderbook (depth@100ms)
+    Binance Orderbook WebSocket с автореконнектом
 
     Документация: https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams
     """
 
-    def __init__(self, symbols: List[str], depth: int = 20):
+    def __init__(self, symbols: List[str], connector, depth: int = 20):
         """
         Args:
             symbols: Список символов (например, ["BTCUSDT", "ETHUSDT"])
+            connector: BinanceConnector instance
             depth: Глубина orderbook (5, 10, 20) - по умолчанию 20
         """
-        self.symbols = [s.lower() for s in symbols]
+        self.symbols = symbols
+        self.connector = connector
         self.depth = depth
         self.orderbook_data = {}
-        self.last_pressure_log: Dict[str, float] = {}  # ← ДОБАВЛЕНО!
+        self.last_pressure_log: Dict[str, float] = {}  # Throttling для логов
 
-        # WebSocket URL для фьючерсов
-        self.ws_url = "wss://fstream.binance.com/stream"
+        # Создание streams для futures
+        self.streams = [f"{s.lower()}@depth{depth}@100ms" for s in symbols]
 
-        self.ws = None
-        self.is_running = False
+        # WebSocket URL для futures
+        url = f"wss://fstream.binance.com/stream?streams={'/'.join(self.streams)}"
+
+        # Создание WebSocket Manager
+        self.ws_manager = WebSocketManager(
+            url=url,
+            on_message=self._process_message,
+            on_connect=self._on_connect,
+            on_disconnect=self._on_disconnect,
+            ping_interval=20,
+            ping_timeout=15,
+            reconnect_delay=5,
+            max_reconnect_attempts=10,
+            name="Binance-Orderbook",
+        )
 
         logger.info(
-            f"✅ BinanceOrderbookWebSocket инициализирован: {len(symbols)} символов, depth={depth}"
+            f"✅ Binance Orderbook WS инициализирован: "
+            f"{len(symbols)} символов, depth={depth}"
         )
 
     async def start(self):
-        """Запуск WebSocket подключения"""
-        if self.is_running:
-            logger.warning("⚠️ Binance WS уже запущен")
-            return
+        """Запуск WebSocket"""
+        await self.ws_manager.start()
 
-        self.is_running = True
+    async def stop(self):
+        """Остановка WebSocket"""
+        await self.ws_manager.stop()
 
-        # Создаём подписку на все символы
-        streams = [f"{symbol}@depth{self.depth}@100ms" for symbol in self.symbols]
-        params = "/".join(streams)
+    async def _on_connect(self):
+        """Callback при подключении"""
+        logger.info(f"🎉 Binance Orderbook WS подключён: {len(self.symbols)} потоков")
 
-        url = f"{self.ws_url}?streams={params}"
-
-        logger.info(f"🔌 Подключение к Binance WebSocket: {len(self.symbols)} пар")
-
-        try:
-            async with websockets.connect(url) as ws:
-                self.ws = ws
-                logger.info("✅ Binance WebSocket подключен")
-
-                while self.is_running:
-                    try:
-                        message = await asyncio.wait_for(ws.recv(), timeout=30)
-                        await self._process_message(json.loads(message))
-
-                    except asyncio.TimeoutError:
-                        logger.warning("⚠️ Binance WS timeout, переподключение...")
-                        await ws.ping()
-
-                    except Exception as e:
-                        logger.error(f"❌ Ошибка обработки сообщения: {e}")
-
-        except Exception as e:
-            logger.error(f"❌ Ошибка Binance WebSocket: {e}")
-
-        finally:
-            self.is_running = False
-            logger.info("🛑 Binance WebSocket отключен")
+    async def _on_disconnect(self):
+        """Callback при отключении"""
+        logger.warning("⚠️ Binance Orderbook WS отключён")
 
     async def _process_message(self, data: Dict):
-        """Обработка входящего сообщения"""
+        """Обработка сообщения"""
         try:
             if "data" not in data:
                 return
 
             msg = data["data"]
-            symbol = msg["s"].upper()  # BTCUSDT
+            symbol = msg.get("s", "").upper()  # BTCUSDT
+
+            if not symbol:
+                return
 
             # Обновляем orderbook
             self.orderbook_data[symbol] = {
-                "bids": [[float(bid[0]), float(bid[1])] for bid in msg["b"]],
-                "asks": [[float(ask[0]), float(ask[1])] for ask in msg["a"]],
-                "timestamp": msg["E"],
+                "bids": [[float(bid[0]), float(bid[1])] for bid in msg.get("b", [])],
+                "asks": [[float(ask[0]), float(ask[1])] for ask in msg.get("a", [])],
+                "timestamp": msg.get("E", 0),
             }
 
-            # Рассчитываем дисбаланс
+            # Обновление в connector (для совместимости)
+            if hasattr(self.connector, "orderbook_data"):
+                self.connector.orderbook_data[symbol] = self.orderbook_data[symbol]
+
+            # Рассчитываем дисбаланс и логируем (throttled)
             imbalance = self._calculate_imbalance(symbol)
 
-            # ========== THROTTLING: ЛОГИРУЕМ РАЗ В 30 СЕКУНД ==========
             if imbalance and abs(imbalance) > 70:
                 current_time = time.time()
                 last_log = self.last_pressure_log.get(symbol, 0)
@@ -113,7 +111,7 @@ class BinanceOrderbookWebSocket:
                     self.last_pressure_log[symbol] = current_time
 
         except Exception as e:
-            logger.error(f"❌ Ошибка _process_message: {e}")
+            logger.error(f"❌ Ошибка обработки orderbook: {e}")
 
     def _calculate_imbalance(self, symbol: str) -> Optional[float]:
         """Расчёт дисбаланса bid/ask"""
@@ -148,9 +146,10 @@ class BinanceOrderbookWebSocket:
         """Получить orderbook для символа"""
         return self.orderbook_data.get(symbol.upper())
 
-    async def stop(self):
-        """Остановка WebSocket"""
-        self.is_running = False
-        if self.ws:
-            await self.ws.close()
-        logger.info("🛑 Binance WebSocket остановлен")
+    def get_stats(self) -> Dict:
+        """Получить статистику WebSocket"""
+        return self.ws_manager.get_stats()
+
+    def is_healthy(self) -> bool:
+        """Проверка здоровья соединения"""
+        return self.ws_manager.is_healthy()

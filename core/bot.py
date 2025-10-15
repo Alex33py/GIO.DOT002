@@ -71,6 +71,8 @@ from analytics.correlation_analyzer import CorrelationAnalyzer
 from handlers.correlation_handler import CorrelationHandler
 from analytics.liquidity_depth_analyzer import LiquidityDepthAnalyzer
 from handlers.liquidity_handler import LiquidityHandler
+from analytics.signal_performance_analyzer import SignalPerformanceAnalyzer
+from handlers.performance_handler import PerformanceHandler
 
 
 # Filters
@@ -226,25 +228,15 @@ class GIOCryptoBot:
             # 2️⃣.2 Инициализация Binance Orderbook WebSocket
             logger.info("2️⃣.2 Инициализация Binance Orderbook WebSocket...")
             self.binance_orderbook_ws = BinanceOrderbookWebSocket(
-                symbols=TRACKED_SYMBOLS,  # ["BTCUSDT", "XRPUSDT"]
-                depth=20,  # 20 уровней orderbook
+                symbols=TRACKED_SYMBOLS, connector=self, depth=20
             )
-            logger.info("   ✅ Binance Orderbook WebSocket инициализирован")
+            logger.info("✅ Binance Orderbook WebSocket инициализирован")
 
-            # ⭐ Binance (REST + WebSocket)
+            # 2️⃣.3 Binance Connector (REST API + WebSocket)
+            logger.info("2️⃣.3 Инициализация Binance Connector...")
             binance_symbols = ["btcusdt", "ethusdt", "solusdt"]
-
             self.binance_connector = BinanceConnector(
-                symbols=binance_symbols, enable_websocket=True
-            )
-
-            # Установить callbacks
-            self.binance_connector.set_callbacks(
-                {
-                    "on_orderbook_update": self.handle_binance_orderbook,
-                    "on_trade": self.handle_binance_trade,
-                    "on_kline": self.handle_binance_kline,
-                }
+                symbols=binance_symbols, enable_websocket=False
             )
 
             # Инициализация REST API
@@ -256,7 +248,7 @@ class GIOCryptoBot:
             # News
             self.news_connector = UnifiedNewsConnector()
 
-            # ⭐ 2.3 OKX (REST + WebSocket) - ВСТАВИТЬ ЗДЕСЬ!
+            # 2.3 OKX (REST + WebSocket) - ВСТАВИТЬ ЗДЕСЬ!
             logger.info("2️⃣.3 Инициализация OKX Connector...")
             from connectors.okx_connector import OKXConnector
 
@@ -451,6 +443,10 @@ class GIOCryptoBot:
             # Liquidity Depth Analyzer
             self.liquidity_depth_analyzer = LiquidityDepthAnalyzer(self)
             logger.info("✅ LiquidityDepthAnalyzer инициализирован")
+
+            # Signal Performance Analyzer
+            self.signal_performance_analyzer = SignalPerformanceAnalyzer(self)
+            logger.info("✅ SignalPerformanceAnalyzer инициализирован")
 
             # 5. Системы принятия решений
             logger.info("5️⃣ Инициализация систем принятия решений...")
@@ -718,6 +714,20 @@ class GIOCryptoBot:
                 logger.error(
                     f"❌ Ошибка инициализации LiquidityHandler: {e}", exc_info=True
                 )
+
+            # 8️⃣.9 Инициализация Performance Handler
+            logger.info("8️⃣.9 Инициализация Performance Handler...")
+            try:
+                self.performance_handler = PerformanceHandler(self)
+                logger.info("   ✅ PerformanceHandler инициализирован")
+            except Exception as e:
+                logger.error(
+                    f"❌ Ошибка инициализации PerformanceHandler: {e}", exc_info=True
+                )
+            # Health Monitor
+            logger.info("8️⃣.🩺 Запуск Health Monitor...")
+            asyncio.create_task(self._health_monitor())
+            logger.info("   ✅ Health Monitor запущен")
 
             # 9. Планировщик
             # logger.info("9️⃣ Настройка планировщика...")
@@ -1000,20 +1010,17 @@ class GIOCryptoBot:
                 else:
                     logger.warning("   ⚠️ L2 orderbook расчёт не удался")
 
-            # ПРИОРИТЕТ 2: Binance WebSocket Orderbook (для других символов)
-            if self.binance_connector:
-                binance_orderbook = self.binance_connector.get_ws_orderbook(
-                    symbol.lower(), depth=200
+            # 2️⃣ Binance WebSocket Orderbook (через BinanceOrderbookWebSocket)
+            if self.binance_orderbook_ws:
+                binance_orderbook = self.binance_orderbook_ws.get_orderbook(
+                    symbol.upper()
                 )
-
                 if (
                     binance_orderbook
-                    and binance_orderbook["bids"]
-                    and binance_orderbook["asks"]
+                    and binance_orderbook.get("bids")
+                    and binance_orderbook.get("asks")
                 ):
-                    logger.debug(
-                        f"📊 Используем Binance WebSocket Orderbook для {symbol}"
-                    )
+                    logger.debug(f"✅ Binance WebSocket Orderbook для {symbol}")
 
                     # Преобразуем в формат для volume_calculator
                     orderbook_formatted = {
@@ -1401,6 +1408,85 @@ class GIOCryptoBot:
 
         except Exception as e:
             logger.error(f"❌ Ошибка обновления новостей: {e}")
+
+    async def update_news(self):
+        """Обновление новостей"""
+        try:
+            logger.info("📰 Обновление новостей...")
+            news = await self.news_connector.fetch_unified_news(
+                symbols=["BTC", "ETH"], max_age_hours=24
+            )
+
+            if news:
+                self.news_cache = news
+                if self.enhanced_sentiment:
+                    self.enhanced_sentiment.update_news_cache(news)
+                logger.info(f"✅ Загружено {len(news)} новостей")
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка обновления новостей: {e}")
+
+    async def update_news(self):
+        """Обновление новостей"""
+        try:
+            logger.info("📰 Обновление новостей...")
+            news = await self.news_connector.fetch_unified_news(
+                symbols=["BTC", "ETH"], max_age_hours=24
+            )
+
+            if news:
+                self.news_cache = news
+                if self.enhanced_sentiment:
+                    self.enhanced_sentiment.update_news_cache(news)
+                logger.info(f"✅ Загружено {len(news)} новостей")
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка обновления новостей: {e}")
+
+    async def _health_monitor(self):
+        """Мониторинг здоровья WebSocket соединений"""
+        while True:
+            await asyncio.sleep(60)  # Проверка каждую минуту
+
+            try:
+                # Проверка Binance WebSocket
+                if hasattr(self, "binance_connector") and hasattr(
+                    self.binance_connector, "orderbook_ws"
+                ):
+                    stats = self.binance_connector.orderbook_ws.get_stats()
+                    is_healthy = self.binance_connector.orderbook_ws.is_healthy()
+
+                    if is_healthy:
+                        logger.info(
+                            f"💚 Binance WS: Healthy | "
+                            f"Messages: {stats['total_messages']} | "
+                            f"Uptime: {stats['uptime_seconds']:.0f}s"
+                        )
+                    else:
+                        logger.warning(
+                            f"⚠️ Binance WS: Unhealthy | "
+                            f"Reconnects: {stats['reconnect_count']}"
+                        )
+
+                # Проверка Binance Orderbook WebSocket
+                if hasattr(self, "binance_orderbook_ws"):
+                    stats = self.binance_orderbook_ws.get_stats()
+                    is_healthy = self.binance_orderbook_ws.is_healthy()
+
+                    if is_healthy:
+                        logger.info(
+                            f"💚 Binance Orderbook WS: Healthy | "
+                            f"Messages: {stats['total_messages']} | "
+                            f"Uptime: {stats['uptime_seconds']:.0f}s"
+                        )
+                    else:
+                        logger.warning(
+                            f"⚠️ Binance Orderbook WS: Unhealthy | "
+                            f"Reconnects: {stats['reconnect_count']}"
+                        )
+
+            except Exception as e:
+                logger.error(f"❌ Health monitor error: {e}")
 
     async def shutdown(self):
         """Корректная остановка бота"""

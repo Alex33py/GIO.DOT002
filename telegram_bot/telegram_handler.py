@@ -118,6 +118,25 @@ class TelegramBotHandler:
             )
             logger.info("   ✅ Liquidity handler зарегистрирован")
 
+            # Performance commands
+            self.application.add_handler(
+                CommandHandler(
+                    "performance", self.bot_instance.performance_handler.cmd_performance
+                )
+            )
+            self.application.add_handler(
+                CommandHandler(
+                    "bestsignals", self.bot_instance.performance_handler.cmd_bestsignals
+                )
+            )
+            self.application.add_handler(
+                CommandHandler(
+                    "worstsignals",
+                    self.bot_instance.performance_handler.cmd_worstsignals,
+                )
+            )
+            logger.info("   ✅ Performance handlers зарегистрированы")
+
             logger.info("✅ Telegram bot команды зарегистрированы")
             return True
         except Exception as e:
@@ -227,8 +246,8 @@ class TelegramBotHandler:
     async def cmd_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Команда /start"""
         await update.message.reply_text(
-            "🤖 *Добро пожаловать в GIO Crypto Bot v3.0!*\n\n"
-            "Профессиональный бот для автоматической торговли криптовалютами.\n\n"
+            "🤖 *Добро пожаловать в GIO Crypto Bot!*\n\n"
+            "Профессиональный бот для анализа крипто рынка.\n\n"
             "Используйте /help для списка команд.",
             parse_mode=ParseMode.MARKDOWN,
         )
@@ -240,59 +259,51 @@ class TelegramBotHandler:
             username = update.effective_user.username or "Unknown"
             logger.info(f"📋 cmd_help вызвана (user_id={user_id}, username={username})")
 
-            text = """📋 ДОСТУПНЫЕ КОМАНДЫ:
+            text = """📋 GIO MARKET INTELLIGENCE — КОМАНДЫ
 
-    🎯 GIO Intelligence:  НОВОЕ
+    🎯 Главные Дашборды:
     • /gio [SYMBOL] — Unified Market Intelligence Dashboard
     • /overview — Multi-Symbol Market Overview (8 активов)
-
-    📊 Дашборды:  НОВОЕ
     • /market [SYMBOL] — Главный дашборд рынка
+
+    📊 Продвинутая Аналитика:
     • /advanced SYMBOL — Продвинутые индикаторы
+    • /scenario SYMBOL — Текущий сценарий ММ и фаза Wyckoff
+    • /filters — Статус фильтров (Confirm, Multi-TF)
+    • /mtf SYMBOL — Multi-Timeframe тренды (1H/4H/1D)
 
-    🎯 Сценарии:  НОВОЕ
-    • /scenario SYMBOL — Текущий сценарий ММ и фаза
-
-    📈 Корреляция:  НОВОЕ
+    📈 Корреляция  и Sentiment:
     • /correlation — Матрица корреляций топ-5 активов
     • /corrpair SYMBOL1 SYMBOL2 — Корреляция между двумя активами
 
-    💧 Ликвидность:  НОВОЕ
+    💧 Ликвидность и Киты:
     • /liquidity [SYMBOL] — Анализ глубины ликвидности и whale walls
 
-    📊 Аналитика сигналов:
-    • /signal_stats — Статистика отслеживаемых сигналов
-    • /signal_stats SYMBOL — Статистика для символа
-    • /signal_history [days] — История сигналов
-    • /stats [days] — Общая статистика
+    📊 Производительность Сигналов:
+    • /performance [days] — Статистика производительности сигналов
+    • /bestsignals — Топ-10 лучших сигналов
+    • /worstsignals — Топ-10 худших сигналов
 
-    🔍 Фильтры:  НОВОЕ
-    • /filters — Статус фильтров
-    • /mtf SYMBOL — Multi-Timeframe тренды
-
-    Основные:
+    🔧 Системные:
     • /status — Статус системы
-    • /analyze [SYMBOL] — Анализ актива
-    • /signals [N] — Последние N сигналов
-
-
-    Управление парами:
-    • /pairs — Список всех пар
-    • /add SYMBOL — Добавить пару
+    • /pairs — Список отслеживаемых пар
+    • /add SYMBOL — Добавить новую пару
     • /remove SYMBOL — Удалить пару
-    • /available — Доступные пары
 
-    Экспорт:
-    • /export [SYMBOL] [days] — Экспорт данных
+    ━━━━━━━━━━━━━━━━━━━━━━
 
-    Настройки:
-    • /autosignals [on|off] — Автосигналы
+💡 Примеры использования:
+    /gio BTCUSDT
+    /overview
+    /market ETHUSDT
+    /advanced SOLUSDT
+    /performance 7
 
-    💡 Примеры:
-    • /signal_stats
-    • /signal_stats BTCUSDT
-    • /signal_history 7
-    • /analyze BTCUSDT"""
+━━━━━━━━━━━━━━━━━━━━━━
+    📖 О GIO:
+GIO Market Intelligence - это аналитическая
+платформа для трейдеров,  с AI-интерпретацией рыночных данных.
+🎯 Фокус: Аналитика, Сигналы, Уведомления"""
 
             await update.message.reply_text(text)
             logger.info(f"✅ cmd_help успешно отправлена (username={username})")
@@ -2500,47 +2511,40 @@ class TelegramBotHandler:
                 f"cmd_scenario: Funding={funding_rate:.3f}%, L/S={ls_ratio:.2f}"
             )
 
-            # ✅ ШАГ 5: Получаем Multi-Timeframe данные через analyze()
+            # ✅ ШАГ 5: Получаем Multi-Timeframe данные
             mtf_data = {}
             aligned_count = 0
             agreement = 0.0
 
             try:
-                if hasattr(self.bot_instance, "multi_tf_filter"):
+                if hasattr(self.bot_instance, "mtf_filter"):
                     logger.debug(f"🔍 cmd_scenario: Запрашиваем MTF для {symbol}...")
-
-                    # ✅ ПОЛУЧАЕМ direction ИЗ КОМАНДЫ
-                    direction = args[1].upper() if len(args) > 1 else "LONG"
-
-                    mtf_result = await self.bot_instance.multi_tf_filter.analyze(
-                        symbol,
-                        direction=direction,  # ✅ ДИНАМИЧЕСКИ!
-                        timeframes=["1h", "4h", "1d"],
-                    )
-
+                    mtf_result = self.bot_instance.mtf_filter.validate(symbol, "LONG")
                     logger.debug(f"✅ cmd_scenario: MTF результат = {mtf_result}")
 
-                    # Извлекаем данные
                     if mtf_result and isinstance(mtf_result, dict):
-                        mtf_data = mtf_result.get("trends", {})
+                        mtf_data = mtf_result.get("trends", mtf_data)
                         aligned_count = mtf_result.get("aligned_count", 0)
-                        agreement = mtf_result.get("agreement", 0.0)
-
+                        agreement = mtf_result.get("agreement", 0.0) * 100
                 else:
                     logger.warning("⚠️ MTF Filter недоступен!")
-                    for tf in ["1h", "4h", "1d"]:
-                        mtf_data[tf] = {"direction": "UNKNOWN", "strength": 0.0}
+                    # ✅ ИНИЦИАЛИЗИРУЕМ ДЕФОЛТНЫМИ ЗНАЧЕНИЯМИ:
+                    mtf_data = {
+                        "1h": {"direction": "UNKNOWN", "strength": 0.0},
+                        "4h": {"direction": "UNKNOWN", "strength": 0.0},
+                        "1d": {"direction": "UNKNOWN", "strength": 0.0},
+                    }
 
             except Exception as e:
                 logger.error(
                     f"❌ cmd_scenario: Ошибка MTF для {symbol}: {e}", exc_info=True
                 )
-                for tf in ["1h", "4h", "1d"]:
-                    mtf_data[tf] = {"direction": "UNKNOWN", "strength": 0.0}
-
-            logger.debug(
-                f"cmd_scenario: MTF для {symbol} - aligned={aligned_count}/3, agreement={agreement:.0f}%"
-            )
+                # ✅ ИНИЦИАЛИЗИРУЕМ ДЕФОЛТНЫМИ ЗНАЧЕНИЯМИ:
+                mtf_data = {
+                    "1h": {"direction": "UNKNOWN", "strength": 0.0},
+                    "4h": {"direction": "UNKNOWN", "strength": 0.0},
+                    "1d": {"direction": "UNKNOWN", "strength": 0.0},
+                }
 
             # ✅ ШАГ 6: Определяем сценарий через scenario_matcher
             scenario_name = "Unknown"
@@ -2552,20 +2556,45 @@ class TelegramBotHandler:
 
             try:
                 if hasattr(self.bot_instance, "scenario_matcher"):
-                    # Подготавливаем данные для сценария
-                    scenario_data = {
+                    # ✅ ПРАВИЛЬНО: Подготавливаем ВСЕ параметры
+                    # 1. Market Data
+                    market_data = {
                         "price": price,
-                        "cvd_percent": cvd_pct,
-                        "volume_multiplier": volume_multiplier,
+                        "volume_24h": volume_24h,
                         "funding_rate": funding_rate,
-                        "long_short_ratio": ls_ratio,
-                        "trend_1h": mtf_data.get("1h", {}).get("direction", "UNKNOWN"),
-                        "trend_4h": mtf_data.get("4h", {}).get("direction", "UNKNOWN"),
-                        "trend_1d": mtf_data.get("1d", {}).get("direction", "UNKNOWN"),
+                        "ls_ratio": ls_ratio,
+                        "cvd": cvd_pct,
                     }
 
+                    # 2. Indicators (базовые значения)
+                    indicators = {
+                        "rsi": 50,  # TODO: получить реальный RSI
+                        "macd": 0,  # TODO: получить реальный MACD
+                        "trend": mtf_data.get("1h", {}).get("direction", "NEUTRAL"),
+                    }
+
+                    # 3. MTF Trends
+                    mtf_trends = mtf_data
+
+                    # 4. Volume Profile (пустой если нет данных)
+                    volume_profile = {}
+
+                    # 5. News Sentiment (нейтральный по умолчанию)
+                    news_sentiment = "neutral"
+
+                    # 6. Veto Checks (пустой)
+                    veto_checks = {}
+
+                    # ✅ ПРАВИЛЬНЫЙ ВЫЗОВ С 7 ПАРАМЕТРАМИ:
                     scenario_result = self.bot_instance.scenario_matcher.match_scenario(
-                        scenario_data
+                        symbol,  # 1. symbol
+                        "spot",  # 2. scenario_type
+                        market_data,  # 3. market_data
+                        indicators,  # 4. indicators
+                        mtf_trends,  # 5. mtf_trends
+                        volume_profile,  # 6. volume_profile
+                        news_sentiment,  # 7. news_sentiment
+                        veto_checks,  # 8. veto_checks
                     )
 
                     if scenario_result:
