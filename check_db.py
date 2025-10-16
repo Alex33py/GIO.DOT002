@@ -1,16 +1,33 @@
-import sqlite3
+﻿import sqlite3
 
-# Подключаемся к БД
-conn = sqlite3.connect("D:/GIO.BOT.02/data/gio_bot.db")
+conn = sqlite3.connect('gio_bot.db')
 cursor = conn.cursor()
 
-# Получаем структуру таблицы signals
-cursor.execute("PRAGMA table_info(signals)")
-columns = cursor.fetchall()
+# Список таблиц
+tables = cursor.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+print('📊 Таблицы в БД:', [t[0] for t in tables])
 
-print("📊 Структура таблицы 'signals':")
-print("=" * 50)
-for col in columns:
-    print(f"{col[1]:20} | {col[2]:10} | NOT NULL: {col[3]}")
+# Если нет signals — создай
+if 'signals' not in [t[0] for t in tables]:
+    cursor.execute('''
+        CREATE TABLE signals (
+            id INTEGER PRIMARY KEY,
+            symbol TEXT,
+            direction TEXT,
+            entry_price REAL,
+            stop_loss REAL,
+            take_profit_1 REAL,
+            take_profit_2 REAL,
+            take_profit_3 REAL,
+            scenario TEXT,
+            confidence REAL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            status TEXT DEFAULT 'active'
+        )
+    ''')
+    conn.commit()
+    print('✅ Таблица signals создана!')
+else:
+    print('✅ Таблица signals уже существует!')
 
 conn.close()

@@ -32,6 +32,7 @@ class TelegramBotHandler:
         self.application = None
         self.is_running = False
         self.gio_dashboard = GIODashboardHandler(bot_instance)
+        self.db_path = os.path.join(DATA_DIR, "gio_bot.db")
 
         if not self.enabled:
             logger.warning("⚠️ Telegram bot disabled")
@@ -57,7 +58,7 @@ class TelegramBotHandler:
                 CommandHandler("signal_history", self.cmd_signal_history)
             )
             self.application.add_handler(CommandHandler("analyze", self.cmd_analyze))
-            self.application.add_handler(CommandHandler("trades", self.cmd_trades))
+            #  self.application.add_handler(CommandHandler("trades", self.cmd_trades))
             self.application.add_handler(CommandHandler("stats", self.cmd_stats))
             self.application.add_handler(CommandHandler("signals", self.cmd_signals))
             self.application.add_handler(
@@ -78,7 +79,7 @@ class TelegramBotHandler:
             self.application.add_handler(
                 CommandHandler("available", self.cmd_available)
             )
-            self.application.add_handler(CommandHandler("roi", self.cmd_roi))
+            #  self.application.add_handler(CommandHandler("roi", self.cmd_roi))
             self.application.add_handler(CommandHandler("mtf", self.cmd_mtf))
             self.application.add_handler(CommandHandler("filters", self.cmd_filters))
             self.application.add_handler(CommandHandler("scenario", self.cmd_scenario))
@@ -95,6 +96,15 @@ class TelegramBotHandler:
             self.application.add_handler(
                 CommandHandler("overview", self.market_overview_handler.cmd_overview)
             )
+            self.application.add_handler(
+                CommandHandler("dashboard", self.cmd_dashboard)
+            )
+
+            # ===== UNIFIED DASHBOARD (NEW!) =====
+            self.application.add_handler(
+                CommandHandler("dashboard", self.cmd_dashboard)
+            )
+            logger.info("✅ Unified Dashboard handler registered")
 
             # Correlation commands
             self.application.add_handler(
@@ -259,53 +269,48 @@ class TelegramBotHandler:
             username = update.effective_user.username or "Unknown"
             logger.info(f"📋 cmd_help вызвана (user_id={user_id}, username={username})")
 
-            text = """📋 GIO MARKET INTELLIGENCE — КОМАНДЫ
+            text = """📋 <b>GIO MARKET INTELLIGENCE — КОМАНДЫ</b>
 
-    🎯 Главные Дашборды:
-    • /gio [SYMBOL] — Unified Market Intelligence Dashboard
-    • /overview — Multi-Symbol Market Overview (8 активов)
-    • /market [SYMBOL] — Главный дашборд рынка
+        🎯 <b>Главный Дашборд (НОВОЕ!):</b>
+        • /dashboard — Unified GIO Dashboard (все метрики)
+        • /dashboard live — С автообновлением (60 мин)
 
-    📊 Продвинутая Аналитика:
-    • /advanced SYMBOL — Продвинутые индикаторы
-    • /scenario SYMBOL — Текущий сценарий ММ и фаза Wyckoff
-    • /filters — Статус фильтров (Confirm, Multi-TF)
-    • /mtf SYMBOL — Multi-Timeframe тренды (1H/4H/1D)
+        📊 <b>Детальный Анализ:</b>
+        • /market SYMBOL — Глубокий анализ актива
+        • /scenario SYMBOL — MM сценарий и фаза Wyckoff
+        • /advanced SYMBOL — Продвинутые индикаторы
+        • /mtf SYMBOL — Multi-Timeframe тренды
 
-    📈 Корреляция  и Sentiment:
-    • /correlation — Матрица корреляций топ-5 активов
-    • /corrpair SYMBOL1 SYMBOL2 — Корреляция между двумя активами
+        📈 <b>Обзор Рынка:</b>
+        • /overview — Multi-Symbol Overview (8 активов)
+        • /correlation — Матрица корреляций топ-5
 
-    💧 Ликвидность и Киты:
-    • /liquidity [SYMBOL] — Анализ глубины ликвидности и whale walls
+        💧 <b>Ликвидность:</b>
+        • /liquidity SYMBOL — Анализ глубины ликвидности
 
-    📊 Производительность Сигналов:
-    • /performance [days] — Статистика производительности сигналов
-    • /bestsignals — Топ-10 лучших сигналов
-    • /worstsignals — Топ-10 худших сигналов
+        📊 <b>Статистика:</b>
+        • /performance [days] — Статистика сигналов
+        • /bestsignals — Топ-10 лучших сигналов
+        • /worstsignals — Топ-10 худших сигналов
 
-    🔧 Системные:
-    • /status — Статус системы
-    • /pairs — Список отслеживаемых пар
-    • /add SYMBOL — Добавить новую пару
-    • /remove SYMBOL — Удалить пару
+        🔧 <b>Вспомогательные:</b>
+        • /status — Статус системы
+        • /pairs — Список отслеживаемых пар
+
+        ━━━━━━━━━━━━━━━━━━━━━━
+
+    💡 <b>Примеры использования:</b>
+        /dashboard live
+        /market BTCUSDT
+        /scenario ETHUSDT
 
     ━━━━━━━━━━━━━━━━━━━━━━
+        📖 <b>О GIO:</b>
+    GIO Market Intelligence - аналитическая
+    платформа с AI-интерпретацией данных.
+    🎯 Фокус: Аналитика, Сигналы, Уведомления"""
 
-💡 Примеры использования:
-    /gio BTCUSDT
-    /overview
-    /market ETHUSDT
-    /advanced SOLUSDT
-    /performance 7
-
-━━━━━━━━━━━━━━━━━━━━━━
-    📖 О GIO:
-GIO Market Intelligence - это аналитическая
-платформа для трейдеров,  с AI-интерпретацией рыночных данных.
-🎯 Фокус: Аналитика, Сигналы, Уведомления"""
-
-            await update.message.reply_text(text)
+            await update.message.reply_text(text, parse_mode=ParseMode.HTML)
             logger.info(f"✅ cmd_help успешно отправлена (username={username})")
 
         except Exception as e:
@@ -2658,29 +2663,52 @@ GIO Market Intelligence - это аналитическая
             else:
                 recommendation = "Ожидайте подтверждения"
 
-            message = f"""📊 СЦЕНАРИЙ ДЛЯ {symbol}
+                # ===== МАППИНГ ЭМОДЗИ ДЛЯ ФАЗ =====
+                PHASE_EMOJI = {
+                    "ACCUMULATION": "🟢",
+                    "MARKUP": "🚀",
+                    "DISTRIBUTION": "🔴",
+                    "MARKDOWN": "📉",
+                    "Spring": "🌱",
+                    "UTAD": "⚠️",
+                    "Phase C": "💪",
+                    "Unknown": "❓",
+                }
 
-    🎯 Текущий сценарий: {scenario_name}
-    📈 Фаза рынка: {market_phase} ({confidence:.0f}% conf)
-    🏛️ Фаза Wyckoff: {wyckoff_phase}
-    ⚡ Стратегия: {strategy}
-    💪 Качество: {quality:.1f}%
+                # ===== МАППИНГ ЭМОДЗИ ДЛЯ MTF ТРЕНДОВ =====
+                mtf_trend_emoji = {
+                    "UP": "🟢",
+                    "DOWN": "🔴",
+                    "SIDEWAYS": "↔️",
+                    "UNKNOWN": "❓",
+                }
 
-    🔍 Условия:
-    ├─ CVD: {cvd_pct:+.1f}% {cvd_emoji}
-    ├─ Volume: {volume_multiplier:.1f}x {vol_emoji}
-    ├─ Funding: {funding_rate:+.3f}% {funding_emoji}
-    ├─ L/S Ratio: {ls_ratio:.2f} {ls_emoji}
-    └─ MTF: {aligned_count}/3 aligned ({agreement:.0f}%)
+                phase_emoji = PHASE_EMOJI.get(market_phase, "❓")
 
-    🎯 Multi-Timeframe:
-    ├─ 1H: {mtf_data.get('1h', {}).get('direction', 'UNKNOWN')} {mtf_trend_emoji.get(mtf_data.get('1h', {}).get('direction', 'UNKNOWN'), '↔️')}
-    ├─ 4H: {mtf_data.get('4h', {}).get('direction', 'UNKNOWN')} {mtf_trend_emoji.get(mtf_data.get('4h', {}).get('direction', 'UNKNOWN'), '↔️')}
-    └─ 1D: {mtf_data.get('1d', {}).get('direction', 'UNKNOWN')} {mtf_trend_emoji.get(mtf_data.get('1d', {}).get('direction', 'UNKNOWN'), '↔️')}
+                # ===== ФОРМИРУЕМ УЛУЧШЕННОЕ СООБЩЕНИЕ =====
+                message = f"""📊 <b>СЦЕНАРИЙ ДЛЯ {symbol}</b>
 
-    💡 Рекомендация: {recommendation}
+            {phase_emoji} <b>Текущий сценарий:</b> {scenario_name}
+            📈 <b>Фаза рынка:</b> {market_phase} ({confidence:.0f}% conf)
+            🏛️ <b>Фаза Wyckoff:</b> {wyckoff_phase}
+            ⚡ <b>Стратегия:</b> {strategy}
+            💪 <b>Качество:</b> {quality:.1f}%
 
-    ⏱️ Обновлено: {datetime.now().strftime('%H:%M:%S')}"""
+            🔍 Условия:
+            ├─ CVD: {cvd_pct:+.1f}% {cvd_emoji}
+            ├─ Volume: {volume_multiplier:.1f}x {vol_emoji}
+            ├─ Funding: {funding_rate:+.3f}% {funding_emoji}
+            ├─ L/S Ratio: {ls_ratio:.2f} {ls_emoji}
+            └─ MTF: {aligned_count}/3 aligned ({agreement:.0f}%)
+
+            🎯 Multi-Timeframe:
+            ├─ 1H: {mtf_data.get('1h', {}).get('direction', 'UNKNOWN')} {mtf_trend_emoji.get(mtf_data.get('1h', {}).get('direction', 'UNKNOWN'), '↔️')}
+            ├─ 4H: {mtf_data.get('4h', {}).get('direction', 'UNKNOWN')} {mtf_trend_emoji.get(mtf_data.get('4h', {}).get('direction', 'UNKNOWN'), '↔️')}
+            └─ 1D: {mtf_data.get('1d', {}).get('direction', 'UNKNOWN')} {mtf_trend_emoji.get(mtf_data.get('1d', {}).get('direction', 'UNKNOWN'), '↔️')}
+
+            💡 Рекомендация: {recommendation}
+
+            ⏱️ Обновлено: {datetime.now().strftime('%H:%M:%S')}"""
 
             await update.message.reply_text(message)
             logger.debug(f"cmd_scenario: {symbol} - успешно отправлено")
@@ -2688,3 +2716,482 @@ GIO Market Intelligence - это аналитическая
         except Exception as e:
             logger.error(f"Ошибка в cmd_scenario: {e}", exc_info=True)
             await update.message.reply_text(f"❌ Ошибка: {str(e)}")
+
+        # ======================== UNIFIED DASHBOARD ========================
+
+    async def cmd_dashboard(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        🎯 UNIFIED GIO DASHBOARD - Главный дашборд
+        """
+        try:
+            user_id = update.effective_user.id
+            username = update.effective_user.username or "Unknown"
+            logger.info(f"📊 /dashboard от {username} (user_id={user_id})")
+
+            # Проверяем аргументы
+            auto_update = context.args and context.args[0].lower() == "live"
+
+            # Отправляем статус
+            loading_msg = await update.message.reply_text(
+                "📊 Загрузка GIO Unified Dashboard...\n" "⏳ Это займёт 5-10 секунд..."
+            )
+
+            # Генерируем dashboard
+            dashboard_text = await self._generate_unified_dashboard()
+
+            # Удаляем loading сообщение
+            await loading_msg.delete()
+
+            # Отправляем dashboard
+            message = await update.message.reply_text(
+                dashboard_text, parse_mode=ParseMode.HTML
+            )
+
+            # Если live режим - запускаем автообновление
+            if auto_update:
+                await self._start_dashboard_auto_update(message, context)
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка cmd_dashboard: {e}", exc_info=True)
+            await update.message.reply_text(f"❌ Ошибка: {str(e)}")
+
+    async def _generate_unified_dashboard(self, limit: int = 8) -> str:
+        """
+        Генерация Unified Dashboard с категоризацией сигналов
+        """
+        try:
+            # Получение символов для анализа
+            try:
+                from config.settings import TRACKED_SYMBOLS
+
+                symbols = TRACKED_SYMBOLS[:8]  # ← ИЗМЕНЕНО: limit → 8
+            except:
+                symbols = [
+                    "BTCUSDT",
+                    "ETHUSDT",
+                    "SOLUSDT",
+                    "XRPUSDT",
+                    "BNBUSDT",
+                    "DOGEUSDT",
+                    "ADAUSDT",
+                    "AVAXUSDT",
+                ]
+
+            # 1. TOP OPPORTUNITIES
+            opportunities = []
+            try:
+                with sqlite3.connect(self.db_path) as conn:
+                    query = """
+                        SELECT
+                            symbol,
+                            direction,
+                            entry_price,
+                            scenario_id,
+                            scenario_score,
+                            timestamp,
+                            tp1_price,
+                            tp2_price,
+                            tp3_price,
+                            sl_price
+                        FROM unified_signals
+                        WHERE status = 'ACTIVE'
+                            AND scenario_score >= 40
+                            AND entry_price > 0
+                        ORDER BY scenario_score DESC, timestamp DESC
+                        LIMIT 10
+                    """
+
+                    df = pd.read_sql_query(query, conn)
+
+                    if not df.empty:
+                        logger.info(f"✅ Found {len(df)} opportunities")
+                        for _, row in df.iterrows():
+                            opportunities.append(
+                                {
+                                    "symbol": row["symbol"],
+                                    "direction": row["direction"],
+                                    "entry": float(row["entry_price"]),
+                                    "scenario_id": row.get("scenario_id", "N/A"),
+                                    "score": float(row.get("scenario_score", 0)),
+                                    "tp1": (
+                                        float(row.get("tp1_price", 0))
+                                        if row.get("tp1_price")
+                                        else None
+                                    ),
+                                    "tp2": (
+                                        float(row.get("tp2_price", 0))
+                                        if row.get("tp2_price")
+                                        else None
+                                    ),
+                                    "tp3": (
+                                        float(row.get("tp3_price", 0))
+                                        if row.get("tp3_price")
+                                        else None
+                                    ),
+                                    "sl": (
+                                        float(row.get("sl_price", 0))
+                                        if row.get("sl_price")
+                                        else None
+                                    ),
+                                }
+                            )
+                    else:
+                        logger.warning("⚠️ No opportunities in unified_signals")
+
+            except Exception as e:
+                logger.error(f"❌ Opportunities error: {e}", exc_info=True)
+
+            # 2. MARKET OVERVIEW
+            market_overview = []
+            for symbol in symbols[:8]:
+                try:
+                    if hasattr(self.bot_instance, "bybit_connector"):
+                        ticker = await self.bot_instance.bybit_connector.get_ticker(
+                            symbol
+                        )
+                        if ticker:
+                            market_overview.append(
+                                {
+                                    "symbol": symbol,
+                                    "price": float(ticker.get("lastPrice", 0)),
+                                    "change": float(ticker.get("price24hPcnt", 0))
+                                    * 100,
+                                }
+                            )
+                except Exception as e:
+                    logger.error(f"❌ Market overview error {symbol}: {e}")
+
+            # 3. INSTITUTIONAL PRESSURE
+            institutional_data = []
+            for symbol in symbols[:8]:
+                try:
+                    if hasattr(self.bot_instance, "bybit_connector"):
+                        pressure = await self._calculate_institutional_pressure(symbol)
+                        institutional_data.append(
+                            {"symbol": symbol, "pressure": pressure}
+                        )
+                except Exception as e:
+                    logger.error(f"❌ Institutional pressure error {symbol}: {e}")
+
+            # 4. WHALE ACTIVITY
+            whale_activity = []
+            try:
+                with sqlite3.connect(self.db_path) as conn:
+                    query_whales = """
+                        SELECT symbol, side, size_usd, timestamp
+                        FROM large_trades
+                        WHERE timestamp > datetime('now', '-15 minutes')
+                        ORDER BY timestamp DESC
+                        LIMIT 10
+                    """
+                    df = pd.read_sql_query(query_whales, conn)
+
+                    if not df.empty:
+                        for _, row in df.iterrows():
+                            whale_activity.append(
+                                {
+                                    "symbol": row["symbol"],
+                                    "side": row["side"],
+                                    "size": float(row["size_usd"]),
+                                }
+                            )
+            except Exception as e:
+                logger.error(f"❌ Whale activity error: {e}")
+
+            # Форматируем dashboard
+            dashboard_text = self._format_unified_dashboard(
+                opportunities, market_overview, institutional_data, whale_activity
+            )
+
+            return dashboard_text
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка _generate_unified_dashboard: {e}", exc_info=True)
+            return "❌ Ошибка генерации dashboard"
+
+    def _format_unified_dashboard(
+        self, opportunities, market_overview, institutional_data, whale_activity
+    ) -> str:
+        """
+        Форматирование Unified Dashboard - готовый текст
+        """
+        now = datetime.now().strftime("%H:%M:%S")
+
+        message = "📊 GIO UNIFIED DASHBOARD\n"
+        message += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+
+        # 1. TOP OPPORTUNITIES - ✅ УЛУЧШЕННОЕ ФОРМАТИРОВАНИЕ
+        message += "🔥 TOP OPPORTUNITIES (MM SCENARIOS)\n\n"
+        if opportunities:
+            for i, opp in enumerate(opportunities[:5], 1):  # Топ-5 с нумерацией
+                direction_emoji = "🟢" if opp["direction"] == "LONG" else "🔴"
+
+                # Форматирование цены входа
+                entry_price = opp["entry"]
+                if entry_price >= 1000:
+                    entry_str = f"${entry_price:,.0f}"  # 111,234
+                elif entry_price >= 1:
+                    entry_str = f"${entry_price:.2f}"  # $123.45
+                else:
+                    entry_str = f"${entry_price:.4f}"  # $0.1234
+
+                # Базовая информация
+                message += (
+                    f"{i}. {direction_emoji} {opp['symbol']} | "
+                    f"Scenario: {opp['scenario_id']}\n"
+                    f"   Entry: {entry_str} | "
+                    f"Confidence: {opp['score']:.1f}%"
+                )
+
+                # Добавляем TP/SL если есть
+                if opp.get("tp1"):
+                    tp1 = opp["tp1"]
+                    tp1_str = f"${tp1:,.2f}" if tp1 >= 1 else f"${tp1:.4f}"
+                    message += f" | TP1: {tp1_str}"
+
+                if opp.get("sl"):
+                    sl = opp["sl"]
+                    sl_str = f"${sl:,.2f}" if sl >= 1 else f"${sl:.4f}"
+                    message += f" | SL: {sl_str}"
+
+                message += "\n\n"
+        else:
+            message += "⚠️ No active MM signals found\n\n"
+            message += "💡 Signals appear when:\n"
+            message += "  • High-confidence scenarios detected (40%+)\n"
+            message += "  • Valid entry price calculated\n"
+            message += "  • Market conditions match MM patterns\n\n"
+
+        # MARKET OVERVIEW
+        message += "💰 MARKET OVERVIEW\n\n"
+        if market_overview:
+            for market in market_overview:
+                emoji = "🟢" if market["change"] > 0 else "🔴"
+                message += f"{market['symbol']}: ${market['price']:.2f} {emoji} {market['change']:+.2f}%\n"
+        else:
+            message += "No market data\n"
+        message += "\n"
+
+        # INSTITUTIONAL PRESSURE
+        message += "🏛️ INSTITUTIONAL PRESSURE\n\n"
+        if institutional_data:
+            for inst in institutional_data:
+                pressure = inst["pressure"]
+                if pressure > 0:
+                    emoji = "🟢 BULLISH"
+                elif pressure < 0:
+                    emoji = "🔴 BEARISH"
+                else:
+                    emoji = "⚪ NEUTRAL"
+                message += f"{inst['symbol']}: {emoji} ({pressure:+.1f})\n"
+        else:
+            message += "No institutional data\n"
+        message += "\n"
+
+        # WHALE ACTIVITY
+        message += "🐋 WHALE ACTIVITY\n\n"
+        if whale_activity:
+            for whale in whale_activity:
+                message += f"{whale['symbol']}: {whale['action']}\n"
+        else:
+            message += "No whale activity detected\n"
+        message += "\n"
+
+        # FOOTER
+        message += "━━━━━━━━━━━━━━━━━━━━━━\n"
+        message += f"⏱️ Updated: {now}\n"
+        message += "🔄 Use /dashboard live for auto-update"
+
+        return message
+
+    def _calculate_heat(self, change_24h, volume_24h):
+        """Вычисление уровня "жара" рынка"""
+        if abs(change_24h) > 10 or volume_24h > 1_000_000_000:
+            return "🔥🔥"
+        elif abs(change_24h) > 5 or volume_24h > 500_000_000:
+            return "🔥"
+        elif abs(change_24h) < 1 and volume_24h < 100_000_000:
+            return "❄️"
+        else:
+            return "⚪"
+
+    def _get_phase_emoji(self, phase):
+        """Получение эмодзи для фазы"""
+        phase_map = {
+            "ACCUMULATION": "🟢",
+            "MARKUP": "🚀",
+            "DISTRIBUTION": "🔴",
+            "MARKDOWN": "📉",
+            "Unknown": "❓",
+        }
+        return phase_map.get(phase, "⚪")
+
+    async def _calculate_institutional_pressure(self, symbol: str) -> float:
+        """Расчёт институционального давления"""
+        try:
+            pressure_sum = 0.0
+            count = 0
+
+            # Bybit L2
+            if hasattr(self.bot_instance, "orderbook_pressure"):
+                bybit_pressure = self.bot_instance.orderbook_pressure.get(symbol, 0)
+                pressure_sum += bybit_pressure
+                count += 1
+
+            # OKX давление
+            if (
+                hasattr(self.bot_instance, "okx_connector")
+                and self.bot_instance.okx_connector
+            ):
+                okx_symbol = symbol.replace("USDT", "-USDT")  # BTC-USDT формат
+                okx_pressure = self.bot_instance.okx_connector.get_orderbook_pressure(
+                    okx_symbol
+                )
+                pressure_sum += okx_pressure
+                count += 1
+
+            # Binance давление (через L2 orderbook_data)
+            if (
+                hasattr(self.bot_instance, "binance_orderbook_ws")
+                and self.bot_instance.binance_orderbook_ws
+            ):
+                try:
+                    ob_data = self.bot_instance.binance_orderbook_ws.orderbook_data.get(
+                        symbol, {}
+                    )
+                    if ob_data:
+                        bids = ob_data.get("bids", [])
+                        asks = ob_data.get("asks", [])
+
+                        if bids and asks:
+                            bid_volume = sum([float(bid[1]) for bid in bids[:20]])
+                            ask_volume = sum([float(ask[1]) for ask in asks[:20]])
+
+                            if bid_volume + ask_volume > 0:
+                                buy_pressure = (
+                                    bid_volume / (bid_volume + ask_volume)
+                                ) * 100
+                                binance_pressure = (buy_pressure - 50) * 2
+
+                                pressure_sum += binance_pressure
+                                count += 1
+                except Exception as e:
+                    logger.debug(f"⚠️ Binance pressure error {symbol}: {e}")
+
+            # ✅ COINBASE ДАВЛЕНИЕ (НОВОЕ!)
+            if (
+                hasattr(self.bot_instance, "coinbase_connector")
+                and self.bot_instance.coinbase_connector
+            ):
+                try:
+                    # Coinbase формат: BTC-USD → меняем на BTC-USDT
+                    coinbase_symbol = symbol.replace("USDT", "-USD")
+
+                    # Проверяем, есть ли метод get_orderbook_pressure
+                    if hasattr(
+                        self.bot_instance.coinbase_connector, "get_orderbook_pressure"
+                    ):
+                        coinbase_pressure = (
+                            self.bot_instance.coinbase_connector.get_orderbook_pressure(
+                                coinbase_symbol
+                            )
+                        )
+                        pressure_sum += coinbase_pressure
+                        count += 1
+                    else:
+                        # Если нет метода, рассчитываем вручную
+                        ob_data = (
+                            self.bot_instance.coinbase_connector.orderbook_data.get(
+                                coinbase_symbol, {}
+                            )
+                        )
+                        if ob_data:
+                            bids = ob_data.get("bids", [])
+                            asks = ob_data.get("asks", [])
+
+                            if bids and asks:
+                                bid_volume = sum([float(bid[1]) for bid in bids[:20]])
+                                ask_volume = sum([float(ask[1]) for ask in asks[:20]])
+
+                                if bid_volume + ask_volume > 0:
+                                    buy_pressure = (
+                                        bid_volume / (bid_volume + ask_volume)
+                                    ) * 100
+                                    coinbase_pressure = (buy_pressure - 50) * 2
+
+                                    pressure_sum += coinbase_pressure
+                                    count += 1
+                except Exception as e:
+                    logger.debug(f"⚠️ Coinbase pressure error {symbol}: {e}")
+
+            # Среднее давление
+            if count > 0:
+                avg_pressure = pressure_sum / count
+                logger.debug(
+                    f"📊 {symbol} Institutional Pressure: {avg_pressure:+.1f}% (from {count} exchanges)"
+                )
+                return avg_pressure
+            return 0.0
+
+        except Exception as e:
+            logger.error(f"❌ _calculate_institutional_pressure error {symbol}: {e}")
+            return 0.0
+
+    def _calculate_pressure(
+        self, cvd_pct: float, ls_ratio: float, funding: float
+    ) -> str:
+        """Вычисление институционального давления"""
+        try:
+            # Сильное покупательское давление
+            if cvd_pct > 10 and ls_ratio > 1.2 and funding > 0.01:
+                return "🟢 Strong BUY"
+
+            # Сильное продавательское давление
+            elif cvd_pct < -10 and ls_ratio < 0.8 and funding < -0.01:
+                return "🔴 Strong SELL"
+
+            # Умеренное покупательское давление
+            elif cvd_pct > 5:
+                return "🟢 Moderate BUY"
+
+            # Умеренное продавательское давление
+            elif cvd_pct < -5:
+                return "🔴 Moderate SELL"
+
+            # Нейтральное
+            else:
+                return "⚪ Neutral"
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка _calculate_pressure: {e}")
+            return "⚪ Unknown"
+
+    async def _start_dashboard_auto_update(self, message, context):
+        """Запуск автообновления dashboard"""
+        try:
+            logger.info("🔄 Запуск автообновления Dashboard (5 мин)")
+
+            # Автообновление 12 раз (60 минут)
+            for i in range(12):
+                await asyncio.sleep(300)  # 5 минут
+
+                try:
+                    # Генерируем обновлённый dashboard
+                    dashboard_text = await self._generate_unified_dashboard()
+
+                    # Обновляем сообщение
+                    await message.edit_text(dashboard_text, parse_mode=ParseMode.HTML)
+                    logger.info(f"✅ Dashboard обновлён ({i+1}/12)")
+
+                except Exception as e:
+                    logger.error(f"❌ Ошибка обновления Dashboard: {e}")
+                    break
+
+            # После 60 минут
+            await message.reply_text(
+                "⏹️ Автообновление завершено (60 мин).\n"
+                "Используйте /dashboard live для перезапуска."
+            )
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка _start_dashboard_auto_update: {e}")

@@ -22,7 +22,7 @@ class SignalRecorder:
         symbol: str,
         direction: str,
         entry_price: float,
-        stop_loss: float,
+        sl: float,
         tp1: float,
         tp2: float,
         tp3: float,
@@ -48,7 +48,7 @@ class SignalRecorder:
                 """
                 INSERT INTO signals (
                     symbol, direction, entry_price,
-                    stop_loss, tp1, tp2, tp3,
+                    sl, tp1, tp2, tp3,
                     scenario_id, status, quality_score, risk_reward,
                     strategy, market_regime, confidence,
                     phase, risk_profile, tactic_name,
@@ -60,7 +60,7 @@ class SignalRecorder:
                     symbol,
                     direction,
                     entry_price,
-                    stop_loss,
+                    sl,
                     tp1,
                     tp2,
                     tp3,
@@ -92,7 +92,6 @@ class SignalRecorder:
             logger.error(f"❌ Ошибка record_signal: {e}")
             return 0
 
-
     # ========== НОВЫЕ МЕТОДЫ (ДОБАВИТЬ ЗДЕСЬ) ==========
 
     def get_active_signals(self) -> List[Dict]:
@@ -105,7 +104,7 @@ class SignalRecorder:
                 """
                 SELECT
                     id, symbol, direction, entry_price,
-                    stop_loss, tp1, tp2, tp3,
+                    sl, tp1, tp2, tp3,
                     scenario_id, status, quality_score, risk_reward,
                     COALESCE(tp1_hit, 0) as tp1_hit,
                     COALESCE(tp2_hit, 0) as tp2_hit,
@@ -131,7 +130,7 @@ class SignalRecorder:
                         "symbol": row[1],
                         "direction": row[2],
                         "entry_price": row[3],
-                        "stop_loss": row[4],
+                        "sl": row[4],
                         "tp1": row[5],
                         "tp2": row[6],
                         "tp3": row[7],
@@ -142,9 +141,9 @@ class SignalRecorder:
                         "tp1_hit": row[12],
                         "tp2_hit": row[13],
                         "tp3_hit": row[14],
-                        "strategy": row[15],           # ← ДОБАВЛЕНО
-                        "market_regime": row[16],      # ← ДОБАВЛЕНО
-                        "confidence": row[17],         # ← ДОБАВЛЕНО
+                        "strategy": row[15],  # ← ДОБАВЛЕНО
+                        "market_regime": row[16],  # ← ДОБАВЛЕНО
+                        "confidence": row[17],  # ← ДОБАВЛЕНО
                     }
                 )
 
@@ -153,7 +152,6 @@ class SignalRecorder:
         except Exception as e:
             logger.error(f"❌ Ошибка get_active_signals: {e}")
             return []
-
 
     def update_signal_tp_reached(
         self, signal_id: int, tp_level: int, realized_roi: float
@@ -237,7 +235,7 @@ class SignalRecorder:
                 """
                 SELECT
                     id, symbol, direction, entry_price,
-                    stop_loss, tp1, tp2, tp3, exit_price,
+                    sl, tp1, tp2, tp3, exit_price,
                     profit_percent, scenario_id, status,
                     quality_score, risk_reward, timestamp,
                     COALESCE(strategy, 'unknown') as strategy,
@@ -261,7 +259,7 @@ class SignalRecorder:
                 "symbol": row[1],
                 "direction": row[2],
                 "entry_price": row[3],
-                "stop_loss": row[4],
+                "sl": row[4],
                 "tp1": row[5],
                 "tp2": row[6],
                 "tp3": row[7],
@@ -272,16 +270,15 @@ class SignalRecorder:
                 "quality_score": row[12],
                 "risk_reward": row[13],
                 "timestamp": row[14],
-                "strategy": row[15],           # ← ДОБАВЛЕНО
-                "market_regime": row[16],      # ← ДОБАВЛЕНО
-                "confidence": row[17],         # ← ДОБАВЛЕНО
-                "phase": row[18],              # ← ДОБАВЛЕНО
+                "strategy": row[15],  # ← ДОБАВЛЕНО
+                "market_regime": row[16],  # ← ДОБАВЛЕНО
+                "confidence": row[17],  # ← ДОБАВЛЕНО
+                "phase": row[18],  # ← ДОБАВЛЕНО
             }
 
         except Exception as e:
             logger.error(f"❌ Ошибка get_signal_by_id: {e}")
             return None
-
 
     def get_signal_stats(self, days: int = 30) -> Dict:
         """Получение статистики сигналов"""

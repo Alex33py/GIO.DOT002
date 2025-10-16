@@ -400,6 +400,10 @@ class GIOCryptoBot:
             logger.info("4️⃣ Инициализация аналитики...")
             self.mtf_analyzer = MultiTimeframeAnalyzer(self.bybit_connector)
             self.volume_calculator = EnhancedVolumeProfileCalculator()
+            from indicators.indicator_calculator import IndicatorCalculator
+
+            self.indicator_calculator = IndicatorCalculator()
+            logger.info("✅ IndicatorCalculator инициализирован")
 
             logger.info("🔍 DEBUG: Попытка импорта ClusterDetector...")
 
@@ -968,6 +972,43 @@ class GIOCryptoBot:
         except Exception as e:
             logger.error(f"❌ Coinbase ticker handler error: {e}", exc_info=True)
 
+    async def get_market_data(self, symbol: str) -> Dict:
+        """Получить market data для символа"""
+        try:
+            ticker = await self.bybit_connector.get_ticker(symbol)
+
+            if not ticker:
+                logger.warning(f"⚠️ Ticker не получен для {symbol}")
+                return {
+                    "symbol": symbol,
+                    "last_price": 0.0,
+                    "change_24h": 0.0,
+                    "volume_24h": 0.0,
+                }
+
+            # ✅ БЕЗОПАСНОЕ ИЗВЛЕЧЕНИЕ С ПРОВЕРКОЙ НА None
+            last_price = ticker.get("lastPrice")
+            price24h_pcnt = ticker.get("price24hPcnt")
+            volume24h = ticker.get("volume24h")
+
+            return {
+                "symbol": symbol,
+                "last_price": float(last_price) if last_price is not None else 0.0,
+                "change_24h": (
+                    (float(price24h_pcnt) * 100) if price24h_pcnt is not None else 0.0
+                ),
+                "volume_24h": float(volume24h) if volume24h is not None else 0.0,
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка получения market_data для {symbol}: {e}")
+            return {
+                "symbol": symbol,
+                "last_price": 0.0,
+                "change_24h": 0.0,
+                "volume_24h": 0.0,
+            }
+
     async def get_volume_profile(self, symbol: str) -> Optional[Dict]:
         """
         Получение Volume Profile с приоритетом L2 Orderbook
@@ -1174,6 +1215,135 @@ class GIOCryptoBot:
         except Exception as e:
             logger.error(f"❌ Ошибка настройки scheduler: {e}")
             raise
+
+    async def _get_unified_dashboard(self) -> str:
+        """
+        Генерирует unified dashboard с whale activity
+        """
+        try:
+            dashboard = "📊 GIO BOT DASHBOARD\n"
+            dashboard += "=" * 50 + "\n\n"
+
+            # 1. MARKET OVERVIEW
+            dashboard += "📈 MARKET OVERVIEW\n\n"
+
+            for symbol in TRACKED_SYMBOLS[:3]:  # Топ-3 символа
+                try:
+                    market_data = await self.get_market_data(symbol)
+                    price = market_data.get('last_price', 0)
+                    change = market_data.get('change_24h', 0)
+                    volume = market_data.get('volume_24h', 0)
+
+                    emoji = "🟢" if change > 0 else "🔴"
+                    dashboard += f"{emoji} {symbol}: ${price:,.2f} ({change:+.2f}%) Vol: ${volume:,.0f}\n"
+                except Exception as e:
+                    logger.error(f"Error getting market data for {symbol}: {e}")
+
+            dashboard += "\n"
+
+            # 2. 🐋 WHALE ACTIVITY SECTION (НОВОЕ!)
+            dashboard += "🐋 WHALE ACTIVITY\n\n"
+
+            # Получаем recent whale trades (последние 10 минут)
+            recent_whales = await self._get_recent_whale_trades(minutes=10)
+
+            if recent_whales:
+                for i, whale in enumerate(recent_whales[:5], 1):  # Топ-5
+                    symbol = whale['symbol']
+                    side = whale['side']
+                    size = whale['size']
+                    price = whale['price']
+                    value = whale['value']
+                    exchange = whale['exchange']
+
+                    emoji = "🟢" if side == "BUY" else "🔴"
+
+                    dashboard += f"{i}. {emoji} {exchange} {symbol}: {side} {size:.2f} @ ${price:,.2f} (${value:,.0f})\n"
+            else:
+                dashboard += "No whale activity detected\n"
+
+            dashboard += "\n"
+
+            # 3. ACTIVE SIGNALS (если есть)
+            dashboard += "🎯 ACTIVE SIGNALS\n\n"
+
+            if hasattr(self, 'position_tracker') and self.position_tracker:
+                positions = self.position_tracker.get_active_positions()
+
+                if positions:
+                    for pos in positions[:3]:  # Топ-3 позиции
+                        dashboard += f"• {pos['symbol']}: {pos['side']} @ ${pos['entry_price']:,.2f} (P&L: {pos['pnl']:+.2f}%)\n"
+                else:
+                    dashboard += "No active signals\n"
+            else:
+                dashboard += "Position tracker not initialized\n"
+
+            dashboard += "\n"
+            dashboard += "=" * 50
+
+            return dashboard
+
+        except Exception as e:
+            logger.error(f"❌ Dashboard error: {e}")
+            return "❌ Error generating dashboard"
+
+
+    async def _get_recent_whale_trades(self, minutes: int = 10) -> List[Dict]:
+        """
+        Получает крупные трейды за последние N минут
+
+        Args:
+            minutes: Временное окно в минутах
+
+        Returns:
+            List[Dict]: Список whale trades, отсортированный по значению
+        """
+        try:
+            from datetime import datetime, timedelta
+
+            cutoff_time = datetime.now() - timedelta(minutes=minutes)
+            recent_trades = []
+
+            # Проверяем все коннекторы
+            for connector_name in ['okx', 'bybit', 'binance', 'coinbase']:
+                # Получаем коннектор
+                connector = getattr(self, f'{connector_name}_connector', None)
+
+                if connector and hasattr(connector, 'large_trades'):
+                    # Извлекаем large_trades из коннектора
+                    for trade in connector.large_trades:
+                        # Проверяем timestamp
+                        if isinstance(trade.get('timestamp'), datetime):
+                            trade_time = trade['timestamp']
+                        else:
+                            # Если timestamp в миллисекундах/секундах
+                            ts = trade.get('timestamp', 0)
+                            if ts > 1e10:  # Миллисекунды
+                                trade_time = datetime.fromtimestamp(ts / 1000)
+                            else:  # Секунды
+                                trade_time = datetime.fromtimestamp(ts)
+
+                        # Фильтруем по времени
+                        if trade_time > cutoff_time:
+                            recent_trades.append({
+                                'symbol': trade.get('symbol', ''),
+                                'side': trade.get('side', ''),
+                                'size': trade.get('size', 0),
+                                'price': trade.get('price', 0),
+                                'value': trade.get('value', 0),
+                                'exchange': connector_name.upper(),
+                                'timestamp': trade_time
+                            })
+
+            # Сортируем по значению (убыванию)
+            recent_trades.sort(key=lambda x: x['value'], reverse=True)
+
+            return recent_trades[:10]  # Топ-10
+
+        except Exception as e:
+            logger.error(f"❌ Error getting whale trades: {e}")
+            return []
+
 
     async def analyze_symbol_with_validation(self, symbol: str):
         """Анализ символа с кросс-валидацией между биржами"""
@@ -1444,49 +1614,37 @@ class GIOCryptoBot:
             logger.error(f"❌ Ошибка обновления новостей: {e}")
 
     async def _health_monitor(self):
-        """Мониторинг здоровья WebSocket соединений"""
-        while True:
-            await asyncio.sleep(60)  # Проверка каждую минуту
-
+        """Health Monitor с защитой от NoneType"""
+        while self.is_running:
             try:
-                # Проверка Binance WebSocket
-                if hasattr(self, "binance_connector") and hasattr(
-                    self.binance_connector, "orderbook_ws"
-                ):
-                    stats = self.binance_connector.orderbook_ws.get_stats()
-                    is_healthy = self.binance_connector.orderbook_ws.is_healthy()
+                await asyncio.sleep(60)
 
-                    if is_healthy:
-                        logger.info(
-                            f"💚 Binance WS: Healthy | "
-                            f"Messages: {stats['total_messages']} | "
-                            f"Uptime: {stats['uptime_seconds']:.0f}s"
-                        )
+                # Проверка Scanner
+                if hasattr(self, "scanner") and self.scanner:
+                    if hasattr(self.scanner, "get_stats"):
+                        stats = self.scanner.get_stats()
+                        self.logger.info(f"🔍 Scanner: {stats}")
                     else:
-                        logger.warning(
-                            f"⚠️ Binance WS: Unhealthy | "
-                            f"Reconnects: {stats['reconnect_count']}"
-                        )
+                        self.logger.debug("⚠️ Scanner не имеет метода get_stats")
 
-                # Проверка Binance Orderbook WebSocket
-                if hasattr(self, "binance_orderbook_ws"):
-                    stats = self.binance_orderbook_ws.get_stats()
-                    is_healthy = self.binance_orderbook_ws.is_healthy()
-
-                    if is_healthy:
-                        logger.info(
-                            f"💚 Binance Orderbook WS: Healthy | "
-                            f"Messages: {stats['total_messages']} | "
-                            f"Uptime: {stats['uptime_seconds']:.0f}s"
-                        )
+                # Проверка ROI Tracker
+                if hasattr(self, "roi_tracker") and self.roi_tracker:
+                    if hasattr(self.roi_tracker, "get_stats"):
+                        stats = self.roi_tracker.get_stats()
+                        self.logger.info(f"💰 ROI Tracker: {stats}")
                     else:
-                        logger.warning(
-                            f"⚠️ Binance Orderbook WS: Unhealthy | "
-                            f"Reconnects: {stats['reconnect_count']}"
-                        )
+                        self.logger.debug("⚠️ ROI Tracker не имеет метода get_stats")
+
+                # Проверка Connectors
+                for name in ["okx", "bybit", "binance", "coinbase"]:
+                    if hasattr(self, name):
+                        connector = getattr(self, name, None)
+                        if connector and hasattr(connector, "is_connected"):
+                            status = "✅" if connector.is_connected() else "❌"
+                            self.logger.info(f"{status} {name.upper()} connector")
 
             except Exception as e:
-                logger.error(f"❌ Health monitor error: {e}")
+                self.logger.error(f"❌ Health monitor error: {e}")
 
     async def shutdown(self):
         """Корректная остановка бота"""

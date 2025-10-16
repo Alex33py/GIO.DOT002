@@ -86,7 +86,7 @@ class ROITracker:
     - Только отслеживает и уведомляет о результатах сигналов
     """
 
-    def __init__(self, bot, telegram_handler=None, db_path: str = "signals.db"):
+    def __init__(self, bot, telegram_handler=None, db_path: str = "gio_bot.db"):
         """
         Инициализация ROI Tracker
 
@@ -882,6 +882,17 @@ class ROITracker:
                     )
                 """
                 )
+
+                # ✅ ПРОВЕРИТЬ И ДОБАВИТЬ close_time ЕСЛИ ЕЁ НЕТ
+                cursor = await db.execute("PRAGMA table_info(signals)")
+                columns = await cursor.fetchall()
+                column_names = [col[1] for col in columns]
+
+                if "close_time" not in column_names:
+                    logger.info("🔧 Добавляем колонку close_time...")
+                    await db.execute("ALTER TABLE signals ADD COLUMN close_time TEXT")
+                    logger.info("✅ Колонка close_time добавлена")
+
                 await db.commit()
 
             logger.info("✅ База данных инициализирована")

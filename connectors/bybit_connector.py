@@ -40,6 +40,7 @@ class EnhancedBybitConnector:
 
         self.orderbook_cache = {}
         self.trades_cache = deque(maxlen=1000)
+        self.large_trades = deque(maxlen=1000)
         self.klines_cache = {}
         self.ticker_cache = {}
 
@@ -66,6 +67,12 @@ class EnhancedBybitConnector:
         self.ping_interval = 30
         self.reconnect_delay = 5
         self.max_reconnect_attempts = 10
+
+        # CVD tracking (НОВОЕ!)
+        self.cvd = {}  # {symbol: cumulative_delta}
+        self.cvd_window = 300  # 5 минут window для CVD
+        self.cvd_trades = {}  # {symbol: [(timestamp, delta), ...]}
+
 
         self.rate_limiter = get_rate_limiter()
         logger.info("✅ Rate Limiter интегрирован в EnhancedBybitConnector")
@@ -242,9 +249,11 @@ class EnhancedBybitConnector:
     async def _get_ticker(self, symbol: str) -> Optional[Dict]:
         """Получение данных тикера (с Rate Limiting и Cache)"""
         try:
-            # ✅ ПРОВЕРЯЕМ КЭШ
-            cached_ticker = await self.cache.get(symbol, namespace="ticker")
-            if cached_ticker is not None:
+            # ✅ ИСПОЛЬЗУЕМ АСИНХРОННЫЙ КЭШ
+            cache_key = f"ticker:{symbol}"
+            cached_ticker = await self.cache.get(cache_key, namespace="ticker")
+
+            if cached_ticker:
                 logger.debug(f"💾 Ticker {symbol} из кэша")
                 return cached_ticker
 
@@ -261,16 +270,11 @@ class EnhancedBybitConnector:
             for attempt in range(max_retries):
                 try:
                     async with self.session.get(url, params=params) as response:
-                        # Rate limit check
                         if response.status == 429:
-                            logger.warning(
-                                f"⚠️ Rate Limit (429) для ticker {symbol}, "
-                                f"retry {attempt+1}/{max_retries}"
-                            )
+                            logger.warning(f"⚠️ Rate Limit (429) для ticker {symbol}")
                             await backoff.sleep()
                             continue
 
-                        # Успешный ответ
                         if response.status == 200:
                             data = await response.json()
                             if data.get("retCode") == 0 and data.get("result"):
@@ -291,9 +295,9 @@ class EnhancedBybitConnector:
                                         "fundingRate": ticker_data.get("fundingRate"),
                                     }
 
-                                    # ✅ СОХРАНЯЕМ В КЭШ (TTL: 5 секунд)
+                                    # ✅ СОХРАНЯЕМ В АСИНХРОННЫЙ КЭШ
                                     await self.cache.set(
-                                        symbol,
+                                        cache_key,
                                         formatted_ticker,
                                         ttl=5.0,
                                         namespace="ticker",
@@ -306,15 +310,11 @@ class EnhancedBybitConnector:
 
                                     return formatted_ticker
 
-                        # Ошибка HTTP - прерываем retry
                         logger.warning(f"⚠️ HTTP {response.status} для ticker {symbol}")
                         break
 
                 except aiohttp.ClientError as e:
-                    logger.warning(
-                        f"⚠️ HTTP ошибка для ticker {symbol}, "
-                        f"retry {attempt+1}/{max_retries}: {e}"
-                    )
+                    logger.warning(f"⚠️ HTTP ошибка для ticker {symbol}: {e}")
                     if attempt < max_retries - 1:
                         await backoff.sleep()
                     else:
@@ -326,7 +326,6 @@ class EnhancedBybitConnector:
                     )
                     break
 
-            # Если дошли сюда - все попытки неудачны
             return None
 
         except Exception as e:
@@ -641,46 +640,76 @@ class EnhancedBybitConnector:
             return None
 
     async def _get_recent_trades(self, symbol: str, limit: int = 100) -> Optional[Dict]:
-        """Получение последних сделок"""
+        """
+        Получить последние сделки для символа
+        """
         try:
-            url = f"{self.base_url}/v5/market/recent-trade"
-            params = {"category": "linear", "symbol": symbol, "limit": limit}
+            await self.rate_limiter.wait_if_needed("market_data")
 
-            async with self.session.get(url, params=params) as response:
+            # Формируем запрос
+            params = {
+                "category": "spot",
+                "symbol": symbol,
+                "limit": min(limit, 1000)  # Макс 1000
+            }
+
+            async with self.session.get(
+                f"{self.base_url}/v5/market/recent-trade",
+                params=params
+            ) as response:
                 if response.status == 200:
                     data = await response.json()
-                    if data.get("retCode") == 0 and data.get("result"):
-                        trades_list = data["result"].get("list", [])
+
+                    if data.get("retCode") == 0:
+                        trades_list = data.get("result", {}).get("list", [])
 
                         trades = {
                             "symbol": symbol,
                             "trades": [],
-                            "timestamp": current_epoch_ms(),
+                            "count": len(trades_list)
                         }
 
+                        # Обрабатываем каждый трейд
                         for trade in trades_list:
-                            trades["trades"].append(
-                                {
-                                    "id": trade.get("execId", ""),
-                                    "price": float(trade.get("price", 0)),
-                                    "size": float(trade.get("size", 0)),
-                                    "side": trade.get("side", "").lower(),
-                                    "timestamp": int(
-                                        trade.get("time", current_epoch_ms())
-                                    ),
-                                    "is_block_trade": trade.get("isBlockTrade", False),
-                                }
-                            )
+                            trade_obj = {
+                                "id": trade.get("execId", ""),
+                                "price": float(trade.get("price", 0)),
+                                "size": float(trade.get("size", 0)),
+                                "side": trade.get("side", "").lower(),
+                                "timestamp": int(trade.get("time", current_epoch_ms())),
+                                "is_block_trade": trade.get("isBlockTrade", False),
+                                "symbol": symbol  # ← ОБЯЗАТЕЛЬНО!
+                            }
 
-                        trades["trades"].sort(
-                            key=lambda x: x["timestamp"], reverse=True
-                        )
+                            trades["trades"].append(trade_obj)
+
+                            # ✅ CVD обработка ВНУТРИ цикла
+                            await self._handle_trade_for_cvd(trade_obj)
+
+                            # 🚀 НОВОЕ: Детект large trades и сохранение
+                            usd_value = trade_obj["price"] * trade_obj["size"]
+                            if usd_value >= 100000:  # $100k threshold
+                                if not hasattr(self, 'large_trades'):
+                                    self.large_trades = deque(maxlen=1000)
+                                self.large_trades.append(trade_obj)
+                                logger.debug(f"💰 Bybit Large trade: {symbol} ${usd_value:,.0f}")
+
+                        # Сортируем после обработки
+                        trades["trades"].sort(key=lambda x: x["timestamp"], reverse=True)
 
                         return trades
+                    else:
+                        logger.error(f"Bybit API error: {data.get('retMsg')}")
+                        return None
+                else:
+                    logger.error(f"HTTP error {response.status}")
+                    return None
 
         except Exception as e:
             logger.error(f"Ошибка получения trades для {symbol}: {e}")
             return None
+
+
 
     async def _get_funding_rate(self, symbol: str) -> Optional[Dict]:
         """Получение данных по funding rate"""
@@ -1025,7 +1054,7 @@ class EnhancedBybitConnector:
                     }
 
                     self.trades_cache.append(trade)
-
+                    await self._handle_trade_for_cvd(trade)
         except Exception as e:
             logger.error(f"Ошибка обработки trades update: {e}")
 
@@ -1312,11 +1341,97 @@ class EnhancedBybitConnector:
         """
         return self.rate_limiter.get_all_stats()
 
-    def get_rate_limiter_stats(self) -> Dict:
+    # ========== CVD МЕТОДЫ (НОВЫЕ) ==========
+
+    async def _handle_trade_for_cvd(self, trade_data: Dict):
         """
-        Получить статистику использования API (Rate Limiter)
+        Обрабатывает трейды для расчёта CVD (Cumulative Volume Delta)
+
+        Args:
+            trade_data: Данные трейда от WebSocket или REST API
+        """
+        try:
+            # Извлекаем symbol из trade_data
+            symbol = trade_data.get('symbol', '')
+
+            if not symbol:
+                return
+
+            # Извлекаем данные трейда (адаптировано под Bybit API)
+            side = trade_data.get('side', '').lower()  # 'buy' или 'sell'
+            size = float(trade_data.get('size', 0))
+
+            # Timestamp может быть в разных форматах
+            timestamp = trade_data.get('timestamp', current_epoch_ms())
+            if timestamp > 1e12:  # Если в миллисекундах
+                timestamp = timestamp / 1000  # Конвертируем в секунды
+            else:
+                timestamp = float(timestamp)
+
+            # Вычисляем delta
+            delta = size if side == 'buy' else -size
+
+            # Инициализируем структуры если нужно
+            if symbol not in self.cvd:
+                self.cvd[symbol] = 0
+                self.cvd_trades[symbol] = []
+
+            # Добавляем текущий трейд
+            self.cvd_trades[symbol].append((timestamp, delta))
+
+            # Удаляем старые трейды (старше 5 минут)
+            cutoff_time = timestamp - self.cvd_window
+            self.cvd_trades[symbol] = [
+                (ts, d) for ts, d in self.cvd_trades[symbol]
+                if ts > cutoff_time
+            ]
+
+            # Пересчитываем CVD
+            self.cvd[symbol] = sum(d for ts, d in self.cvd_trades[symbol])
+
+            logger.debug(f"📊 Bybit CVD updated {symbol}: {self.cvd[symbol]:.2f}")
+
+        except Exception as e:
+            logger.error(f"❌ Bybit CVD calculation error: {e}")
+
+
+    def get_cvd(self, symbol: str) -> float:
+        """
+        Возвращает текущий CVD для символа
+
+        Args:
+            symbol: Торговая пара (например, BTCUSDT)
 
         Returns:
-            Dict со статистикой для всех endpoints
+            float: Cumulative Volume Delta
         """
-        return self.rate_limiter.get_all_stats()
+        return self.cvd.get(symbol, 0)
+
+
+    def get_cvd_percentage(self, symbol: str) -> float:
+        """
+        Возвращает CVD в процентах от общего объёма
+
+        Args:
+            symbol: Торговая пара
+
+        Returns:
+            float: CVD в процентах (-100 до +100)
+        """
+        try:
+            if symbol not in self.cvd_trades or not self.cvd_trades[symbol]:
+                return 0
+
+            # Сумма всех трейдов (по модулю)
+            total_volume = sum(abs(d) for ts, d in self.cvd_trades[symbol])
+
+            if total_volume == 0:
+                return 0
+
+            # CVD в процентах
+            cvd_pct = (self.cvd[symbol] / total_volume) * 100
+            return cvd_pct
+
+        except Exception as e:
+            logger.error(f"❌ Bybit CVD percentage error: {e}")
+            return 0

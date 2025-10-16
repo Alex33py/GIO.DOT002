@@ -9,6 +9,8 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, field
 from collections import defaultdict
+from database.signal_manager import save_signal_to_unified
+
 
 from config.settings import (
     logger,
@@ -301,11 +303,15 @@ class AdvancedSignalGenerator:
 
                         if filters_passed:
                             logger.info(f"✅ {symbol}: Сигнал прошёл все фильтры")
+
+                            # ========== ✅ СОХРАНЕНИЕ В unified_signals ==========
+                            if save_signal_to_unified(signal):
+                                logger.info(f"💾 {symbol}: Сигнал сохранён в unified_signals")
+                            # ====================================================
+
                             generated_signals.append(signal)
                         else:
-                            logger.warning(
-                                f"❌ {symbol}: Сигнал отклонён фильтром: {reason}"
-                            )
+                            logger.warning(f"❌ {symbol}: Сигнал отклонён фильтром: {reason}")
                     else:
                         # Фильтры не доступны или не настроены
                         logger.warning(f"⚠️ {symbol}: Фильтры ПРОПУЩЕНЫ!")

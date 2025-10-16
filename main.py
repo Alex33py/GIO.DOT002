@@ -11,6 +11,7 @@ import asyncio
 import logging
 from pathlib import Path
 from datetime import datetime
+from db_migration import migrate_database
 
 # === НАСТРОЙКА ОКРУЖЕНИЯ ===
 os.environ["ENVIRONMENT"] = os.getenv("ENVIRONMENT", "development")
@@ -83,11 +84,13 @@ try:
         logger.warning("   Бот будет работать со старой системой алертов")
 
     try:
-        from analytics.whale_tracker import WhaleTracker
+        from whale_activity_tracker import (
+            WhaleActivityTracker as WhaleTracker,
+        )  # ← ИМЯ ФАЙЛА!
 
-        logger.info("✅ WhaleTracker импортирован")
+        logger.info("✅ WhaleActivityTracker импортирован")
     except ImportError as e:
-        logger.warning(f"⚠️ WhaleTracker не найден: {e}")
+        logger.warning(f"⚠️ WhaleActivityTracker не найден: {e}")
         logger.warning("   Whale tracking будет недоступен")
 
     logger.info("✅ Основные модули импортированы успешно")
@@ -156,6 +159,10 @@ def print_banner():
 
 async def main():
     """Главная функция"""
+    logger.info("🔧 Проверка необходимости миграции БД...")
+    migrate_database()
+    logger.info("")
+
     bot = None
     roi_tracker = None
     alerts_system = None
@@ -188,10 +195,19 @@ async def main():
 
         # Whale Tracker (если доступен)
         if WhaleTracker:
-            logger.info("🐋 Инициализация Whale Tracker...")
-            whale_tracker = WhaleTracker(threshold_usd=100000)
+            logger.info("🐋 Инициализация Whale Activity Tracker...")
+
+            # ✅ ПОЛУЧИТЬ ПУТЬ К БД
+            import os
+            from config.settings import DATA_DIR
+
+            db_path = os.path.join(DATA_DIR, "gio_bot.db")
+
+            whale_tracker = WhaleTracker(
+                window_minutes=15, db_path=db_path  # ← ДОБАВИТЬ ПОДДЕРЖКУ БД!
+            )
             bot.whale_tracker = whale_tracker
-            logger.info("✅ Whale Tracker готов")
+            logger.info("✅ Whale Activity Tracker готов с БД")
 
         # Enhanced Alerts (если доступен)
         if EnhancedAlertsSystem:
@@ -212,8 +228,11 @@ async def main():
             telegram_handler = getattr(bot, "telegram_handler", None)
 
             roi_tracker = ROITracker(
-                bot=bot, telegram_handler=telegram_handler, db_path="signals.db"
+                bot=bot,
+                telegram_handler=telegram_handler,
+                db_path="gio_bot.db"  # ✅ ПРАВИЛЬНО
             )
+
             bot.roi_tracker = roi_tracker
             logger.info("✅ ROI Tracker готов")
 

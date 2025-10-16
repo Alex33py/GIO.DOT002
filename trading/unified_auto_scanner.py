@@ -117,7 +117,7 @@ class UnifiedAutoScanner:
                                 symbol=symbol,
                                 direction=result["direction"],
                                 entry_price=result["entry_price"],
-                                stop_loss=result["stop_loss"],
+                                sl=result["stop_loss"],
                                 tp1=result["tp1"],
                                 tp2=result["tp2"],
                                 tp3=result["tp3"],
@@ -241,7 +241,7 @@ class UnifiedAutoScanner:
                     symbol=symbol,
                     direction=result["direction"],
                     entry_price=result["entry_price"],
-                    stop_loss=result["stop_loss"],
+                    sl=result["stop_loss"],
                     tp1=result["tp1"],
                     tp2=result["tp2"],
                     tp3=result["tp3"],
@@ -468,9 +468,11 @@ class UnifiedAutoScanner:
                 }
 
                 filters_passed = await self.bot.confirm_filter.validate(
-                    symbol, direction, market_data, signal_data  # ← ПЕРЕДАЁМ signal_data!
+                    symbol,
+                    direction,
+                    market_data,
+                    signal_data,  # ← ПЕРЕДАЁМ signal_data!
                 )
-
 
                 # ✅ ПОЛУЧАЕМ CVD **СРАЗУ** ПОСЛЕ validate() (независимо от результата!)
                 try:
@@ -495,7 +497,9 @@ class UnifiedAutoScanner:
                 logger.info(f"🔍 Применение Multi-TF Filter для {symbol}...")
 
                 is_valid, trends, mtf_reason = await self.bot.multi_tf_filter.validate(
-                    symbol=symbol, direction=direction
+                    symbol=symbol,
+                    direction=direction,
+                    scenario_name=match_result.get("scenario_name"),
                 )
 
                 if not is_valid:

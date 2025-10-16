@@ -8,6 +8,7 @@ REST API + WebSocket orderbook через BinanceOrderbookWebSocket
 import asyncio
 import aiohttp
 from typing import Dict, List, Optional
+from collections import deque
 from config.settings import logger
 from utils.validators import DataValidator
 from connectors.binance_orderbook_websocket import BinanceOrderbookWebSocket
@@ -46,7 +47,8 @@ class BinanceConnector:
         self.enable_websocket = enable_websocket
         self.symbols = symbols or []
         self.orderbook_ws = None
-        self.orderbook_data = {}  # Для совместимости
+        self.orderbook_data = {}
+        self.large_trades = deque(maxlen=1000)
 
         # Statistics
         self.stats = {
@@ -243,15 +245,22 @@ class BinanceConnector:
 
                     trades = []
                     for trade in data:
-                        trades.append(
-                            {
-                                "id": trade["id"],
-                                "price": float(trade["price"]),
-                                "quantity": float(trade["qty"]),
-                                "timestamp": trade["time"],
-                                "is_buyer_maker": trade["isBuyerMaker"],
-                            }
-                        )
+                        trade_obj = {
+                            "id": trade["id"],
+                            "price": float(trade["price"]),
+                            "quantity": float(trade["qty"]),
+                            "timestamp": trade["time"],
+                            "is_buyer_maker": trade["isBuyerMaker"],
+                            "symbol": symbol  # ← ДОБАВЬ!
+                        }
+
+                        trades.append(trade_obj)
+
+                        # 🚀 НОВОЕ: Детект large trades
+                        usd_value = trade_obj["price"] * trade_obj["quantity"]
+                        if usd_value >= 100000:  # $100k threshold
+                            self.large_trades.append(trade_obj)
+                            logger.debug(f"💰 Binance Large trade: {symbol} ${usd_value:,.0f}")
 
                     return trades
                 else:

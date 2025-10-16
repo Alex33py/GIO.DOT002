@@ -49,9 +49,9 @@ class UnifiedScenarioMatcher:
     def __init__(
         self,
         scenarios_path: str = None,
-        deal_threshold: float = 0.50,
-        risky_threshold: float = 0.40,
-        observation_threshold: float = 0.30,
+        deal_threshold: float = 0.40,
+        risky_threshold: float = 0.30,
+        observation_threshold: float = 0.20,
     ):
         """
         Args:
@@ -285,9 +285,84 @@ class UnifiedScenarioMatcher:
             if best_score < self.observation_threshold:
                 logger.debug(
                     f"❌ Нет подходящих сценариев для {symbol}. "
-                    f"Лучший score: {best_score:.1%}"
+                    f"Лучший score: {best_score:.1%}. Пробуем fallback..."
                 )
-                return None
+
+                # ✅ FALLBACK: Базовый сценарий если score слишком низкий
+                cvd = market_data.get("cvd", 0)
+                ls_ratio = market_data.get("long_short_ratio", 1.0)
+                funding = market_data.get("funding_rate", 0)
+                rsi = indicators.get("rsi", 50)
+                volume_ratio = market_data.get("volume_ratio", 1.0)
+
+                # Bullish scenario
+                if cvd > 2 and ls_ratio > 1.2 and rsi < 50:
+                    best_match = {
+                        "id": "FALLBACK_LONG",
+                        "name": "Accumulation (Basic)",
+                        "direction": "LONG",
+                        "description": "Базовый бычий сценарий на основе CVD и L/S",
+                        "tp1_percent": 1.5,
+                        "tp2_percent": 3.0,
+                        "tp3_percent": 5.0,
+                        "sl_percent": 1.0,
+                        "conditions": {},
+                        "timeframe": "1H",
+                    }
+                    best_score = 0.25
+                    matched_features = ["positive_cvd", "high_ls_ratio", "oversold_rsi"]
+                    logger.info(
+                        f"✅ Применён FALLBACK LONG для {symbol} (CVD={cvd:.1f}, L/S={ls_ratio:.2f})"
+                    )
+
+                # Bearish scenario
+                elif cvd < -2 and ls_ratio < 0.9 and rsi > 50:
+                    best_match = {
+                        "id": "FALLBACK_SHORT",
+                        "name": "Distribution (Basic)",
+                        "direction": "SHORT",
+                        "description": "Базовый медвежий сценарий на основе CVD и L/S",
+                        "tp1_percent": 1.5,
+                        "tp2_percent": 3.0,
+                        "tp3_percent": 5.0,
+                        "sl_percent": 1.0,
+                        "conditions": {},
+                        "timeframe": "1H",
+                    }
+                    best_score = 0.25
+                    matched_features = [
+                        "negative_cvd",
+                        "low_ls_ratio",
+                        "overbought_rsi",
+                    ]
+                    logger.info(
+                        f"✅ Применён FALLBACK SHORT для {symbol} (CVD={cvd:.1f}, L/S={ls_ratio:.2f})"
+                    )
+
+                # Ranging/Consolidation
+                elif abs(cvd) < 2 and 0.9 <= ls_ratio <= 1.1 and volume_ratio > 1.2:
+                    best_match = {
+                        "id": "FALLBACK_RANGE",
+                        "name": "Consolidation",
+                        "direction": "LONG",
+                        "description": "Консолидация с повышенными объёмами",
+                        "tp1_percent": 1.0,
+                        "tp2_percent": 2.0,
+                        "tp3_percent": 3.0,
+                        "sl_percent": 0.8,
+                        "conditions": {},
+                        "timeframe": "1H",
+                    }
+                    best_score = 0.22
+                    matched_features = ["neutral_cvd", "balanced_ls", "high_volume"]
+                    logger.info(
+                        f"✅ Применён FALLBACK RANGE для {symbol} (Neutral market)"
+                    )
+
+                # Если fallback тоже не подошёл
+                if best_score < self.observation_threshold:
+                    logger.debug(f"❌ Fallback тоже не подошёл для {symbol}")
+                    return None
 
             # Определяем статус на основе score
             status = self._determine_status(best_score)
@@ -344,7 +419,7 @@ class UnifiedScenarioMatcher:
                     calculated_rr = 0.0
 
                 # Минимальный порог RR
-                min_rr = 1.5
+                min_rr = 1.2
 
                 if calculated_rr < min_rr:
                     logger.info(

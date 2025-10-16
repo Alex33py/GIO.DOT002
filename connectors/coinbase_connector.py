@@ -14,6 +14,7 @@ import hashlib
 import time
 from typing import Dict, List, Optional, Callable, Any
 from datetime import datetime
+from collections import deque
 from config.settings import logger
 from utils.validators import DataValidator
 
@@ -61,6 +62,8 @@ class CoinbaseConnector:
         self.orderbooks: Dict[str, Dict] = {}
         self.orderbook_initialized: Dict[str, bool] = {}
         self.last_pressure_log: Dict[str, float] = {}
+        self.orderbook_data = {}
+        self.large_trades = deque(maxlen=1000)
 
         # Statistics
         self.stats = {
@@ -616,6 +619,14 @@ class CoinbaseConnector:
 
         self.stats["ws_messages"] += 1
         self.stats["ws_trade_updates"] += 1
+
+        # 🚀 НОВОЕ: Детект large trades
+        usd_value = trade_data["price"] * trade_data["size"]
+        if usd_value >= 100000:  # $100k threshold
+            self.large_trades.append(trade_data)
+            logger.debug(
+                f"💰 Coinbase Large trade: {trade_data['symbol']} ${usd_value:,.0f}"
+            )
 
         if "on_trade" in self.callbacks:
             await self.callbacks["on_trade"](trade_data["symbol"], trade_data)

@@ -73,6 +73,15 @@ class OKXConnector:
         self.orderbooks: Dict[str, Dict] = {}
         self.orderbook_initialized: Dict[str, bool] = {}
         self.last_pressure_log: Dict[str, float] = {}
+        self.orderbook_pressure: Dict[str, float] = {}
+        self.orderbook_data: Dict[str, Dict] = {}
+        self.large_trades = []  # Список крупных трейдов
+        self.large_trade_threshold = 50000  # $50k минимум
+        # CVD tracking (НОВОЕ!)
+        self.cvd = {}  # {symbol: cumulative_delta}
+        self.cvd_window = 300  # 5 минут window для CVD
+        self.cvd_trades = {}  # {symbol: [(timestamp, delta), ...]}
+
 
         # Statistics
         self.stats = {
@@ -85,6 +94,8 @@ class OKXConnector:
         }
 
         logger.info("✅ OKXConnector инициализирован")
+
+
 
     async def initialize(self) -> bool:
         """
@@ -123,6 +134,141 @@ class OKXConnector:
         except Exception as e:
             logger.error(f"❌ Ошибка инициализации OKX: {e}")
             return False
+
+    def _calculate_orderbook_pressure(self, symbol: str, bids: list, asks: list) -> float:
+        """Рассчитывает давление orderbook для символа"""
+        try:
+            if not bids or not asks:
+                return 0.0
+
+            total_bids = sum([float(bid[1]) for bid in bids[:20]])
+            total_asks = sum([float(ask[1]) for ask in asks[:20]])
+
+            if total_bids + total_asks == 0:
+                return 0.0
+
+            buy_pressure = (total_bids / (total_bids + total_asks)) * 100
+            pressure = (buy_pressure - 50) * 2
+
+            return round(pressure, 2)
+
+        except Exception as e:
+            logger.error(f"❌ _calculate_orderbook_pressure error {symbol}: {e}")
+            return 0.0
+
+
+    async def _handle_trade_for_cvd(self, trade_data: Dict):
+        """Обрабатывает трейды для расчёта CVD"""
+        try:
+            symbol = trade_data.get('instId', '').replace('-', '')
+            if symbol not in self.symbols:
+                return
+
+            side = trade_data.get('side')
+            size = float(trade_data.get('sz', 0))
+            timestamp = int(trade_data.get('ts', 0)) / 1000
+
+            delta = size if side == 'buy' else -size
+
+            if symbol not in self.cvd:
+                self.cvd[symbol] = 0
+                self.cvd_trades[symbol] = []
+
+            self.cvd_trades[symbol].append((timestamp, delta))
+
+            cutoff_time = timestamp - self.cvd_window
+            self.cvd_trades[symbol] = [
+                (ts, d) for ts, d in self.cvd_trades[symbol]
+                if ts > cutoff_time
+            ]
+
+            self.cvd[symbol] = sum(d for ts, d in self.cvd_trades[symbol])
+            logger.debug(f"📊 OKX CVD updated {symbol}: {self.cvd[symbol]:.2f}")
+
+        except Exception as e:
+            logger.error(f"❌ OKX CVD calculation error: {e}")
+
+
+    def get_cvd(self, symbol: str) -> float:
+        """Возвращает текущий CVD для символа"""
+        return self.cvd.get(symbol, 0)
+
+
+    def get_cvd_percentage(self, symbol: str) -> float:
+        """Возвращает CVD в процентах от общего объёма"""
+        try:
+            if symbol not in self.cvd_trades or not self.cvd_trades[symbol]:
+                return 0
+
+            total_volume = sum(abs(d) for ts, d in self.cvd_trades[symbol])
+
+            if total_volume == 0:
+                return 0
+
+            cvd_pct = (self.cvd[symbol] / total_volume) * 100
+            return cvd_pct
+
+        except Exception as e:
+            logger.error(f"❌ OKX CVD percentage error: {e}")
+            return 0
+
+
+    def set_callbacks(self, callbacks: Dict[str, Callable]):
+        """Установить callback функции для WebSocket"""
+        self.callbacks = callbacks
+        logger.info(f"✅ Установлено {len(callbacks)} callbacks для OKX WebSocket")
+
+
+
+    def get_cvd_percentage(self, symbol: str) -> float:
+        """
+        Возвращает CVD в процентах от общего объёма
+
+        Args:
+            symbol: Торговая пара
+
+        Returns:
+            float: CVD в процентах (-100 до +100)
+        """
+        try:
+            if symbol not in self.cvd_trades or not self.cvd_trades[symbol]:
+                return 0
+
+            # Сумма всех трейдов (по модулю)
+            total_volume = sum(abs(d) for ts, d in self.cvd_trades[symbol])
+
+            if total_volume == 0:
+                return 0
+
+            # CVD в процентах
+            cvd_pct = (self.cvd[symbol] / total_volume) * 100
+            return cvd_pct
+
+        except Exception as e:
+            logger.error(f"❌ OKX CVD percentage error: {e}")
+            return 0
+
+
+            # Суммируем объёмы (первые 20 уровней)
+            total_bids = sum([float(bid[1]) for bid in bids[:20]])
+            total_asks = sum([float(ask[1]) for ask in asks[:20]])
+
+            if total_bids + total_asks == 0:
+                return 0.0
+
+            # Рассчитываем buy pressure (0-100%)
+            buy_pressure = (total_bids / (total_bids + total_asks)) * 100
+
+            # Нормализуем от -100 до +100
+            # 50% = 0 (neutral), 100% = +100 (strong buy), 0% = -100 (strong sell)
+            pressure = (buy_pressure - 50) * 2
+
+            return round(pressure, 2)
+
+        except Exception as e:
+            logger.error(f"❌ _calculate_orderbook_pressure error {symbol}: {e}")
+            return 0.0
+
 
     def set_callbacks(self, callbacks: Dict[str, Callable]):
         """
@@ -499,16 +645,19 @@ class OKXConnector:
             return
 
         for book_data in data["data"]:
+            bids_raw = book_data["bids"]
+            asks_raw = book_data["asks"]
+
             orderbook = {
                 "symbol": symbol,
                 "timestamp": int(book_data["ts"]),
                 "bids": [
                     [float(price), float(qty), int(orders)]
-                    for price, qty, _, orders in book_data["bids"]
+                    for price, qty, _, orders in bids_raw
                 ],
                 "asks": [
                     [float(price), float(qty), int(orders)]
-                    for price, qty, _, orders in book_data["asks"]
+                    for price, qty, _, orders in asks_raw
                 ],
             }
 
@@ -518,11 +667,33 @@ class OKXConnector:
             self.stats["ws_messages"] += 1
             self.stats["ws_orderbook_updates"] += 1
 
-            # ========== РАСЧЁТ ДИСБАЛАНСА С THROTTLING ==========
-            try:
-                bids = orderbook["bids"]
-                asks = orderbook["asks"]
+            # ✅ ДОБАВЬ ЭТУ ЧАСТЬ:
+            # Рассчитываем и сохраняем давление
+            bids = orderbook["bids"]
+            asks = orderbook["asks"]
 
+            pressure = self._calculate_orderbook_pressure(symbol, bids, asks)
+            self.orderbook_pressure[symbol] = pressure
+
+            # Сохраняем полные данные
+            self.orderbook_data[symbol] = {
+                'bids': bids,
+                'asks': asks,
+                'timestamp': orderbook["timestamp"],
+                'pressure': pressure
+            }
+
+            # Логируем давление (throttled)
+            current_time = time.time()
+            last_log = self.last_pressure_log.get(symbol, 0)
+
+            if abs(pressure) > 20 and (current_time - last_log > 30):  # Раз в 30 секунд
+                direction = "📈 BUY" if pressure > 0 else "📉 SELL"
+                logger.info(f"📊 OKX {symbol} Pressure: {pressure:+.1f}% {direction}")
+                self.last_pressure_log[symbol] = current_time
+
+            # ========== РАСЧЁТ ДИСБАЛАНСА (существующий код) ==========
+            try:
                 if bids and asks:
                     bid_volume = sum([bid[1] for bid in bids[:5]])
                     ask_volume = sum([ask[1] for ask in asks[:5]])
@@ -552,7 +723,6 @@ class OKXConnector:
                                     )
                                     self._last_imbalance_log[symbol] = now
 
-
             except Exception as e:
                 logger.debug(f"⚠️ OKX imbalance calc error: {e}")
 
@@ -560,27 +730,66 @@ class OKXConnector:
             if "on_orderbook_update" in self.callbacks:
                 await self.callbacks["on_orderbook_update"](symbol, orderbook)
 
+
     async def _handle_trade(self, symbol: str, data: Dict):
-        """Обработка WebSocket trades"""
+        """Обработка WebSocket trades с обнаружением whale activity"""
         if "data" not in data:
             return
 
         for trade in data["data"]:
+            # CVD tracking
+            await self._handle_trade_for_cvd(trade)
+
+            # Parse trade data
+            price = float(trade["px"])
+            quantity = float(trade["sz"])
+            timestamp_ms = int(trade["ts"])
+            side = trade["side"]  # buy/sell
+
             trade_data = {
                 "symbol": symbol,
                 "trade_id": trade["tradeId"],
-                "price": float(trade["px"]),
-                "quantity": float(trade["sz"]),
-                "timestamp": int(trade["ts"]),
-                "side": trade["side"],
-                "datetime": datetime.fromtimestamp(int(trade["ts"]) / 1000),
+                "price": price,
+                "quantity": quantity,
+                "timestamp": timestamp_ms,
+                "side": side,
+                "datetime": datetime.fromtimestamp(timestamp_ms / 1000),
             }
+
+            # Calculate trade value
+            trade_value = price * quantity
+
+            # ⭐ НОВОЕ: Обнаружение крупных трейдов (whale activity)
+            if trade_value >= self.large_trade_threshold:
+                whale_trade = {
+                    'symbol': symbol.replace('-', ''),  # BTC-USDT -> BTCUSDT
+                    'side': side.upper(),  # buy -> BUY
+                    'size': quantity,
+                    'price': price,
+                    'value': trade_value,
+                    'timestamp': datetime.fromtimestamp(timestamp_ms / 1000),
+                    'exchange': 'OKX'
+                }
+
+                # Добавляем в список
+                self.large_trades.append(whale_trade)
+
+                # Ограничиваем размер (храним последние 100)
+                if len(self.large_trades) > 100:
+                    self.large_trades = self.large_trades[-100:]
+
+                # Логируем крупную сделку
+                logger.info(
+                    f"🐋 OKX {symbol} Large Trade {side.upper()} "
+                    f"{quantity:.4f} @ ${price:,.2f} = ${trade_value:,.0f}"
+                )
 
             self.stats["ws_messages"] += 1
             self.stats["ws_trade_updates"] += 1
 
             if "on_trade" in self.callbacks:
                 await self.callbacks["on_trade"](symbol, trade_data)
+
 
     # HELPER METHODS
     # ===========================================
@@ -658,6 +867,17 @@ class OKXConnector:
 
         except Exception as e:
             logger.error(f"❌ Error closing OKX connector: {e}")
+    def get_orderbook_pressure(self, symbol: str) -> float:
+        """
+        Получить текущее давление orderbook для символа
+
+        Args:
+            symbol: Торговая пара (например, BTC-USDT)
+
+        Returns:
+            float: Давление от -100 до +100
+        """
+        return self.orderbook_pressure.get(symbol, 0.0)
 
 
 # Экспорт

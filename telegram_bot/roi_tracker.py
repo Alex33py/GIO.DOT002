@@ -276,7 +276,7 @@ class ROITracker:
             symbol=signal["symbol"],
             direction=signal["direction"],
             entry_price=signal["entry_price"],
-            stop_loss=signal["stop_loss"],
+            stop_loss=signal.get("sl") or signal.get("stop_loss"),
             tp1=signal.get("tp1", 0),
             tp2=signal.get("tp2", 0),
             tp3=signal.get("tp3", 0),
@@ -649,7 +649,7 @@ class ROITracker:
                 await db.execute(
                     """
                     INSERT INTO signals (
-                        symbol, direction, entry_price, stop_loss,
+                        symbol, direction, entry_price, sl,
                         tp1, tp2, tp3, status, timestamp
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
@@ -816,7 +816,7 @@ class ROITracker:
             async with aiosqlite.connect(DATABASE_PATH) as db:
                 cursor = await db.execute(
                     """
-                    SELECT id, symbol, direction, entry_price, stop_loss,
+                    SELECT id, symbol, direction, entry_price, sl,
                         tp1, tp2, tp3, status, timestamp
                     FROM signals
                     WHERE status = 'active'

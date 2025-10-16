@@ -20,7 +20,7 @@ class MultiTimeframeFilter:
         self,
         bot=None,
         require_all_aligned: bool = False,
-        min_aligned_count: int = 3,
+        min_aligned_count: int = 1,
         higher_tf_weight: float = 2.0,
     ):
         """
@@ -68,29 +68,21 @@ class MultiTimeframeFilter:
         direction: str,
         timeframes: Optional[List[str]] = None,
         min_agreement: Optional[int] = None,
+        scenario_name: Optional[str] = None,  # ✅ ДОБАВЛЕН ПАРАМЕТР
     ) -> Tuple[bool, Dict[str, str], str]:
         """
         **ОСНОВНОЙ МЕТОД** - Валидация сигнала через мультитаймфреймовый анализ
-
-        Args:
-            symbol: Торговая пара (например, 'BTCUSDT')
-            direction: Направление сигнала ('LONG' или 'SHORT')
-            timeframes: Список таймфреймов для проверки (по умолчанию ['1h', '4h', '1d'])
-            min_agreement: Минимальное количество согласованных TF (по умолчанию из конфига)
-
-        Returns:
-            Tuple[bool, Dict[str, str], str]:
-                - bool: True если сигнал валиден, False если нет
-                - Dict: Словарь с трендами по каждому таймфрейму {'1h': 'UP', '4h': 'UP', '1d': 'DOWN'}
-                - str: Причина отклонения или подтверждения
-
-        Example:
-            >>> is_valid, trends, reason = await mtf_filter.validate('BTCUSDT', 'LONG')
-            >>> if is_valid:
-            >>>     print(f"Сигнал валиден: {reason}")
-            >>>     print(f"Тренды: {trends}")
         """
         try:
+            # ✅ ИСКЛЮЧЕНИЕ ДЛЯ MEAN REVERSION
+            if scenario_name and "Mean_Reversion" in scenario_name:
+                logger.info(
+                    f"✅ {symbol} {direction}: Mean Reversion исключение — "
+                    f"MTF Filter пропущен (сценарий: {scenario_name})"
+                )
+                # Возвращаем "успех" без проверки трендов
+                return True, {}, f"Mean Reversion bypass (scenario: {scenario_name})"
+
             if timeframes is None:
                 timeframes = self.default_timeframes
 
@@ -134,6 +126,7 @@ class MultiTimeframeFilter:
                 f"❌ Ошибка в MTF Filter.validate() для {symbol}: {e}", exc_info=True
             )
             return False, {}, f"❌ Ошибка валидации: {str(e)}"
+
 
     async def analyze(
         self,

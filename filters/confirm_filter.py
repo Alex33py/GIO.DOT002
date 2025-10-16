@@ -163,116 +163,66 @@ class ConfirmFilter:
             logger.error(f"❌ Ошибка validate_signal для {symbol}: {e}")
             return (False, f"Error: {e}")
 
-    # ========== ПРОВЕРКИ CVD (ASYNC) ==========
 
     async def _check_cvd_simple(
-        self, symbol: str, direction: str, market_data: Dict, signal_data: Dict = None
+        self, symbol: str, direction: str, market_data: Dict, signal_data: Dict
     ) -> bool:
-        """Проверка CVD (async версия)"""
+        """Проверяет CVD (Cumulative Volume Delta) с адаптивными порогами"""
         try:
-            # Вариант 1: Из orderbook (основной источник)
-            orderbook = market_data.get("orderbook", {})
-            imbalance = orderbook.get("imbalance", 0)
+            # Получаем scenario из signal_data
+            scenario = signal_data.get("pattern", "Unknown")
 
-            # Вариант 2: Из orderbook_imbalance (WebSocket)
-            if imbalance == 0:
-                imbalance = market_data.get("orderbook_imbalance", 0)
+            # Получаем адаптивный порог
+            cvd_threshold = self._get_adaptive_cvd_threshold(scenario, direction)
 
-            # Вариант 3: Рассчитываем из bid/ask volumes
-            if imbalance == 0 and self.bot:
-                imbalance = self._calculate_cvd_from_orderbook(symbol)
+            # Получаем CVD от коннекторов
+            cvd_okx = None
+            cvd_bybit = None
 
-            # ✅ СОХРАНЯЕМ CVD (конвертируем в проценты если нужно)
-            self.last_cvd = imbalance * 100 if abs(imbalance) < 1 else imbalance
+            if hasattr(self.bot, "okx") and self.bot.okx:
+                cvd_okx = self.bot.okx.get_cvd_percentage(symbol)
 
-            # Рассчитываем порог в долях (2% -> 0.02)
-            threshold = self.cvd_threshold / 100
+            if hasattr(self.bot, "bybit") and self.bot.bybit:
+                cvd_bybit = self.bot.bybit.get_cvd_percentage(symbol)
 
-            # Проверка 1: Достаточная сила (абсолютное значение)
-            abs_imbalance = abs(imbalance)
-            logger.debug(
-                f"   📊 {symbol} CVD: {imbalance:.1%} (abs: {abs_imbalance:.1%})"
-            )
+            # Используем доступный CVD
+            cvd = cvd_okx if cvd_okx is not None else cvd_bybit
 
-            if abs_imbalance < threshold:
-                logger.debug(f"   ⚠️ CVD слабый: {abs_imbalance:.1%} < {threshold:.1%}")
-                return False
+            if cvd is None:
+                logger.warning(f"⚠️ CVD недоступен для {symbol}")
+                return True  # ← ИЗМЕНЕНО: пропускаем проверку если нет данных
 
-            # Проверка 2: М'яка перевірка узгодженості напрямку
-            # Используем адаптивный порог
-            soft_threshold_pct = (
-                self._get_adaptive_cvd_threshold(
-                    signal_data.get("pattern", "Unknown"), direction
-                )
-                / 100
-            )  # Конвертируем из % в доли (30% → 0.30)
+            # ✅ СОХРАНЯЕМ CVD
+            self.last_cvd = cvd
 
+            # Логируем CVD
+            logger.debug(f"   📊 {symbol} CVD: {cvd:.1f}% (порог: ±{cvd_threshold}%)")
+
+            # Проверка CVD в зависимости от направления
             if direction == "LONG":
-                if imbalance < -soft_threshold_pct:
-                    # Якщо CVD ДУЖЕ негативний - блокуємо
+                # Для LONG нужен положительный CVD
+                if cvd < -cvd_threshold:  # Слишком bearish
                     logger.debug(
-                        f"   ⚠️ LONG сигнал, але CVD дуже негативний "
-                        f"({imbalance:.1%} < -{soft_threshold_pct:.1%})"
+                        f"   ❌ CVD не подтверждает LONG: {cvd:.1f}% < -{cvd_threshold}%"
                     )
                     return False
-                elif imbalance < 0:
-                    # Якщо CVD помірно негативний - попередження але дозволяємо
-                    logger.info(
-                        f"   ⚡ LONG сигнал з помірно негативним CVD ({imbalance:.1%}), "
-                        f"але в межах допуску ({-soft_threshold_pct:.1%})"
-                    )
-                else:
-                    # CVD позитивний - ідеально!
-                    logger.debug(f"   ✅ CVD підтримує LONG: {imbalance:.1%}")
 
             elif direction == "SHORT":
-                if imbalance > soft_threshold_pct:
-                    # Якщо CVD ДУЖЕ позитивний - блокуємо
+                # Для SHORT нужен отрицательный CVD
+                if cvd > cvd_threshold:  # Слишком bullish
                     logger.debug(
-                        f"   ⚠️ SHORT сигнал, але CVD дуже позитивний "
-                        f"({imbalance:.1%} > {soft_threshold_pct:.1%})"
+                        f"   ❌ CVD не подтверждает SHORT: {cvd:.1f}% > {cvd_threshold}%"
                     )
                     return False
-                elif imbalance > 0:
-                    # Якщо CVD помірно позитивний - попередження але дозволяємо
-                    logger.info(
-                        f"   ⚡ SHORT сигнал з помірно позитивним CVD ({imbalance:.1%}), "
-                        f"але в межах допуску ({soft_threshold_pct:.1%})"
-                    )
-                else:
-                    # CVD негативний - ідеально!
-                    logger.debug(f"   ✅ CVD підтримує SHORT: {imbalance:.1%}")
 
-            logger.debug(f"   ✅ CVD перевірка OK: {imbalance:.1%}")
+            # CVD OK
+            logger.debug(f"   ✅ CVD проверка OK: {cvd:.1f}%")
             return True
 
         except Exception as e:
-            logger.error(f"❌ Ошибка _check_cvd_simple для {symbol}: {e}")
+            logger.error(f"❌ Ошибка проверки CVD для {symbol}: {e}")
             return True  # При ошибке пропускаем проверку
 
-    def _calculate_cvd_from_orderbook(self, symbol: str) -> float:
-        """Расчёт CVD из L2 orderbook (sync)"""
-        try:
-            if not self.bot:
-                return 0
-
-            market_data = self.bot.market_data.get(symbol, {})
-
-            # Получаем bid/ask volumes
-            bid_volume = market_data.get("bid_volume", 0)
-            ask_volume = market_data.get("ask_volume", 0)
-
-            total_volume = bid_volume + ask_volume
-            if total_volume == 0:
-                return 0
-
-            # CVD = (bid - ask) / total
-            cvd = (bid_volume - ask_volume) / total_volume
-            return cvd
-
-        except Exception as e:
-            logger.error(f"❌ Ошибка расчёта CVD: {e}")
-            return 0
 
     # ========== ПРОВЕРКИ ОБЪЁМА (ASYNC) ==========
 
