@@ -12,7 +12,7 @@ from collections import deque
 from config.settings import logger
 from utils.validators import DataValidator
 from connectors.binance_orderbook_websocket import BinanceOrderbookWebSocket
-
+from connectors.binance_trade_websocket import BinanceTradeWebSocket
 
 class BinanceConnector:
     """
@@ -47,6 +47,7 @@ class BinanceConnector:
         self.enable_websocket = enable_websocket
         self.symbols = symbols or []
         self.orderbook_ws = None
+        self.trade_ws = None
         self.orderbook_data = {}
         self.large_trades = deque(maxlen=1000)
 
@@ -285,13 +286,22 @@ class BinanceConnector:
         logger.info("🚀 Запуск Binance WebSocket потоков...")
 
         try:
+            # ✅ Orderbook WebSocket
             self.orderbook_ws = BinanceOrderbookWebSocket(
                 symbols=self.symbols, connector=self, depth=20
             )
             asyncio.create_task(self.orderbook_ws.start())
-            logger.info("✅ Binance WebSocket запущен")
+
+            # ✅ Trade WebSocket (НОВОЕ!)
+            self.trade_ws = BinanceTradeWebSocket(
+                symbols=self.symbols, connector=self
+            )
+            asyncio.create_task(self.trade_ws.start())
+
+            logger.info("✅ Binance WebSocket (Orderbook + Trades) запущен")
         except Exception as e:
             logger.error(f"❌ Ошибка запуска Binance WebSocket: {e}")
+
 
     # ===========================================
     # HELPER METHODS
@@ -299,16 +309,23 @@ class BinanceConnector:
 
     def get_statistics(self) -> Dict:
         """Получить статистику работы коннектора"""
-        ws_stats = {}
+        ws_orderbook_stats = {}
+        ws_trade_stats = {}
+
         if self.orderbook_ws:
-            ws_stats = self.orderbook_ws.get_stats()
+            ws_orderbook_stats = self.orderbook_ws.get_stats()
+
+        if self.trade_ws:
+            ws_trade_stats = self.trade_ws.get_stats()
 
         return {
             **self.stats,
             "rest_initialized": self.is_initialized,
-            "ws_running": self.orderbook_ws is not None,
-            "ws_stats": ws_stats,
+            "ws_running": (self.orderbook_ws is not None or self.trade_ws is not None),
+            "ws_orderbook_stats": ws_orderbook_stats,
+            "ws_trade_stats": ws_trade_stats,
         }
+
 
     # ===========================================
     # SHUTDOWN
@@ -323,6 +340,9 @@ class BinanceConnector:
             if self.orderbook_ws:
                 await self.orderbook_ws.stop()
 
+            if self.trade_ws:
+                await self.trade_ws.stop()
+
             # Close REST session
             if self.session and not self.session.closed:
                 await self.session.close()
@@ -335,6 +355,7 @@ class BinanceConnector:
 
         except Exception as e:
             logger.error(f"❌ Error closing Binance connector: {e}")
+
 
 
 # Экспорт

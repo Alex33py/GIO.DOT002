@@ -12,7 +12,7 @@ import re
 from datetime import datetime
 from typing import Dict, List, Optional, Set
 from collections import deque
-
+from pathlib import Path
 from config.settings import CRYPTOPANIC_API_KEY, CRYPTOCOMPARE_API_KEY, logger
 from config.constants import API_ENDPOINTS, SYMBOL_FILTERS, TIME_FORMATS
 from core.exceptions import APIConnectionError
@@ -90,6 +90,41 @@ class UnifiedNewsConnector:
         self.cryptopanic_retry_after = 0  # Timestamp когда можно снова делать запрос
 
         logger.info("✅ UnifiedNewsConnector инициализирован")
+
+        # ✅ PERSISTENT CACHE (НОВЫЙ КОД)
+        self.cryptopanic_cache_file = Path("data/cryptopanic_cache.json")
+        self.cryptocompare_cache_file = Path("data/cryptocompare_cache.json")
+
+        # Создаём директорию data если не существует
+        self.cryptopanic_cache_file.parent.mkdir(exist_ok=True)
+
+        # Загружаем CryptoPanic кэш с диска при старте
+        if self.cryptopanic_cache_file.exists():
+            try:
+                with open(self.cryptopanic_cache_file, "r", encoding="utf-8") as f:
+                    cache_data = json.load(f)
+                    self.cryptopanic_cache = cache_data.get("cryptopanic_cache", {})
+                    cache_count = len(self.cryptopanic_cache)
+                    logger.info(
+                        f"✅ CryptoPanic cache loaded from disk ({cache_count} entries)"
+                    )
+            except Exception as e:
+                logger.error(f"❌ Failed to load CryptoPanic cache: {e}")
+                self.cryptopanic_cache = {}
+
+        # Загружаем CryptoCompare кэш с диска при старте
+        if self.cryptocompare_cache_file.exists():
+            try:
+                with open(self.cryptocompare_cache_file, "r", encoding="utf-8") as f:
+                    cache_data = json.load(f)
+                    self.cryptocompare_cache = cache_data.get("cryptocompare_cache", {})
+                    cache_count = len(self.cryptocompare_cache)
+                    logger.info(
+                        f"✅ CryptoCompare cache loaded from disk ({cache_count} entries)"
+                    )
+            except Exception as e:
+                logger.error(f"❌ Failed to load CryptoCompare cache: {e}")
+                self.cryptocompare_cache = {}
 
     async def get_session(self):
         """Получение HTTP сессии"""
@@ -360,12 +395,26 @@ class UnifiedNewsConnector:
                                 )
                                 continue
 
-                        # ✅ СОХРАНЕНИЕ В КЭШ (NEW!)
+                                # ✅ СОХРАНЕНИЕ В КЭШ RAM
                         self.cryptopanic_cache[cache_key] = {
                             "data": news_items,
                             "timestamp": current_epoch_ms(),
-                            "ttl": 900,  # 15 минут TTL
+                            "ttl": 900,
                         }
+
+                        # ✅ СОХРАНЕНИЕ КЭША НА ДИСК (НОВЫЙ КОД)
+                        try:
+                            cache_data = {
+                                "cryptopanic_cache": self.cryptopanic_cache,
+                                "saved_at": current_epoch_ms(),
+                            }
+                            with open(
+                                self.cryptopanic_cache_file, "w", encoding="utf-8"
+                            ) as f:
+                                json.dump(cache_data, f, ensure_ascii=False, indent=2)
+                            logger.debug(f"💾 CryptoPanic cache saved to disk")
+                        except Exception as e:
+                            logger.error(f"❌ Failed to save CryptoPanic cache: {e}")
 
                         logger.info(
                             f"📰 CryptoPanic: {len(news_items)} новостей (cached)"
@@ -515,12 +564,26 @@ class UnifiedNewsConnector:
                             }
                         )
 
-                    # ✅ СОХРАНЕНИЕ В КЭШ (NEW!)
+                        # ✅ СОХРАНЕНИЕ В КЭШ RAM
                     self.cryptocompare_cache[cache_key] = {
                         "data": processed_news,
                         "timestamp": current_epoch_ms(),
-                        "ttl": 900,  # 15 минут TTL
+                        "ttl": 900,
                     }
+
+                    # ✅ СОХРАНЕНИЕ КЭША НА ДИСК (НОВЫЙ КОД)
+                    try:
+                        cache_data = {
+                            "cryptocompare_cache": self.cryptocompare_cache,
+                            "saved_at": current_epoch_ms(),
+                        }
+                        with open(
+                            self.cryptocompare_cache_file, "w", encoding="utf-8"
+                        ) as f:
+                            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+                        logger.debug(f"💾 CryptoCompare cache saved to disk")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to save CryptoCompare cache: {e}")
 
                     logger.info(
                         f"📰 CryptoCompare: {len(processed_news)} новостей (cached)"

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-GIO Crypto Bot v3.0 Enhanced Modular
+GIO Crypto Bot  Enhanced Modular
 Главная точка входа в систему
 """
 
@@ -66,7 +66,8 @@ try:
     ROITracker = None
     EnhancedAlertsSystem = None
     WhaleTracker = None
-
+    TradeDataAccumulator = None
+    MarketDashboard = None
     try:
         from monitors.roi_tracker import ROITracker  # type: ignore
 
@@ -84,14 +85,31 @@ try:
         logger.warning("   Бот будет работать со старой системой алертов")
 
     try:
-        from whale_activity_tracker import (
+        from analytics.whale_activity_tracker import (
             WhaleActivityTracker as WhaleTracker,
-        )  # ← ИМЯ ФАЙЛА!
+        )
 
         logger.info("✅ WhaleActivityTracker импортирован")
     except ImportError as e:
         logger.warning(f"⚠️ WhaleActivityTracker не найден: {e}")
         logger.warning("   Whale tracking будет недоступен")
+
+    try:
+        from modules.trade_data_accumulator import TradeDataAccumulator
+
+        logger.info("✅ TradeDataAccumulator импортирован")
+    except ImportError as e:
+        logger.warning(f"⚠️ TradeDataAccumulator не найден: {e}")
+        logger.warning("   CVD данные будут недоступны")
+
+    MarketDashboard = None
+    try:
+        from core.market_dashboard import MarketDashboard  # ✅ ПРАВИЛЬНЫЙ ПУТЬ!
+
+        logger.info("✅ MarketDashboard импортирован")
+    except ImportError as e:
+        logger.warning(f"⚠️ MarketDashboard не найден: {e}")
+        logger.warning("   /market будет использовать старый формат")
 
     logger.info("✅ Основные модули импортированы успешно")
 
@@ -126,7 +144,10 @@ def print_banner():
         components.append("✅ Whale Tracker (сделки >$100K)")
     else:
         components.append("⚠️  Whale Tracker (не установлен)")
-
+    if MarketDashboard:
+        components.append("✅ Market Dashboard (S/R, Volume Profile, Sentiment)")
+    else:
+        components.append("⚠️  Market Dashboard (базовая версия)")
     components.append("✅ Confirm Filter (CVD + Volume + Candle)")
     components.append("✅ Multi-TF Filter (1H/4H/1D согласование)")
     components.append("✅ Dashboard (/market + /advanced)")
@@ -135,7 +156,7 @@ def print_banner():
 
     banner = f"""
 ╔══════════════════════════════════════════════════════════════════╗
-║  🚀 GIO CRYPTO BOT v3.0 Enhanced Modular 🚀                     ║
+║                    🚀 GIO CRYPTO BOT 🚀                     ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║  {components_str}
 ╠══════════════════════════════════════════════════════════════════╣
@@ -167,6 +188,7 @@ async def main():
     roi_tracker = None
     alerts_system = None
     whale_tracker = None
+    trade_accumulator = None
 
     try:
         print_banner()
@@ -193,21 +215,28 @@ async def main():
 
         # ========== ИНИЦИАЛИЗАЦИЯ ДОПОЛНИТЕЛЬНЫХ КОМПОНЕНТОВ ==========
 
+        # ✅ НОВОЕ: Trade Data Accumulator (для CVD)
+        if TradeDataAccumulator:
+            logger.info("📊 Инициализация Trade Data Accumulator...")
+            trade_accumulator = TradeDataAccumulator(window_minutes=60)
+            bot.trade_accumulator = trade_accumulator
+            bot.tradedata = trade_accumulator
+            logger.info("✅ Trade Data Accumulator готов (60 мин окно)")
+
         # Whale Tracker (если доступен)
         if WhaleTracker:
             logger.info("🐋 Инициализация Whale Activity Tracker...")
+            from config.settings import DATABASE_PATH
 
-            # ✅ ПОЛУЧИТЬ ПУТЬ К БД
-            import os
-            from config.settings import DATA_DIR
-
-            db_path = os.path.join(DATA_DIR, "gio_bot.db")
-
-            whale_tracker = WhaleTracker(
-                window_minutes=15, db_path=db_path  # ← ДОБАВИТЬ ПОДДЕРЖКУ БД!
-            )
+            whale_tracker = WhaleTracker(window_minutes=5, db_path=DATABASE_PATH)
             bot.whale_tracker = whale_tracker
-            logger.info("✅ Whale Activity Tracker готов с БД")
+            logger.info(f"✅ Whale Activity Tracker готов с БД: {DATABASE_PATH}")
+
+            # Market Dashboard (если доступен)
+        if MarketDashboard:
+            logger.info("📊 Инициализация Market Dashboard...")
+            bot.market_dashboard = MarketDashboard(bot)
+            logger.info("✅ Market Dashboard готов")
 
         # Enhanced Alerts (если доступен)
         if EnhancedAlertsSystem:
@@ -222,35 +251,17 @@ async def main():
             bot.alerts_system = alerts_system
             logger.info("✅ Enhanced Alerts System готов")
 
-        # ROI Tracker (если доступен)
-        if ROITracker:
-            logger.info("📊 Инициализация ROI Tracker...")
-            telegram_handler = getattr(bot, "telegram_handler", None)
-
-            roi_tracker = ROITracker(
-                bot=bot,
-                telegram_handler=telegram_handler,
-                db_path="gio_bot.db"  # ✅ ПРАВИЛЬНО
-            )
-
-            bot.roi_tracker = roi_tracker
-            logger.info("✅ ROI Tracker готов")
+        # ❌ ROI Tracker ОТКЛЮЧЕН (бот не торгует)
+        roi_tracker = None
+        logger.info("⚠️ ROI Tracker отключён (работает БЕЗ торговли)")
 
         # ========== ЗАПУСК КОМПОНЕНТОВ ==========
         logger.info("▶️ Запуск бота...")
         logger.info("=" * 70)
 
         tasks = []
-
-        # Основной бот (обязательно)
         tasks.append(asyncio.create_task(bot.run(), name="bot_main"))
 
-        # ROI Tracker (если доступен)
-        if roi_tracker:
-            tasks.append(asyncio.create_task(roi_tracker.start(), name="roi_tracker"))
-            logger.info("   ✅ ROI Tracker запущен")
-
-        # Enhanced Alerts (если доступен)
         if alerts_system:
             tasks.append(
                 asyncio.create_task(
@@ -265,7 +276,6 @@ async def main():
         logger.info("🛑 Нажмите Ctrl+C для остановки")
         logger.info("=" * 70)
 
-        # Ожидать завершения
         await asyncio.gather(*tasks, return_exceptions=True)
 
     except KeyboardInterrupt:
@@ -279,7 +289,6 @@ async def main():
         )
 
     finally:
-        # ========== GRACEFUL SHUTDOWN ==========
         logger.info("")
         logger.info("🛑 Остановка бота...")
 

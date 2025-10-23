@@ -96,3 +96,153 @@ class IndicatorCalculator:
             return emas
         except:
             return {f"ema_{p}": 0.0 for p in periods}
+    def calculate_rsi(self, df, period: int = 14) -> float:
+        """
+        Рассчитать RSI
+
+        Args:
+            df: DataFrame ИЛИ список словарей с ключом 'close'
+            period: Период RSI
+
+        Returns:
+            float: Значение RSI (0-100)
+        """
+        try:
+            # ✅ Если передан список словарей - конвертируем в DataFrame
+            if isinstance(df, list):
+                if not df:
+                    return 50.0
+                # Создаем DataFrame из списка свечей
+                df = pd.DataFrame(df)
+
+            if df is None or df.empty or 'close' not in df.columns:
+                return 50.0
+
+            # Конвертируем в числа
+            close_prices = pd.to_numeric(df['close'], errors='coerce')
+
+            # Убираем NaN
+            close_prices = close_prices.dropna()
+
+            if len(close_prices) < period + 1:
+                return 50.0
+
+            # Расчёт изменений цены
+            delta = close_prices.diff()
+
+            # Разделяем на прибыль и убыток
+            gain = delta.where(delta > 0, 0)
+            loss = -delta.where(delta < 0, 0)
+
+            # Сглаживание по Wilder (EMA)
+            avg_gain = gain.ewm(span=period, adjust=False).mean()
+            avg_loss = loss.ewm(span=period, adjust=False).mean()
+
+            # Избегаем деления на ноль
+            rs = avg_gain / avg_loss.replace(0, 0.000001)
+
+            # Формула RSI
+            rsi = 100 - (100 / (1 + rs))
+
+            return round(float(rsi.iloc[-1]), 2)
+
+        except Exception as e:
+            logger.error(f"❌ calculate_rsi: {e}")
+            return 50.0
+
+
+    def calculate_macd(self, df, fast: int = 12, slow: int = 26, signal: int = 9) -> Dict:
+        """
+        Рассчитать MACD
+
+        Args:
+            df: DataFrame ИЛИ список словарей с ключом 'close'
+            fast: Период быстрой EMA
+            slow: Период медленной EMA
+            signal: Период сигнальной линии
+
+        Returns:
+            Dict: {'macd': float, 'signal': float, 'histogram': float}
+        """
+        try:
+            # ✅ Если передан список словарей - конвертируем в DataFrame
+            if isinstance(df, list):
+                if not df:
+                    return {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
+                # Создаем DataFrame из списка свечей
+                df = pd.DataFrame(df)
+
+            if df is None or df.empty or 'close' not in df.columns:
+                return {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
+
+            # Конвертируем в числа
+            close_prices = pd.to_numeric(df['close'], errors='coerce')
+
+            # Убираем NaN
+            close_prices = close_prices.dropna()
+
+            if len(close_prices) < slow + signal:
+                return {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
+
+            # Расчёт EMA
+            ema_fast = close_prices.ewm(span=fast, adjust=False).mean()
+            ema_slow = close_prices.ewm(span=slow, adjust=False).mean()
+
+            # MACD линия
+            macd_line = ema_fast - ema_slow
+
+            # Signal линия
+            signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+
+            # Histogram
+            histogram = macd_line - signal_line
+
+            return {
+                "macd": round(float(macd_line.iloc[-1]), 4),
+                "signal": round(float(signal_line.iloc[-1]), 4),
+                "histogram": round(float(histogram.iloc[-1]), 4)
+            }
+
+        except Exception as e:
+            logger.error(f"❌ calculate_macd: {e}")
+            return {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
+
+    def calculate_ema(self, df, period: int = 20) -> float:
+        """
+        Рассчитать EMA (Exponential Moving Average)
+
+        Args:
+            df: DataFrame ИЛИ список словарей с ключом 'close'
+            period: Период EMA
+
+        Returns:
+            float: Значение EMA
+        """
+        try:
+            # ✅ Если передан список словарей - конвертируем в DataFrame
+            if isinstance(df, list):
+                if not df:
+                    return 0.0
+                # Создаем DataFrame из списка свечей
+                df = pd.DataFrame(df)
+
+            if df is None or df.empty or 'close' not in df.columns:
+                return 0.0
+
+            # Конвертируем в числа
+            close_prices = pd.to_numeric(df['close'], errors='coerce')
+
+            # Убираем NaN
+            close_prices = close_prices.dropna()
+
+            if len(close_prices) < period:
+                return float(close_prices.iloc[-1]) if len(close_prices) > 0 else 0.0
+
+            # Расчёт EMA
+            ema = close_prices.ewm(span=period, adjust=False).mean()
+
+            return round(float(ema.iloc[-1]), 2)
+
+        except Exception as e:
+            logger.error(f"❌ calculate_ema: {e}")
+            return 0.0

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Confirm Filter - Фильтр подтверждения сигналов
-Проверяет CVD, объём и паттерн свечи перед генерацией сигнала
+Confirm Filter - Фильтр подтверждения сигналов БЕЗ БЛОКИРОВКИ
+Проверяет CVD, объём и паттерн свечи, возвращает penalties вместо False
 """
-
 
 import time
 import asyncio
@@ -15,50 +14,45 @@ from config.settings import logger
 
 class ConfirmFilter:
     """
-    Фильтр подтверждения торговых сигналов
-
+    Фильтр подтверждения торговых сигналов (NON-BLOCKING)
 
     Проверяет 3 критерия:
-    1. CVD (Cumulative Volume Delta) ≥ 60%
+    1. CVD (Cumulative Volume Delta)
     2. Volume ≥ 1.5x среднего
-    3. Candle pattern подтверждает направление
+    3. Candle pattern (опционально)
+
+    НЕ БЛОКИРУЕТ сигналы - только добавляет penalties и warnings
     """
 
     def __init__(
         self,
         bot_instance=None,
-        cvd_threshold: float = 0.5,  # ИЗМЕНЕНО: 2.0 → 0.5 (процент!)
-        volume_multiplier: float = 1.5,  # ИЗМЕНЕНО: 1.3 → 1.5
-        candle_check: bool = False,  # ИЗМЕНЕНО: True → False
+        cvd_threshold: float = 0.5,
+        volume_multiplier: float = 1.5,
+        candle_check: bool = False,
         min_large_trade_value: float = 10000,
-        adaptive_mode: bool = True,  # НОВОЕ: адаптивные пороги
+        adaptive_mode: bool = True,
     ):
-        """
-        Инициализация фильтра
-
-        Args:
-            bot_instance: Ссылка на главный экземпляр бота (опционально)
-            cvd_threshold: Порог CVD в процентах (0.5% по умолчанию)
-            volume_multiplier: Множитель объёма (1.5x по умолчанию)
-            candle_check: Проверять ли паттерн свечи (False по умолчанию)
-            min_large_trade_value: Минимальный размер large trade ($)
-            adaptive_mode: Использовать адаптивные пороги CVD (True по умолчанию)
-        """
+        """Инициализация фильтра"""
         self.bot = bot_instance
         self.cvd_threshold = cvd_threshold
         self.volume_multiplier = volume_multiplier
-        self.volume_threshold_multiplier = volume_multiplier  # Алиас для совместимости
+        self.volume_threshold_multiplier = volume_multiplier
         self.candle_check = candle_check
-        self.require_candle_confirmation = candle_check  # Алиас для совместимости
+        self.require_candle_confirmation = candle_check
         self.min_large_trade_value = min_large_trade_value
-        self.adaptive_mode = adaptive_mode  # НОВОЕ
+        self.adaptive_mode = adaptive_mode
+
+        # Для сохранения последних значений
+        self.last_cvd = 0.0
+        self.last_volume_ratio = 0.0
 
         logger.info(
             f"✅ ConfirmFilter инициализирован (CVD≥{cvd_threshold}%, "
-            f"Vol≥{volume_multiplier}x, Candle={candle_check}, Adaptive={adaptive_mode})"
+            f"Vol≥{volume_multiplier}x, Candle={candle_check}, Adaptive={adaptive_mode}, NON-BLOCKING)"
         )
 
-    # ========== ОСНОВНОЙ МЕТОД ДЛЯ ИНТЕГРАЦИИ (ASYNC) ==========
+    # ========== ОСНОВНОЙ МЕТОД (ВОЗВРАЩАЕТ DICT!) ==========
 
     async def validate(
         self,
@@ -66,31 +60,30 @@ class ConfirmFilter:
         direction: str,
         market_data: Optional[Dict] = None,
         signal_data: Optional[Dict] = None,
-    ) -> bool:
+    ) -> Dict:
         """
-        Полная проверка сигнала перед генерацией (async версия)
-
-        Args:
-            symbol: Торговая пара (BTCUSDT)
-            direction: Направление (LONG/SHORT)
-            market_data: Рыночные данные (опционально, берутся из bot.market_data)
-            signal_data: Данные сигнала (pattern, direction) для адаптивных порогов
+        Полная проверка сигнала БЕЗ БЛОКИРОВКИ
 
         Returns:
-            True если все проверки пройдены, False если нет
+            Dict: {
+                'passed': True,  # ВСЕГДА True
+                'confidence_penalty': int,  # 0-30
+                'warnings': List[str],
+                'cvd_check': Dict,
+                'volume_check': Dict,
+                'candle_check': Dict
+            }
         """
         logger.info(f"🔍 Confirm Filter проверка для {symbol} {direction}")
 
-        # ✅ ИНИЦИАЛИЗИРУЕМ АТРИБУТЫ ДЛЯ СОХРАНЕНИЯ
-        self.last_cvd = 0.0
-        self.last_volume_ratio = 0.0
-
-        # ✅ ЕСЛИ НЕТ signal_data - СОЗДАЁМ БАЗОВЫЙ!
-        if signal_data is None:
-            signal_data = {
-                "pattern": "Unknown",
-                "direction": direction,
-            }
+        result = {
+            'passed': True,  # ВСЕГДА True
+            'confidence_penalty': 0,
+            'warnings': [],
+            'cvd_check': {},
+            'volume_check': {},
+            'candle_check': {}
+        }
 
         try:
             # Получаем market_data
@@ -98,81 +91,108 @@ class ConfirmFilter:
                 market_data = self.bot.market_data.get(symbol, {})
             elif market_data is None:
                 logger.warning(f"⚠️ {symbol}: Нет market_data, пропускаем проверку")
-                return True
+                result['warnings'].append("⚠️ Нет market_data")
+                result['confidence_penalty'] += 20
+                return result
 
-            # 1. ПРОВЕРКА CVD (async) ← ТЕПЕРЬ signal_data ПЕРЕДАЁТСЯ!
-            cvd_ok = await self._check_cvd_simple(
+            # signal_data по умолчанию
+            if signal_data is None:
+                signal_data = {
+                    "pattern": "Unknown",
+                    "direction": direction,
+                }
+
+            # 1. ПРОВЕРКА CVD
+            cvd_confirmed, cvd_value, cvd_warning = await self._check_cvd_simple(
                 symbol, direction, market_data, signal_data
             )
-            if not cvd_ok:
-                logger.warning(f"❌ {symbol}: CVD проверка не пройдена")
-                return False
 
-            # 2. ПРОВЕРКА ОБЪЁМА (async)
-            volume_ok = await self._check_volume_simple(symbol, market_data)
-            if not volume_ok:
-                logger.warning(f"❌ {symbol}: Volume проверка не пройдена")
-                return False
+            result['cvd_check'] = {
+                'value': cvd_value,
+                'confirmed': cvd_confirmed,
+                'warning': cvd_warning
+            }
 
-            # 3. ПРОВЕРКА СВЕЧИ (async)
+            if not cvd_confirmed:
+                result['confidence_penalty'] += 15
+                result['warnings'].append(cvd_warning)
+                logger.warning(f"⚠️ {symbol}: {cvd_warning}")
+            else:
+                logger.info(f"✅ {symbol}: CVD OK ({cvd_value:.1f}%)")
+
+            # 2. ПРОВЕРКА ОБЪЁМА
+            volume_confirmed, volume_ratio, volume_warning = await self._check_volume_simple(
+                symbol, market_data
+            )
+
+            result['volume_check'] = {
+                'value': volume_ratio,
+                'confirmed': volume_confirmed,
+                'warning': volume_warning
+            }
+
+            if not volume_confirmed:
+                result['confidence_penalty'] += 10
+                result['warnings'].append(volume_warning)
+                logger.warning(f"⚠️ {symbol}: {volume_warning}")
+            else:
+                logger.info(f"✅ {symbol}: Volume OK ({volume_ratio:.2f}x)")
+
+            # 3. ПРОВЕРКА СВЕЧИ (опционально)
             if self.candle_check:
-                candle_ok = await self._check_candle_simple(
+                candle_confirmed, candle_pattern, candle_warning = await self._check_candle_simple(
                     symbol, direction, market_data
                 )
-                if not candle_ok:
-                    logger.warning(f"❌ {symbol}: Candle pattern не подтвердился")
-                    return False
 
-            logger.info(f"✅ {symbol}: ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ (CVD, Volume, Candle)")
-            return True
+                result['candle_check'] = {
+                    'pattern': candle_pattern,
+                    'confirmed': candle_confirmed,
+                    'warning': candle_warning
+                }
+
+                if not candle_confirmed and candle_warning:
+                    result['confidence_penalty'] += 5
+                    result['warnings'].append(candle_warning)
+                    logger.warning(f"⚠️ {symbol}: {candle_warning}")
+
+            # Summary
+            total_penalty = result['confidence_penalty']
+            if total_penalty == 0:
+                logger.info(f"✅ {symbol}: ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ")
+            elif total_penalty <= 15:
+                logger.info(f"⚠️ {symbol}: Минимальные warnings, penalty: -{total_penalty}%")
+            else:
+                logger.warning(f"⚠️⚠️ {symbol}: Множественные warnings, penalty: -{total_penalty}%")
+
+            return result
 
         except Exception as e:
             logger.error(f"❌ Ошибка validate для {symbol}: {e}")
-            return False  # При ошибке блокируем сигнал
+            return {
+                'passed': True,
+                'confidence_penalty': 20,
+                'warnings': [f"❌ Validation error: {str(e)}"],
+                'cvd_check': {},
+                'volume_check': {},
+                'candle_check': {}
+            }
 
-    # ========== АЛЬТЕРНАТИВНЫЙ МЕТОД (ДЛЯ СОВМЕСТИМОСТИ) ==========
-
-    async def validate_signal(
-        self, signal: Dict, market_data: Dict, symbol: str
-    ) -> Tuple[bool, str]:
-        """
-        Валидация сигнала через Confirm Filter (async версия)
-
-
-        Args:
-            signal: Сигнал для валидации
-            market_data: Рыночные данные
-            symbol: Торговая пара
-
-
-        Returns:
-            (is_valid, reason) - флаг валидности и причина
-        """
-        try:
-            direction = signal.get("direction", "LONG")
-
-            # Используем основной async метод validate
-            is_valid = await self.validate(symbol, direction, market_data)
-
-            if is_valid:
-                return (True, "All confirmations passed")
-            else:
-                return (False, "One or more confirmations failed")
-
-        except Exception as e:
-            logger.error(f"❌ Ошибка validate_signal для {symbol}: {e}")
-            return (False, f"Error: {e}")
-
+    # ========== ПРОВЕРКИ CVD (ВОЗВРАЩАЕТ TUPLE!) ==========
 
     async def _check_cvd_simple(
         self, symbol: str, direction: str, market_data: Dict, signal_data: Dict
-    ) -> bool:
-        """Проверяет CVD (Cumulative Volume Delta) с адаптивными порогами"""
+    ) -> Tuple[bool, float, str]:
+        """
+        Проверяет CVD с адаптивными порогами
+
+        Returns:
+            (is_confirmed: bool, cvd_value: float, warning: str)
+        """
         try:
-            # Получаем scenario из signal_data
+            # Получаем scenario
             scenario = signal_data.get("pattern", "Unknown")
 
-            # Получаем адаптивный порог
+            # Адаптивный порог
             cvd_threshold = self._get_adaptive_cvd_threshold(scenario, direction)
 
             # Получаем CVD от коннекторов
@@ -185,59 +205,60 @@ class ConfirmFilter:
             if hasattr(self.bot, "bybit") and self.bot.bybit:
                 cvd_bybit = self.bot.bybit.get_cvd_percentage(symbol)
 
-            # Используем доступный CVD
             cvd = cvd_okx if cvd_okx is not None else cvd_bybit
 
             if cvd is None:
                 logger.warning(f"⚠️ CVD недоступен для {symbol}")
-                return True  # ← ИЗМЕНЕНО: пропускаем проверку если нет данных
+                return (True, 0, "")  # Пропускаем если нет данных
 
-            # ✅ СОХРАНЯЕМ CVD
+            # Сохраняем CVD
             self.last_cvd = cvd
 
-            # Логируем CVD
             logger.debug(f"   📊 {symbol} CVD: {cvd:.1f}% (порог: ±{cvd_threshold}%)")
 
-            # Проверка CVD в зависимости от направления
+            # Проверка направления CVD
             if direction == "LONG":
-                # Для LONG нужен положительный CVD
-                if cvd < -cvd_threshold:  # Слишком bearish
-                    logger.debug(
-                        f"   ❌ CVD не подтверждает LONG: {cvd:.1f}% < -{cvd_threshold}%"
-                    )
-                    return False
+                if cvd < -cvd_threshold:
+                    return (False, cvd, f"⚠️ CVD против LONG: {cvd:.1f}% < -{cvd_threshold}%")
+                elif abs(cvd) < cvd_threshold * 0.3:
+                    return (False, cvd, f"⚠️ CVD слабый: {cvd:.1f}% (порог {cvd_threshold}%)")
+                else:
+                    return (True, cvd, "")
 
             elif direction == "SHORT":
-                # Для SHORT нужен отрицательный CVD
-                if cvd > cvd_threshold:  # Слишком bullish
-                    logger.debug(
-                        f"   ❌ CVD не подтверждает SHORT: {cvd:.1f}% > {cvd_threshold}%"
-                    )
-                    return False
+                if cvd > cvd_threshold:
+                    return (False, cvd, f"⚠️ CVD против SHORT: {cvd:.1f}% > {cvd_threshold}%")
+                elif abs(cvd) < cvd_threshold * 0.3:
+                    return (False, cvd, f"⚠️ CVD слабый: {cvd:.1f}% (порог {cvd_threshold}%)")
+                else:
+                    return (True, cvd, "")
 
-            # CVD OK
-            logger.debug(f"   ✅ CVD проверка OK: {cvd:.1f}%")
-            return True
+            else:
+                return (False, cvd, "⚠️ Неизвестное направление")
 
         except Exception as e:
             logger.error(f"❌ Ошибка проверки CVD для {symbol}: {e}")
-            return True  # При ошибке пропускаем проверку
+            return (True, 0, "")  # Пропускаем при ошибке
 
+    # ========== ПРОВЕРКИ ОБЪЁМА (ВОЗВРАЩАЕТ TUPLE!) ==========
 
-    # ========== ПРОВЕРКИ ОБЪЁМА (ASYNC) ==========
+    async def _check_volume_simple(
+        self, symbol: str, market_data: Dict
+    ) -> Tuple[bool, float, str]:
+        """
+        Проверка объёма
 
-    async def _check_volume_simple(self, symbol: str, market_data: Dict) -> bool:
-        """Проверка объёма (async версия)"""
+        Returns:
+            (is_confirmed: bool, volume_ratio: float, warning: str)
+        """
         try:
-            # Вариант 1: Из market_data
             current_volume = market_data.get("volume_1m", 0)
             avg_volume = market_data.get("avg_volume_24h", 0)
 
-            # Вариант 2: Из WebSocket данных
             if current_volume == 0:
                 current_volume = market_data.get("volume", 0)
 
-            # Вариант 3: Запросить через API (async)
+            # Async fallback
             if current_volume == 0 and self.bot:
                 current_volume = await self._get_current_volume(symbol)
 
@@ -246,47 +267,43 @@ class ConfirmFilter:
 
             if avg_volume == 0:
                 logger.debug(f"   ⚠️ {symbol}: Средний объём = 0, пропускаем проверку")
-                return True  # Пропускаем если нет данных
+                return (True, 0, "")
 
             volume_ratio = current_volume / avg_volume
 
-            # ✅ СОХРАНЯЕМ VOLUME RATIO
+            # Сохраняем
             self.last_volume_ratio = volume_ratio
 
             logger.debug(
                 f"   📊 {symbol} Volume: {current_volume:,.0f} / {avg_volume:,.0f} = {volume_ratio:.2f}x"
             )
 
-            if volume_ratio < self.volume_multiplier:
-                logger.debug(
-                    f"   ⚠️ Volume {volume_ratio:.2f}x < порог {self.volume_multiplier}x"
-                )
-                return False
-
-            logger.debug(f"   ✅ Volume проверка OK: {volume_ratio:.2f}x")
-            return True
+            if volume_ratio < 0.5:
+                return (False, volume_ratio, f"⚠️ Volume очень низкий: {volume_ratio:.2f}x")
+            elif volume_ratio < self.volume_multiplier:
+                return (False, volume_ratio, f"⚠️ Volume ниже порога: {volume_ratio:.2f}x < {self.volume_multiplier}x")
+            else:
+                return (True, volume_ratio, "")
 
         except Exception as e:
             logger.error(f"❌ Ошибка _check_volume_simple для {symbol}: {e}")
-            return True  # При ошибке пропускаем проверку
+            return (True, 0, "")
 
     async def _get_current_volume(self, symbol: str) -> float:
-        """Получить текущий объём (async версия)"""
+        """Получить текущий объём"""
         try:
             if not self.bot:
                 return 0
 
-            # Из market_data (WebSocket) - быстрее
             market_data = self.bot.market_data.get(symbol, {})
             volume = market_data.get("volume", 0)
 
             if volume > 0:
                 return float(volume)
 
-            # ✅ Async fallback: запросить через API
+            # Async API fallback
             try:
                 candles = await self.bot.bybit_connector.get_klines(symbol, "1", 1)
-
                 if candles and len(candles) > 0:
                     return float(candles[-1].get("volume", 0))
             except Exception as e:
@@ -299,12 +316,11 @@ class ConfirmFilter:
             return 0
 
     async def _get_average_volume(self, symbol: str, periods: int = 20) -> float:
-        """Получить средний объём (async версия)"""
+        """Получить средний объём"""
         try:
             if not self.bot:
                 return 0
 
-            # ✅ Async запрос через API
             candles = await self.bot.bybit_connector.get_klines(symbol, "1", periods)
 
             if not candles or len(candles) < periods:
@@ -318,31 +334,32 @@ class ConfirmFilter:
             logger.error(f"❌ Ошибка _get_average_volume: {e}")
             return 0
 
-    # ========== ПРОВЕРКИ СВЕЧИ (ASYNC) ==========
+    # ========== ПРОВЕРКИ СВЕЧИ (ВОЗВРАЩАЕТ TUPLE!) ==========
 
     async def _check_candle_simple(
         self, symbol: str, direction: str, market_data: Dict
-    ) -> bool:
-        """Проверка свечи (async версия)"""
+    ) -> Tuple[bool, str, str]:
+        """
+        Проверка свечи
+
+        Returns:
+            (is_confirmed: bool, pattern: str, warning: str)
+        """
         try:
-            # Вариант 1: Из market_data
             last_candle = market_data.get("last_candle")
 
             if not last_candle and self.bot:
-                # ✅ Async fallback: запросить через API
                 try:
                     candles = await self.bot.bybit_connector.get_klines(symbol, "1", 2)
-
                     if candles and len(candles) >= 2:
-                        last_candle = candles[-2]  # Последняя закрытая
+                        last_candle = candles[-2]
                 except Exception as e:
                     logger.debug(f"   ⚠️ Ошибка получения свечей через API: {e}")
 
             if not last_candle:
                 logger.debug(f"   ⚠️ {symbol}: Нет данных свечей, пропускаем проверку")
-                return True  # Пропускаем если нет данных
+                return (True, "UNKNOWN", "")
 
-            # Анализируем свечу
             open_price = float(last_candle.get("open", 0))
             close_price = float(last_candle.get("close", 0))
             candle_body = close_price - open_price
@@ -351,130 +368,87 @@ class ConfirmFilter:
             is_bearish = candle_body < 0
 
             candle_type = (
-                "🟢 Bullish"
-                if is_bullish
-                else ("🔴 Bearish" if is_bearish else "⚪ Doji")
+                "BULLISH" if is_bullish else ("BEARISH" if is_bearish else "DOJI")
             )
+
             logger.debug(f"   🕯️ {symbol} Свеча: {candle_type}")
 
-            # Проверка соответствия направлению
+            # Проверка соответствия
             if direction == "LONG" and not is_bullish:
-                logger.debug(f"   ⚠️ LONG сигнал, но свеча bearish")
-                return False
+                return (False, candle_type, f"⚠️ LONG сигнал, но свеча bearish")
             elif direction == "SHORT" and not is_bearish:
-                logger.debug(f"   ⚠️ SHORT сигнал, но свеча bullish")
-                return False
-
-            logger.debug(f"   ✅ Candle проверка OK")
-            return True
+                return (False, candle_type, f"⚠️ SHORT сигнал, но свеча bullish")
+            else:
+                return (True, candle_type, "")
 
         except Exception as e:
             logger.error(f"❌ Ошибка _check_candle_simple для {symbol}: {e}")
-            return True  # При ошибке пропускаем проверку
+            return (True, "ERROR", "")
 
-    # ========== ДОПОЛНИТЕЛЬНЫЕ ПРОВЕРКИ ==========
-
-    async def _check_large_trades(
-        self, signal: Dict, market_data: Dict, symbol: str
-    ) -> Tuple[bool, str]:
-        """Проверка крупных сделок (Large Trades)"""
-        try:
-            large_trades = market_data.get("large_trades", [])
-            if not large_trades:
-                return (False, "No large trades data")
-
-            direction = signal.get("direction", "LONG")
-
-            # Подсчитываем баланс BUY/SELL large trades
-            buy_value = sum(
-                t["value"]
-                for t in large_trades
-                if t.get("side") == "BUY"
-                and t.get("value", 0) >= self.min_large_trade_value
-            )
-            sell_value = sum(
-                t["value"]
-                for t in large_trades
-                if t.get("side") == "SELL"
-                and t.get("value", 0) >= self.min_large_trade_value
-            )
-
-            if direction == "LONG" and buy_value > sell_value * 1.5:
-                logger.info(
-                    f"✅ {symbol}: Large trades поддерживают LONG "
-                    f"(BUY: ${buy_value:,.0f} vs SELL: ${sell_value:,.0f})"
-                )
-                return (True, f"Large trades support LONG")
-            elif direction == "SHORT" and sell_value > buy_value * 1.5:
-                logger.info(
-                    f"✅ {symbol}: Large trades поддерживают SHORT "
-                    f"(SELL: ${sell_value:,.0f} vs BUY: ${buy_value:,.0f})"
-                )
-                return (True, f"Large trades support SHORT")
-            else:
-                return (False, "Large trades neutral or conflicting")
-
-        except Exception as e:
-            logger.error(f"❌ Ошибка _check_large_trades: {e}")
-            return (False, "Large trades check error")
+    # ========== АДАПТИВНЫЕ ПОРОГИ CVD ==========
 
     def _get_adaptive_cvd_threshold(self, scenario: str, direction: str) -> float:
-        """
-        Адаптивный порог CVD в зависимости от сценария
-
-        Args:
-            scenario: Название сценария (Impulse, Reversal, Range и т.д.)
-            direction: Направление сигнала (LONG/SHORT)
-
-        Returns:
-            float: Адаптивный порог CVD в процентах (например, -30.0 для LONG)
-        """
-
+        """Адаптивный порог CVD в зависимости от сценария"""
         if not self.adaptive_mode:
-            # Если адаптивный режим выключен, возвращаем стандартный порог
-            return 30.0  # Стандартный порог 30%
+            return 30.0
 
-        # Нормализуем название сценария
         scenario_upper = scenario.upper()
 
-        # Для разворотных стратегий - более мягкий порог
+        # Разворотные стратегии
         if any(x in scenario_upper for x in ["REVERSAL", "COUNTER", "DEAL_REVERSAL"]):
-            threshold = 50.0  # 50% допуск для разворотов
-            logger.debug(
-                f"   🔄 Адаптивный CVD порог для {scenario}: ±{threshold}% (Reversal)"
-            )
+            threshold = 50.0
+            logger.debug(f"   🔄 Адаптивный CVD порог для {scenario}: ±{threshold}% (Reversal)")
             return threshold
 
-        # Для импульсных - более строгий
+        # Импульсные
         elif any(x in scenario_upper for x in ["IMPULSE", "BREAKOUT", "DEAL"]):
-            threshold = 10.0  # 10% допуск для импульсов
-            logger.debug(
-                f"   ⚡ Адаптивный CVD порог для {scenario}: ±{threshold}% (Impulse)"
-            )
+            threshold = 10.0
+            logger.debug(f"   ⚡ Адаптивный CVD порог для {scenario}: ±{threshold}% (Impulse)")
             return threshold
 
-        # Для Range - средний
+        # Range
         elif any(x in scenario_upper for x in ["RANGE", "CONSOLIDATION"]):
-            threshold = 30.0  # 30% допуск для range
-            logger.debug(
-                f"   ↔️ Адаптивный CVD порог для {scenario}: ±{threshold}% (Range)"
-            )
+            threshold = 30.0
+            logger.debug(f"   ↔️ Адаптивный CVD порог для {scenario}: ±{threshold}% (Range)")
             return threshold
 
-        # Для Squeeze - учитываем ликвидации
+        # Squeeze
         elif any(x in scenario_upper for x in ["SQUEEZE", "LIQUIDATION"]):
-            threshold = 40.0  # 40% допуск для squeeze
-            logger.debug(
-                f"   💥 Адаптивный CVD порог для {scenario}: ±{threshold}% (Squeeze)"
-            )
+            threshold = 40.0
+            logger.debug(f"   💥 Адаптивный CVД порог для {scenario}: ±{threshold}% (Squeeze)")
             return threshold
 
-        # По умолчанию
+        # Default
         threshold = 30.0
-        logger.debug(
-            f"   📊 Адаптивный CVD порог для {scenario}: ±{threshold}% (Default)"
-        )
+        logger.debug(f"   📊 Адаптивный CVD порог для {scenario}: ±{threshold}% (Default)")
         return threshold
+
+    # ========== АЛЬТЕРНАТИВНЫЙ МЕТОД (ДЛЯ СОВМЕСТИМОСТИ) ==========
+
+    async def validate_signal(
+        self, signal: Dict, market_data: Dict, symbol: str
+    ) -> Tuple[bool, str]:
+        """
+        Валидация сигнала (старая версия для совместимости)
+
+        Returns:
+            (is_valid, reason)
+        """
+        try:
+            direction = signal.get("direction", "LONG")
+
+            result = await self.validate(symbol, direction, market_data, signal)
+
+            if result['passed']:
+                penalty = result['confidence_penalty']
+                warnings_str = "; ".join(result['warnings']) if result['warnings'] else "All OK"
+                return (True, f"Confirmed (penalty: -{penalty}%): {warnings_str}")
+            else:
+                return (False, "Validation failed")
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка validate_signal для {symbol}: {e}")
+            return (False, f"Error: {e}")
 
 
 # Экспорт

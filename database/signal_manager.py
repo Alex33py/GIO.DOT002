@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Dict, Optional
 from config.settings import DATA_DIR, logger  # ✅ ИСПРАВЛЕНО
 
-DB_PATH = os.path.join(DATA_DIR, "gio_bot.db")
+DB_PATH = os.path.join(DATA_DIR, "gio_crypto_bot.db")
 
 
 def save_signal(signal_data: Dict) -> bool:

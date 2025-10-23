@@ -309,6 +309,117 @@ class AdvancedIndicators:
             logger.error(f"❌ Ошибка расчёта ADX: {e}")
             return {"adx": 0, "trend_strength": "weak"}
 
+    @staticmethod
+    def get_ai_interpretation(
+        macd: Dict,
+        stoch_rsi: Dict,
+        bollinger: Dict,
+        atr: Dict,
+        adx: Dict
+    ) -> str:
+        """
+        AI интерпретация технических индикаторов
+
+        Args:
+            macd: MACD данные
+            stoch_rsi: Stochastic RSI данные
+            bollinger: Bollinger Bands данные
+            atr: ATR данные
+            adx: ADX данные
+
+        Returns:
+            Строка с AI интерпретацией
+        """
+        try:
+            interpretation = []
+
+            # 1. MACD
+            macd_trend = macd.get("trend", "neutral")
+            macd_histogram = macd.get("histogram", 0)
+
+            if macd_trend == "bullish":
+                if abs(macd_histogram) > 100:
+                    interpretation.append("🟢 **MACD** показывает **сильный бычий тренд** — импульс вверх набирает силу.")
+                else:
+                    interpretation.append("🟢 **MACD** в бычьей зоне, но импульс слабый — подтверждения недостаточно.")
+            elif macd_trend == "bearish":
+                if abs(macd_histogram) > 100:
+                    interpretation.append("🔴 **MACD** показывает **сильный медвежий тренд** — давление продавцов высокое.")
+                else:
+                    interpretation.append("🔴 **MACD** в медвежьей зоне, но импульс слабый — возможна стабилизация.")
+            else:
+                interpretation.append("⚪ **MACD** нейтрален — рынок в балансе, нет чёткого направления.")
+
+            # 2. Stochastic RSI
+            stoch_k = stoch_rsi.get("k", 50)
+
+            if stoch_k > 80:
+                interpretation.append(f"🔴 **Stoch RSI** перекуплен (%K {stoch_k:.1f}) — риск коррекции вниз.")
+            elif stoch_k < 20:
+                interpretation.append(f"🟢 **Stoch RSI** перепродан (%K {stoch_k:.1f}) — потенциал отскока вверх.")
+            else:
+                interpretation.append(f"⚪ **Stoch RSI** нейтрален (%K {stoch_k:.1f}) — нет экстремальных значений.")
+
+            # 3. Bollinger Bands
+            bb_squeeze = bollinger.get("squeeze", False)
+            bb_width = bollinger.get("width", 0)
+
+            if bb_squeeze:
+                interpretation.append(f"⚡ **Bollinger Bands** сжимаются (width {bb_width:.1f}%) — готовится **сильное движение**!")
+            elif bb_width > 5:
+                interpretation.append(f"📊 **Bollinger Bands** расширены (width {bb_width:.1f}%) — **высокая волатильность**.")
+            else:
+                interpretation.append(f"⚪ **Bollinger Bands** в нейтральной зоне (width {bb_width:.1f}%) — умеренная волатильность.")
+
+            # 4. ADX (Сила тренда)
+            adx_value = adx.get("adx", 0)
+
+            if adx_value > 25:
+                interpretation.append(f"🔥 **ADX {adx_value:.1f}** — **сильный тренд**! Следуй за трендом.")
+            elif adx_value > 15:
+                interpretation.append(f"📊 **ADX {adx_value:.1f}** — умеренный тренд, возможно боковое движение.")
+            else:
+                interpretation.append(f"⚪ **ADX {adx_value:.1f}** — слабый тренд, рынок в боковике.")
+
+            # 5. ATR (Волатильность)
+            atr_volatility = atr.get("volatility", "medium")
+            atr_percentage = atr.get("atr_percentage", 0)
+
+            if atr_volatility == "high":
+                interpretation.append(f"⚡ **ATR {atr_percentage:.2f}%** — **высокая волатильность**, увеличь стоп-лоссы!")
+            elif atr_volatility == "low":
+                interpretation.append(f"😴 **ATR {atr_percentage:.2f}%** — низкая волатильность, спокойный рынок.")
+            else:
+                interpretation.append(f"📊 **ATR {atr_percentage:.2f}%** — умеренная волатильность.")
+
+            # 6. Рекомендация
+            bullish_signals = sum([
+                macd_trend == "bullish",
+                stoch_k < 20,
+                adx_value > 20
+            ])
+
+            bearish_signals = sum([
+                macd_trend == "bearish",
+                stoch_k > 80,
+                adx_value > 20
+            ])
+
+            if bullish_signals >= 2:
+                interpretation.append("\n💡 **РЕКОМЕНДАЦИЯ:** 🚀 Рассмотри **LONG** при подтверждении.")
+            elif bearish_signals >= 2:
+                interpretation.append("\n💡 **РЕКОМЕНДАЦИЯ:** 🔻 Рассмотри **SHORT** при подтверждении.")
+            elif bb_squeeze:
+                interpretation.append("\n💡 **РЕКОМЕНДАЦИЯ:** ⏸️ Жди пробоя Bollinger Bands — готовится сильное движение!")
+            else:
+                interpretation.append("\n💡 **РЕКОМЕНДАЦИЯ:** ⏸️ Ожидание подтверждения перед открытием позиций.")
+
+            return " ".join(interpretation)
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка AI интерпретации индикаторов: {e}")
+            return "⚠️ Ошибка генерации AI интерпретации."
+
 
 # Экспорт
 __all__ = ["AdvancedIndicators"]

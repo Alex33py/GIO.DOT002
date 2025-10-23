@@ -43,7 +43,7 @@ from connectors.news_connector import UnifiedNewsConnector
 # Core модули
 from core.memory_manager import AdvancedMemoryManager
 from core.scenario_manager import ScenarioManager
-from core.scenario_matcher import UnifiedScenarioMatcher
+from core.scenario_matcher import EnhancedScenarioMatcher
 from core.veto_system import EnhancedVetoSystem
 from core.alerts import AlertSystem
 from core.decision_matrix import DecisionMatrix
@@ -63,6 +63,7 @@ from trading.unified_auto_scanner import UnifiedAutoScanner
 # Analytics
 from analytics.mtf_analyzer import MultiTimeframeAnalyzer
 from analytics.volume_profile import EnhancedVolumeProfileCalculator
+from analytics.orderbook_analyzer import OrderbookAnalyzer
 from analytics.enhanced_sentiment_analyzer import UnifiedSentimentAnalyzer
 from analytics.cluster_detector import ClusterDetector
 from analytics.whale_activity_tracker import WhaleActivityTracker
@@ -97,9 +98,7 @@ class GIOCryptoBot:
         import time
 
         self.start_time = time.time()
-        logger.info(
-            f"{Colors.HEADER}🚀 Инициализация GIOCryptoBot v3.0...{Colors.ENDC}"
-        )
+        logger.info(f"{Colors.HEADER} Инициализация GIOCryptoBot...{Colors.ENDC}")
 
         # Флаги состояния
         self.is_running = False
@@ -128,6 +127,7 @@ class GIOCryptoBot:
         self.mtf_analyzer = None
         self.volume_calculator = None
         self.signal_generator = None
+        self.orderbook_analyzer = None
         self.risk_calculator = None
         self.signal_recorder = None
         self.position_tracker = None
@@ -155,7 +155,7 @@ class GIOCryptoBot:
             import sqlite3
             import os
 
-            db_path = os.path.join(DATA_DIR, "gio_bot.db")
+            db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
 
             if not os.path.exists(db_path):
                 logger.warning("⚠️ База данных ещё не создана")
@@ -224,6 +224,25 @@ class GIOCryptoBot:
             self.bybit_connector = EnhancedBybitConnector()
             await self.bybit_connector.initialize()
             logger.info("   ✅ Bybit connector initialized")
+
+            logger.info("📊 Предзагрузка свечей для MTF анализа...")
+
+            # Список отслеживаемых пар (используем TRACKED_SYMBOLS если он уже определён)
+            monitored_pairs = TRACKED_SYMBOLS if hasattr(self, 'TRACKED_SYMBOLS') else [
+                "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT",
+                "BNBUSDT", "DOGEUSDT", "ADAUSDT", "AVAXUSDT"
+            ]
+
+            # Загружаем свечи для каждой пары и каждого таймфрейма
+            for symbol in monitored_pairs:
+                for interval in ["60", "240", "D"]:  # 1h, 4h, 1d
+                    try:
+                        await self.bybit_connector.update_klines_cache(symbol, interval, limit=200)
+                        logger.info(f"   ✅ {symbol} ({interval})")
+                    except Exception as e:
+                        logger.error(f"   ❌ Ошибка загрузки {symbol} ({interval}): {e}")
+
+            logger.info(f"✅ Предзагрузка свечей завершена! ({len(monitored_pairs)} пар × 3 таймфрейма)")
 
             # 2️⃣.2 Инициализация Binance Orderbook WebSocket
             logger.info("2️⃣.2 Инициализация Binance Orderbook WebSocket...")
@@ -302,6 +321,10 @@ class GIOCryptoBot:
                 logger.info("   ✅ Coinbase connector initialized (REST + WebSocket)")
             else:
                 logger.warning("   ⚠️ Coinbase initialization failed")
+
+            self.l2_imbalances = {}
+            self.large_trades = {}
+            logger.info("✅ Данные для Cluster Detector инициализированы")
 
             # 2.5. WebSocket Orderbook для Bybit L2 данных
             logger.info("2️⃣.5 Инициализация Bybit WebSocket Orderbook...")
@@ -405,6 +428,12 @@ class GIOCryptoBot:
             self.indicator_calculator = IndicatorCalculator()
             logger.info("✅ IndicatorCalculator инициализирован")
 
+            logger.info("4️⃣.7 Инициализация Wyckoff Analyzer...")
+            from analytics.wyckoff_analyzer import WyckoffAnalyzer
+            self.wyckoff_analyzer = WyckoffAnalyzer(self)
+            logger.info("✅ Wyckoff Analyzer инициализирован (VSA + Smart Money)")
+
+
             logger.info("🔍 DEBUG: Попытка импорта ClusterDetector...")
 
             # Cluster Detector
@@ -419,11 +448,6 @@ class GIOCryptoBot:
 
                 logger.info("   ✅ Cluster Detector инициализирован")
 
-                # Данные для Cluster Detector
-                self.l2_imbalances = {}
-                self.large_trades = {}
-                logger.info("🔍 DEBUG: Данные для Cluster Detector созданы")
-
             except Exception as e:
                 logger.error(f"   ❌ Ошибка инициализации Cluster Detector: {e}")
                 logger.error(f"   ❌ Traceback: ", exc_info=True)
@@ -431,14 +455,58 @@ class GIOCryptoBot:
 
             logger.info("🔍 DEBUG: Завершение инициализации Cluster Detector")
 
+            # 4️⃣.4 OrderbookAnalyzer с CVD Tracking
+            logger.info("4️⃣.4 Инициализация OrderbookAnalyzer...")
+            try:
+                from analytics.orderbook_analyzer import OrderbookAnalyzer
+
+                self.orderbook_analyzer = OrderbookAnalyzer(bot=self)
+                logger.info("   ✅ OrderbookAnalyzer инициализирован с CVD tracking")
+            except Exception as e:
+                logger.error(f"   ❌ Ошибка инициализации OrderbookAnalyzer: {e}")
+                logger.error(f"   ❌ Traceback: ", exc_info=True)
+                self.orderbook_analyzer = None
+
             # 4️⃣.5 Whale Activity Tracker
             logger.info("4️⃣.5 Инициализация Whale Activity Tracker...")
-            self.whale_tracker = WhaleActivityTracker(window_minutes=15)
+            self.whale_tracker = WhaleActivityTracker(
+                window_minutes=15, db_path=DATABASE_PATH
+            )
             logger.info("   ✅ Whale Activity Tracker инициализирован (15min window)")
+
+            # 4️⃣.6 Подключение WhaleTracker к коннекторам
+            logger.info("4️⃣.6 Подключение WhaleTracker к коннекторам...")
+
+            # OKX
+            if self.okx_connector:
+                self.okx_connector.whale_tracker = self.whale_tracker
+                logger.info("   ✅ OKX connector → WhaleTracker")
+
+            # Binance
+            if self.binance_connector:
+                self.binance_connector.whale_tracker = self.whale_tracker
+                logger.info("   ✅ Binance connector → WhaleTracker")
+
+            # Bybit
+            if self.bybit_connector:
+                self.bybit_connector.whale_tracker = self.whale_tracker
+                logger.info("   ✅ Bybit connector → WhaleTracker")
+
+            # Coinbase
+            if self.coinbase_connector:
+                self.coinbase_connector.whale_tracker = self.whale_tracker
+                logger.info("   ✅ Coinbase connector → WhaleTracker")
+
+            logger.info("✅ Все коннекторы подключены к WhaleTracker!")
 
             # Market Heat Indicator
             self.market_heat_indicator = MarketHeatIndicator()
             logger.info("✅ MarketHeatIndicator инициализирован")
+
+            # ✅ OrderbookAnalyzer для CVD
+            logger.info("4️⃣.7 Инициализация OrderbookAnalyzer...")
+            self.orderbook_analyzer = OrderbookAnalyzer(bot=self)
+            logger.info("   ✅ OrderbookAnalyzer инициализирован")
 
             # Correlation Analyzer
             self.correlation_analyzer = CorrelationAnalyzer(self)
@@ -460,7 +528,8 @@ class GIOCryptoBot:
 
             # 6. Объединённые модули
             logger.info("6️⃣ Инициализация ОБЪЕДИНЁННЫХ модулей...")
-            self.scenario_matcher = UnifiedScenarioMatcher()
+            self.scenario_matcher = EnhancedScenarioMatcher()
+
             self.scenario_matcher.scenarios = self.scenario_manager.scenarios
             self.enhanced_sentiment = UnifiedSentimentAnalyzer()
 
@@ -502,23 +571,10 @@ class GIOCryptoBot:
                 signal_recorder=self.signal_recorder
             )
 
-            self.auto_scanner = UnifiedAutoScanner(
-                bot_instance=self,
-                scenario_matcher=self.scenario_matcher,
-                risk_calculator=self.risk_calculator,
-                signal_recorder=self.signal_recorder,
-                position_tracker=self.position_tracker,
-            )
+            # ========== 7️⃣.4 ИНИЦИАЛИЗАЦИЯ ФИЛЬТРОВ ==========
+            logger.info("7️⃣.4 Инициализация фильтров...")
 
-            logger.info(
-                "   ⚪ AutoROITracker отключен (используется TelegramROITracker)"
-            )
-            self.simple_alerts = SimpleAlertsSystem(self)
-
-            # ========== ИНИЦИАЛИЗАЦИЯ ФИЛЬТРОВ ==========
-            logger.info("6️⃣.5 Инициализация фильтров...")
-
-            # Импорт конфигурации фильтров (если есть)
+            # Импорт конфигурации фильтров
             try:
                 from config.filters_config import (
                     CONFIRM_FILTER_CONFIG,
@@ -552,7 +608,7 @@ class GIOCryptoBot:
                     from filters.confirm_filter import ConfirmFilter
 
                     self.confirm_filter = ConfirmFilter(
-                        bot_instance=self,  # ✅ Передаем self
+                        bot_instance=self,
                         cvd_threshold=CONFIRM_FILTER_CONFIG.get("cvd_threshold", 0.2),
                         volume_multiplier=CONFIRM_FILTER_CONFIG.get(
                             "volume_threshold_multiplier", 1.3
@@ -595,11 +651,8 @@ class GIOCryptoBot:
                         ),
                     )
                     logger.info(
-                        f"   ✅ Multi-TF Filter инициализирован "
-                        f"(min_aligned={MULTI_TF_FILTER_CONFIG.get('min_aligned_count', 2)})"
+                        f"   ✅ Multi-TF Filter инициализирован (min_aligned={MULTI_TF_FILTER_CONFIG.get('min_aligned_count', 2)})"
                     )
-                # MTF работает синхронно через get_mtf_status()
-
                 except ImportError as e:
                     logger.warning(f"   ⚠️ Multi-TF Filter не найден: {e}")
                     self.multi_tf_filter = None
@@ -611,11 +664,11 @@ class GIOCryptoBot:
 
             logger.info("✅ Фильтры инициализированы")
 
-            # ========== SIGNAL GENERATOR ==========
+            # ========== 7️⃣.5 SIGNAL GENERATOR ==========
             logger.info("7️⃣.5 Инициализация Signal Generator...")
 
             self.signal_generator = AdvancedSignalGenerator(
-                bot=self,  # ✅ ДОБАВЛЕНО: Передаем self
+                bot=self,
                 veto_system=self.veto_system,
                 confirm_filter=self.confirm_filter,
                 multi_tf_filter=self.multi_tf_filter,
@@ -623,16 +676,16 @@ class GIOCryptoBot:
 
             logger.info("✅ AdvancedSignalGenerator инициализирован")
 
-            # Логирование интеграции фильтров
+            # Логирование статуса фильтров
             if self.confirm_filter:
-                logger.info("   ├─ Confirm Filter: интегрирован ✅")
+                logger.info("   ✅ Confirm Filter: включён")
             else:
-                logger.info("   ├─ Confirm Filter: отключён ⚪")
+                logger.info("   ℹ️ Confirm Filter: отключён")
 
             if self.multi_tf_filter:
-                logger.info("   └─ Multi-TF Filter: интегрирован ✅")
+                logger.info("   ✅ Multi-TF Filter: включён")
             else:
-                logger.info("   └─ Multi-TF Filter: отключён ⚪")
+                logger.info("   ℹ️ Multi-TF Filter: отключён")
 
             # 8. Telegram Bot
             logger.info("8️⃣ Инициализация Telegram Bot...")
@@ -645,27 +698,27 @@ class GIOCryptoBot:
             logger.info("   ✅ Патч применён")
 
             # 8️⃣.5 Инициализация Telegram ROITracker для уведомлений с кешированием цен
-            logger.info("8️⃣.5 Инициализация Telegram ROITracker...")
-            self.telegram_roi_tracker = TelegramROITracker(
-                bot=self,  # ✅ ИЗМЕНЕНО: bot вместо bot_instance
-                telegram_handler=self.telegram_handler,
-            )
-            logger.info("   ✅ Telegram ROITracker инициализирован с кешированием цен")
+            # logger.info("8️⃣.5 Инициализация Telegram ROITracker...")
+            # self.telegram_roi_tracker = TelegramROITracker(
+            #     bot=self,  # ✅ ИЗМЕНЕНО: bot вместо bot_instance
+            #    telegram_handler=self.telegram_handler,
+            # )
+            # logger.info("   ✅ Telegram ROITracker инициализирован с кешированием цен")
 
-            self.roi_tracker = self.telegram_roi_tracker
-            logger.info(
-                "   ✅ ROI Tracker установлен (TelegramROITracker + price caching)"
-            )
+            # self.roi_tracker = self.telegram_roi_tracker
+            # logger.info(
+            #    "   ✅ ROI Tracker установлен (TelegramROITracker + price caching)"
+            # )
 
-            self.enhanced_alerts = EnhancedAlertsSystem(
-                bot_instance=self,
-            )
+            # self.enhanced_alerts = EnhancedAlertsSystem(
+            #    bot_instance=self,
+            # )
 
             # 8️⃣.6 Инициализация Market Dashboard
             logger.info("8️⃣.6 Инициализация Market Dashboard...")
             try:
-                from telegram_bot.market_dashboard import MarketDashboard
-                from telegram_bot.dashboard_commands import DashboardCommands
+                from core.market_dashboard import MarketDashboard
+                from handlers.dashboard_commands import DashboardCommands
 
                 # Market Dashboard
                 self.market_dashboard = MarketDashboard(self)
@@ -709,15 +762,28 @@ class GIOCryptoBot:
                     f"❌ Ошибка инициализации CorrelationHandler: {e}", exc_info=True
                 )
 
-            # 8️⃣.8 Инициализация Liquidity Handler
-            logger.info("8️⃣.8 Инициализация Liquidity Handler...")
+            # ============================================
+            # 8.8 LIQUIDITY ANALYSIS
+            # ============================================
+
+            # 8.8a Enhanced Liquidity Analyzer (ДОЛЖЕН БЫТЬ ПЕРВЫМ!)
+            logger.info("8.8a Enhanced Liquidity Analyzer...")
+            try:
+                from analytics.enhanced_liquidity_analyzer import EnhancedLiquidityAnalyzer
+                self.enhanced_liquidity_analyzer = EnhancedLiquidityAnalyzer(self)
+                logger.info("✅ EnhancedLiquidityAnalyzer инициализирован")
+            except Exception as e:
+                logger.error(f"❌ EnhancedLiquidityAnalyzer ошибка: {e}", exc_info=True)
+                self.enhanced_liquidity_analyzer = None
+
+            # 8.8b Liquidity Handler (ЗАТЕМ!)
+            logger.info("8.8b Liquidity Handler...")
             try:
                 self.liquidity_handler = LiquidityHandler(self)
-                logger.info("   ✅ LiquidityHandler инициализирован")
+                logger.info("✅ LiquidityHandler инициализирован")
             except Exception as e:
-                logger.error(
-                    f"❌ Ошибка инициализации LiquidityHandler: {e}", exc_info=True
-                )
+                logger.error(f"❌ LiquidityHandler ошибка: {e}", exc_info=True)
+
 
             # 8️⃣.9 Инициализация Performance Handler
             logger.info("8️⃣.9 Инициализация Performance Handler...")
@@ -786,6 +852,18 @@ class GIOCryptoBot:
 
             # Нормализуем символ (BTC-USDT -> BTCUSDT)
             symbol_normalized = symbol.replace("-", "")
+
+            # Передача в OrderbookAnalyzer для CVD
+            if hasattr(self, "orderbook_analyzer") and self.orderbook_analyzer:
+                await self.orderbook_analyzer.process_trade(
+                    symbol_normalized,
+                    {
+                        "side": side,
+                        "volume": trade["quantity"],
+                        "price": trade["price"],
+                        "timestamp": trade.get("T", 0),
+                    },
+                )
 
             # ✅ Whale Tracker: добавляем КАЖДУЮ сделку (фильтр внутри tracker)
             if hasattr(self, "whale_tracker"):
@@ -870,6 +948,19 @@ class GIOCryptoBot:
         """Обработка OKX real-time trades"""
         try:
             value = trade["quantity"] * trade["price"]
+            symbol_normalized = symbol.replace("-", "")  # BTC-USDT -> BTCUSDT
+
+            # Передача в OrderbookAnalyzer для CVD
+            if hasattr(self, "orderbook_analyzer") and self.orderbook_analyzer:
+                await self.orderbook_analyzer.process_trade(
+                    symbol_normalized,
+                    {
+                        "side": trade["side"],
+                        "volume": trade["quantity"],
+                        "price": trade["price"],
+                        "timestamp": trade.get("timestamp", 0),
+                    },
+                )
 
             # Логируем крупные сделки > $50k
             if value > 50000:
@@ -928,6 +1019,19 @@ class GIOCryptoBot:
         """Обработка Coinbase real-time trades"""
         try:
             value = trade["size"] * trade["price"]
+            symbol_normalized = symbol.replace("-", "")  # BTC-USD -> BTCUSD
+
+            # Передача в OrderbookAnalyzer для CVD
+            if hasattr(self, "orderbook_analyzer") and self.orderbook_analyzer:
+                await self.orderbook_analyzer.process_trade(
+                    symbol_normalized,
+                    {
+                        "side": trade["side"],
+                        "volume": trade["size"],
+                        "price": trade["price"],
+                        "timestamp": trade.get("time", 0),
+                    },
+                )
 
             # Логируем крупные сделки > $50k
             if value > 50000:
@@ -972,42 +1076,210 @@ class GIOCryptoBot:
         except Exception as e:
             logger.error(f"❌ Coinbase ticker handler error: {e}", exc_info=True)
 
-    async def get_market_data(self, symbol: str) -> Dict:
-        """Получить market data для символа"""
+    async def get_market_data(self, symbol: str) -> Optional[Dict]:
+        """
+        Получить полные рыночные данные для символа
+
+        Args:
+            symbol: Торговая пара (BTCUSDT)
+
+        Returns:
+            Dict с данными или None
+        """
         try:
+            # 1. Получить базовые данные с биржи
             ticker = await self.bybit_connector.get_ticker(symbol)
-
             if not ticker:
-                logger.warning(f"⚠️ Ticker не получен для {symbol}")
-                return {
-                    "symbol": symbol,
-                    "last_price": 0.0,
-                    "change_24h": 0.0,
-                    "volume_24h": 0.0,
-                }
+                logger.warning(f"⚠️ Не удалось получить ticker для {symbol}")
+                return None
 
-            # ✅ БЕЗОПАСНОЕ ИЗВЛЕЧЕНИЕ С ПРОВЕРКОЙ НА None
-            last_price = ticker.get("lastPrice")
-            price24h_pcnt = ticker.get("price24hPcnt")
-            volume24h = ticker.get("volume24h")
+            # Парсим базовые данные
+            price = float(ticker.get('lastPrice', 0))
+            change_24h_str = ticker.get('price24hPcnt', '0')
+            change_24h = float(change_24h_str) * 100 if change_24h_str else 0
+            volume_24h = float(ticker.get('volume24h', 0))
+            high_24h = float(ticker.get('highPrice24h', price * 1.05))
+            low_24h = float(ticker.get('lowPrice24h', price * 0.95))
 
-            return {
-                "symbol": symbol,
-                "last_price": float(last_price) if last_price is not None else 0.0,
-                "change_24h": (
-                    (float(price24h_pcnt) * 100) if price24h_pcnt is not None else 0.0
-                ),
-                "volume_24h": float(volume24h) if volume24h is not None else 0.0,
+            # 2. Собираем базовые данные
+            market_data = {
+                'price': price,
+                'change_24h': change_24h,
+                'volume_24h': volume_24h,
+                'high_24h': high_24h,
+                'low_24h': low_24h,
             }
+
+            # 3. Технические индикаторы (если есть)
+            try:
+                if hasattr(self, 'indicator_calculator') and self.indicator_calculator:
+                    # Получаем свечи для расчёта индикаторов
+                    klines = await self.bybit_connector.get_klines(symbol, interval='60', limit=100)
+
+                    if klines and len(klines) >= 20:
+                        # RSI
+                        closes = [float(k['close']) for k in klines]
+                        rsi = self.indicator_calculator.calculate_rsi(closes, period=14)
+                        market_data['rsi'] = rsi if rsi else 50
+
+                        # MACD
+                        macd_data = self.indicator_calculator.calculate_macd(closes)
+                        if macd_data:
+                            market_data['macd'] = macd_data.get('macd', 0)
+                            market_data['macd_signal'] = macd_data.get('signal', 0)
+                        else:
+                            market_data['macd'] = 0
+                            market_data['macd_signal'] = 0
+
+                        # EMA 20
+                        ema_20 = self.indicator_calculator.calculate_ema(closes, period=20)
+                        market_data['ema_20'] = ema_20 if ema_20 else price
+                    else:
+                        market_data['rsi'] = 50
+                        market_data['macd'] = 0
+                        market_data['macd_signal'] = 0
+                        market_data['ema_20'] = price
+                else:
+                    market_data['rsi'] = 50
+                    market_data['macd'] = 0
+                    market_data['macd_signal'] = 0
+                    market_data['ema_20'] = price
+            except Exception as e:
+                logger.error(f"❌ Ошибка расчёта индикаторов: {e}")
+                market_data['rsi'] = 50
+                market_data['macd'] = 0
+                market_data['macd_signal'] = 0
+                market_data['ema_20'] = price
+
+            # 4. Whale Activity (если есть tracker)
+            try:
+                if hasattr(self, 'whale_tracker') and self.whale_tracker:
+                    whale_summary = self.whale_tracker.get_whale_summary(symbol, minutes=15)
+                    if whale_summary:
+                        market_data['whale_activity'] = whale_summary
+            except Exception as e:
+                logger.debug(f"⚠️ Whale activity недоступна: {e}")
+
+            # 5. Orderbook Pressure (если есть analyzer)
+            try:
+                if hasattr(self, 'orderbook_analyzer') and self.orderbook_analyzer:
+                    # Получаем orderbook
+                    orderbook = await self.bybit_connector.get_orderbook(symbol, limit=50)
+                    if orderbook:
+                        bids = orderbook.get('bids', [])
+                        asks = orderbook.get('asks', [])
+
+                        if bids and asks:
+                            bid_volume = sum(float(q) for p, q in bids[:20])
+                            ask_volume = sum(float(q) for p, q in asks[:20])
+                            total_volume = bid_volume + ask_volume
+
+                            if total_volume > 0:
+                                bid_ask_ratio = bid_volume / ask_volume if ask_volume > 0 else 1.0
+                                bid_pressure = ((bid_volume - ask_volume) / total_volume) * 100
+
+                                # Spread
+                                best_bid = float(bids[0][0])
+                                best_ask = float(asks[0][0])
+                                spread = best_ask - best_bid
+                                spread_pct = (spread / price) * 100 if price > 0 else 0
+
+                                market_data['orderbook'] = {
+                                    'bid_ask_ratio': bid_ask_ratio,
+                                    'bid_pressure': bid_pressure,
+                                    'spread': spread,
+                                    'spread_pct': spread_pct
+                                }
+            except Exception as e:
+                logger.debug(f"⚠️ Orderbook данные недоступны: {e}")
+
+            # 6. CVD (Cumulative Volume Delta)
+            try:
+                if hasattr(self, 'orderbook_analyzer') and self.orderbook_analyzer:
+                    cvd_data = await self.orderbook_analyzer.get_cvd_summary(symbol)
+                    if cvd_data:
+                        cvd_5m = cvd_data.get('cvd_5m', 0)
+                        cvd_15m = cvd_data.get('cvd_15m', 0)
+                        cvd_pct = cvd_data.get('cvd_percent', 0)
+
+                        market_data['cvd'] = {
+                            'cvd_5m': cvd_5m,
+                            'cvd_15m': cvd_15m,
+                            'cvd_pct': cvd_pct,
+                            'trend': 'INCREASING' if cvd_pct > 5 else 'DECREASING' if cvd_pct < -5 else 'STABLE'
+                        }
+            except Exception as e:
+                logger.debug(f"⚠️ CVD данные недоступны: {e}")
+
+            # ✅ 7. LIQUIDATIONS (24H) - НОВОЕ!
+            try:
+                if hasattr(self, 'bybit_connector') and self.bybit_connector:
+                    logger.info(f"📊 Fetching 24H liquidations for {symbol}...")
+                    liquidations = await self.bybit_connector.get_liquidations_24h(symbol)
+
+                    if liquidations and isinstance(liquidations, dict):
+                        market_data['liquidations'] = liquidations
+                        total_m = liquidations.get('total', 0) / 1_000_000
+                        logger.info(f"✅ Liquidations {symbol}: ${total_m:.2f}M total")
+                    else:
+                        logger.warning(f"⚠️ No liquidations data for {symbol}")
+                        market_data['liquidations'] = None
+                else:
+                    logger.warning("⚠️ Bybit connector not available for liquidations")
+                    market_data['liquidations'] = None
+            except Exception as e:
+                logger.error(f"❌ Liquidations error for {symbol}: {e}", exc_info=True)
+                market_data['liquidations'] = None
+
+            return market_data
 
         except Exception as e:
-            logger.error(f"❌ Ошибка получения market_data для {symbol}: {e}")
-            return {
-                "symbol": symbol,
-                "last_price": 0.0,
-                "change_24h": 0.0,
-                "volume_24h": 0.0,
-            }
+            logger.error(f"❌ get_market_data({symbol}): {e}", exc_info=True)
+            return None
+
+
+
+    async def get_matching_scenarios(self, symbol: str, limit: int = 3) -> List[Dict]:
+        """
+        Получить подходящие сценарии для символа
+
+        Args:
+            symbol: Торговая пара
+            limit: Максимум сценариев
+
+        Returns:
+            List[Dict] со сценариями
+        """
+        try:
+            if not self.scenario_matcher:
+                logger.debug("⚠️ Scenario matcher не инициализирован")
+                return []
+
+            # Получить состояние рынка
+            market_state = await self.get_market_data(symbol)
+            if not market_state:
+                logger.warning(f"⚠️ Не удалось получить market data для {symbol}")
+                return []
+
+            # Найти сценарии
+            scenarios = self.scenario_matcher.find_matching_scenarios(
+                symbol=symbol,
+                market_state=market_state,
+                min_confidence=0.70
+            )
+
+            # Сортировать и вернуть топ-N
+            if scenarios:
+                scenarios.sort(key=lambda x: x.get('confidence', 0), reverse=True)
+                logger.info(f"✅ Найдено {len(scenarios)} сценариев для {symbol}")
+                return scenarios[:limit]
+            else:
+                logger.info(f"ℹ️ Подходящих сценариев для {symbol} не найдено")
+                return []
+
+        except Exception as e:
+            logger.error(f"❌ get_matching_scenarios({symbol}): {e}", exc_info=True)
+            return []
 
     async def get_volume_profile(self, symbol: str) -> Optional[Dict]:
         """
@@ -1230,9 +1502,9 @@ class GIOCryptoBot:
             for symbol in TRACKED_SYMBOLS[:3]:  # Топ-3 символа
                 try:
                     market_data = await self.get_market_data(symbol)
-                    price = market_data.get('last_price', 0)
-                    change = market_data.get('change_24h', 0)
-                    volume = market_data.get('volume_24h', 0)
+                    price = market_data.get("last_price", 0)
+                    change = market_data.get("change_24h", 0)
+                    volume = market_data.get("volume_24h", 0)
 
                     emoji = "🟢" if change > 0 else "🔴"
                     dashboard += f"{emoji} {symbol}: ${price:,.2f} ({change:+.2f}%) Vol: ${volume:,.0f}\n"
@@ -1249,12 +1521,12 @@ class GIOCryptoBot:
 
             if recent_whales:
                 for i, whale in enumerate(recent_whales[:5], 1):  # Топ-5
-                    symbol = whale['symbol']
-                    side = whale['side']
-                    size = whale['size']
-                    price = whale['price']
-                    value = whale['value']
-                    exchange = whale['exchange']
+                    symbol = whale["symbol"]
+                    side = whale["side"]
+                    size = whale["size"]
+                    price = whale["price"]
+                    value = whale["value"]
+                    exchange = whale["exchange"]
 
                     emoji = "🟢" if side == "BUY" else "🔴"
 
@@ -1267,7 +1539,7 @@ class GIOCryptoBot:
             # 3. ACTIVE SIGNALS (если есть)
             dashboard += "🎯 ACTIVE SIGNALS\n\n"
 
-            if hasattr(self, 'position_tracker') and self.position_tracker:
+            if hasattr(self, "position_tracker") and self.position_tracker:
                 positions = self.position_tracker.get_active_positions()
 
                 if positions:
@@ -1287,7 +1559,6 @@ class GIOCryptoBot:
             logger.error(f"❌ Dashboard error: {e}")
             return "❌ Error generating dashboard"
 
-
     async def _get_recent_whale_trades(self, minutes: int = 10) -> List[Dict]:
         """
         Получает крупные трейды за последние N минут
@@ -1305,19 +1576,19 @@ class GIOCryptoBot:
             recent_trades = []
 
             # Проверяем все коннекторы
-            for connector_name in ['okx', 'bybit', 'binance', 'coinbase']:
+            for connector_name in ["okx", "bybit", "binance", "coinbase"]:
                 # Получаем коннектор
-                connector = getattr(self, f'{connector_name}_connector', None)
+                connector = getattr(self, f"{connector_name}_connector", None)
 
-                if connector and hasattr(connector, 'large_trades'):
+                if connector and hasattr(connector, "large_trades"):
                     # Извлекаем large_trades из коннектора
                     for trade in connector.large_trades:
                         # Проверяем timestamp
-                        if isinstance(trade.get('timestamp'), datetime):
-                            trade_time = trade['timestamp']
+                        if isinstance(trade.get("timestamp"), datetime):
+                            trade_time = trade["timestamp"]
                         else:
                             # Если timestamp в миллисекундах/секундах
-                            ts = trade.get('timestamp', 0)
+                            ts = trade.get("timestamp", 0)
                             if ts > 1e10:  # Миллисекунды
                                 trade_time = datetime.fromtimestamp(ts / 1000)
                             else:  # Секунды
@@ -1325,25 +1596,26 @@ class GIOCryptoBot:
 
                         # Фильтруем по времени
                         if trade_time > cutoff_time:
-                            recent_trades.append({
-                                'symbol': trade.get('symbol', ''),
-                                'side': trade.get('side', ''),
-                                'size': trade.get('size', 0),
-                                'price': trade.get('price', 0),
-                                'value': trade.get('value', 0),
-                                'exchange': connector_name.upper(),
-                                'timestamp': trade_time
-                            })
+                            recent_trades.append(
+                                {
+                                    "symbol": trade.get("symbol", ""),
+                                    "side": trade.get("side", ""),
+                                    "size": trade.get("size", 0),
+                                    "price": trade.get("price", 0),
+                                    "value": trade.get("value", 0),
+                                    "exchange": connector_name.upper(),
+                                    "timestamp": trade_time,
+                                }
+                            )
 
             # Сортируем по значению (убыванию)
-            recent_trades.sort(key=lambda x: x['value'], reverse=True)
+            recent_trades.sort(key=lambda x: x["value"], reverse=True)
 
             return recent_trades[:10]  # Топ-10
 
         except Exception as e:
             logger.error(f"❌ Error getting whale trades: {e}")
             return []
-
 
     async def analyze_symbol_with_validation(self, symbol: str):
         """Анализ символа с кросс-валидацией между биржами"""
@@ -1510,6 +1782,13 @@ class GIOCryptoBot:
                 asyncio.create_task(self.binance_orderbook_ws.start())
                 logger.info("✅ Binance Orderbook WebSocket запущен")
 
+            # ⭐ Запуск MTF Analyzer Background Task
+            if self.mtf_analyzer:
+                asyncio.create_task(self._mtf_periodic_update())
+                logger.info(
+                    "✅ MTF Analyzer background task запущен (обновление каждые 5 минут)"
+                )
+
             # ⭐ Запуск OKX WebSocket
             if self.okx_connector:
                 asyncio.create_task(self.okx_connector.start_websocket())
@@ -1525,17 +1804,17 @@ class GIOCryptoBot:
                 logger.info("✅ Enhanced Alerts запущен")
 
             # Запуск ROI мониторинга с кешированием цен
-            if self.roi_tracker:
-                try:
-                    # Запускаем ROI Tracker (включает price_updater)
-                    await self.roi_tracker.start()
-                    logger.info("✅ ROI мониторинг запущен с кешированием цен")
+            # if self.roi_tracker:
+            # try:
+            # Запускаем ROI Tracker (включает price_updater)
+            #    await self.roi_tracker.start()
+            #     logger.info("✅ ROI мониторинг запущен с кешированием цен")
 
-                    # Запускаем мониторинг активных сигналов
-                    await self.roi_tracker.start_monitoring()
-                    logger.info("✅ ROI мониторинг активных сигналов запущен")
-                except Exception as e:
-                    logger.error(f"❌ Ошибка запуска ROI мониторинга: {e}")
+            # Запускаем мониторинг активных сигналов
+            #     await self.roi_tracker.start_monitoring()
+            #     logger.info("✅ ROI мониторинг активных сигналов запущен")
+            # except Exception as e:
+            # logger.error(f"❌ Ошибка запуска ROI мониторинга: {e}")
 
             await self.update_news()
 
@@ -1708,3 +1987,80 @@ class GIOCryptoBot:
 
         except Exception as e:
             logger.error(f"❌ Ошибка при остановке: {e}")
+
+    async def _mtf_periodic_update(self):
+        """
+        Периодическое обновление MTF анализа для всех символов
+        Запускается каждые 5 минут
+        """
+        try:
+            logger.info("🔄 MTF Periodic Update Task started (every 5min)")
+
+            while self.is_running:
+                try:
+                    for symbol in TRACKED_SYMBOLS:
+                        try:
+                            logger.info(f"🔄 MTF анализ для {symbol}...")
+
+                            # ✅ ИСПРАВЛЕНО: Обновляем кэш свечей ПЕРЕД анализом!
+                            logger.info(f"🔄 Обновление кэша свечей для {symbol}...")
+                            for interval in ['60', '240', 'D']:
+                                try:
+                                    await self.bybit_connector.update_klines_cache(
+                                        symbol=symbol,
+                                        interval=interval,
+                                        limit=200
+                                    )
+                                    logger.debug(f"   ✅ {symbol} ({interval}) обновлён")
+                                    await asyncio.sleep(1)
+                                except Exception as e:
+                                    logger.error(f"   ❌ Ошибка {symbol} ({interval}): {e}")
+
+                            logger.info(f"   ✅ Кэш свечей {symbol} обновлён")
+
+                            # Анализируем 1h, 4h, 1d
+                            mtf_results = {}
+                            for timeframe in ["1h", "4h", "1d"]:
+                                result = await self.mtf_analyzer.analyze(
+                                    symbol, timeframe
+                                )
+
+                                if result:
+                                    mtf_results[timeframe] = result
+                                    logger.info(
+                                        f"   ✅ {symbol} {timeframe}: {result.get('trend', 'UNKNOWN')} "
+                                        f"(strength {result.get('strength', 0):.2f})"
+                                    )
+                                else:
+                                    logger.debug(
+                                        f"   ⚠️ {symbol} {timeframe}: Недостаточно данных"
+                                    )
+
+                            # Сохраняем в multi_tf_filter для дашборда
+                            if self.multi_tf_filter and mtf_results:
+                                if not hasattr(self.multi_tf_filter, "trends"):
+                                    self.multi_tf_filter.trends = {}
+
+                                self.multi_tf_filter.trends[symbol] = mtf_results
+                                logger.info(
+                                    f"   ✅ MTF данные для {symbol} сохранены в кеш"
+                                )
+
+                        except Exception as e:
+                            logger.error(f"❌ MTF error for {symbol}: {e}")
+
+                        # Небольшая задержка между символами
+                        await asyncio.sleep(2)
+
+                    # Ждём 5 минут до следующего обновления
+                    logger.info("✅ MTF цикл завершён, ждём 5 минут...")
+                    await asyncio.sleep(300)  # 5 минут
+
+                except Exception as e:
+                    logger.error(
+                        f"❌ MTF periodic update cycle error: {e}", exc_info=True
+                    )
+                    await asyncio.sleep(60)  # Retry через минуту
+
+        except Exception as e:
+            logger.error(f"❌ MTF periodic update task crashed: {e}", exc_info=True)

@@ -86,7 +86,7 @@ class ROITracker:
     - Только отслеживает и уведомляет о результатах сигналов
     """
 
-    def __init__(self, bot, telegram_handler=None, db_path: str = "gio_bot.db"):
+    def __init__(self, bot, telegram_handler=None, db_path: str = "gio_crypto_bot.db"):
         """
         Инициализация ROI Tracker
 

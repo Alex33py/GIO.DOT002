@@ -6,6 +6,7 @@ Unified Auto Scanner - Автоматический сканер рынка (к�
 """
 
 import asyncio
+import time
 from typing import Optional, List, Dict
 from datetime import datetime
 from config.settings import logger, TRACKED_SYMBOLS, SCANNER_CONFIG
@@ -18,32 +19,56 @@ class UnifiedAutoScanner:
     def __init__(
         self,
         bot_instance,
-        scenario_matcher,
-        risk_calculator=None,
+        bybit_connector,
+        binance_connector,
+        indicator_calculator,
+        signal_generator,
+        telegram_handler,
         signal_recorder=None,
-        position_tracker=None,
+        scenario_matcher=None,
+        sentiment_analyzer=None,
+        veto_system=None,
+        interval: int = 300,
     ):
         """
         Инициализация автосканера
 
         Args:
             bot_instance: Экземпляр основного бота
-            scenario_matcher: UnifiedScenarioMatcher для поиска сценариев
-            risk_calculator: Калькулятор рисков (опционально)
+            bybit_connector: Bybit API коннектор
+            binance_connector: Binance API коннектор
+            indicator_calculator: Калькулятор индикаторов
+            signal_generator: Генератор сигналов
+            telegram_handler: Telegram бот handler
             signal_recorder: Рекордер сигналов (опционально)
-            position_tracker: Трекер позиций (опционально)
+            scenario_matcher: UnifiedScenarioMatcher (опционально)
+            sentiment_analyzer: Анализатор сентимента (опционально)
+            veto_system: Система вето (опционально)
+            interval: Интервал сканирования в секундах (по умолчанию 300 = 5 мин)
         """
         self.bot = bot_instance
-        self.scenario_matcher = scenario_matcher
-        self.risk_calculator = risk_calculator
+        self.bybit_connector = bybit_connector
+        self.binance_connector = binance_connector
+        self.indicator_calculator = indicator_calculator
+        self.signal_generator = signal_generator
+        self.telegram_handler = telegram_handler
         self.signal_recorder = signal_recorder
-        self.position_tracker = position_tracker
+        self.scenario_matcher = scenario_matcher
+        self.sentiment_analyzer = sentiment_analyzer
+        self.veto_system = veto_system
 
         # Настройки
-        self.interval_minutes = SCANNER_CONFIG.get("interval_minutes", 5)
+        self.interval_minutes = interval // 60  # Конвертируем секунды в минуты
         self.symbols = TRACKED_SYMBOLS
         self.is_running = False
         self.scan_task = None
+
+        # ✅ АНТИ-СПАМ НАСТРОЙКИ
+        self.last_signal_time = {}  # {"BTCUSDT": timestamp}
+        self.signal_cooldown = 1800  # 30 минут между сигналами
+        self.signals_per_hour = []  # [timestamp1, timestamp2, ...]
+        self.max_signals_per_hour = 10  # Максимум 10 сигналов в час
+        self.max_active_positions_per_symbol = 2  # Макс. позиций по символу
 
         logger.info(
             f"✅ UnifiedAutoScanner инициализирован (интервал: {self.interval_minutes} мин)"
@@ -98,6 +123,15 @@ class UnifiedAutoScanner:
     async def scan_market(self):
         """Сканирование рынка на всех символах"""
         try:
+            now = time.time()
+            hour_ago = now - 3600
+            self.signals_per_hour = [t for t in self.signals_per_hour if t > hour_ago]
+
+            if len(self.signals_per_hour) >= self.max_signals_per_hour:
+                logger.warning(
+                    f"⚠️ Лимит сигналов достигнут: {self.max_signals_per_hour}/час"
+                )
+                return
             logger.info(f"🔍 Начало сканирования рынка ({len(self.symbols)} символов)")
 
             signals_found = 0
@@ -128,6 +162,8 @@ class UnifiedAutoScanner:
                             )
 
                             logger.info(f"✅ Сигнал #{signal_id} сохранён в БД")
+                            # ✅ РЕГИСТРИРУЕМ СИГНАЛ В ЛИМИТЕ
+                            self.signals_per_hour.append(now)
 
                             # Сохраняем данные в market_data для команды /scenario
                             try:
@@ -362,32 +398,47 @@ class UnifiedAutoScanner:
     async def analyze_symbol(self, symbol: str) -> Optional[Dict]:
         """
         Анализ одного символа
-
-        Args:
-            symbol: Торговая пара (например, "BTCUSDT")
-
-        Returns:
-            Dict с параметрами сигнала или None
         """
         try:
-            # ========== 1. ПОЛУЧАЕМ ДАННЫЕ РЫНКА ==========
+            # ✅ 1. ПРОВЕРКА COOLDOWN
+            now = time.time()
+            last_time = self.last_signal_time.get(symbol, 0)
+
+            if now - last_time < self.signal_cooldown:
+                remaining_min = int((self.signal_cooldown - (now - last_time)) / 60)
+                logger.debug(f"⏸️ {symbol}: cooldown ({remaining_min} мин осталось)")
+                return None
+
+            # ✅ 2. ПРОВЕРКА АКТИВНЫХ ПОЗИЦИЙ
+            if hasattr(self.bot, "roi_tracker"):
+                active_signals = self.bot.roi_tracker.get_active_signals_by_symbol(
+                    symbol
+                )
+                if len(active_signals) >= self.max_active_positions_per_symbol:
+                    logger.debug(
+                        f"⏸️ {symbol}: {len(active_signals)} активных позиций (лимит)"
+                    )
+                    return None
+
+            # ========== 3. ПОЛУЧАЕМ ДАННЫЕ РЫНКА ==========
+
             market_data = await self._get_market_data(symbol)
             if not market_data:
                 return None
 
-            # ========== 2. ВАЛИДАЦИЯ MARKET DATA ==========
+            # ========== 4. ВАЛИДАЦИЯ MARKET DATA ==========
             current_price = market_data.get("close", 0)
             if not DataValidator.validate_price(current_price, symbol):
                 logger.warning(f"⚠️ {symbol}: Невалидная цена, пропускаем")
                 return None
 
-            # ========== 3. ВАЛИДАЦИЯ СВЕЧЕЙ ==========
+            # ========== 5. ВАЛИДАЦИЯ СВЕЧЕЙ ==========
             candles = market_data.get("candles", [])
             if not DataValidator.validate_candles_list(candles, min_length=20):
                 logger.warning(f"⚠️ {symbol}: Невалидные свечи, пропускаем")
                 return None
 
-            # ========== 4. ПОДГОТОВКА ДАННЫХ ==========
+            # ========== 6. ПОДГОТОВКА ДАННЫХ ==========
             indicators = {}
             mtf_trends = {}
             volume_profile = await self.bot.get_volume_profile(symbol)
@@ -430,7 +481,7 @@ class UnifiedAutoScanner:
                 except:
                     pass
 
-            # ========== 5. ИЩЕМ СОВПАДЕНИЕ СЦЕНАРИЯ ==========
+            # ========== 7. ИЩЕМ СОВПАДЕНИЕ СЦЕНАРИЯ ==========
             match_result = self.scenario_matcher.match_scenario(
                 symbol=symbol,
                 market_data=market_data,
@@ -445,7 +496,7 @@ class UnifiedAutoScanner:
             if not match_result:
                 return None
 
-            # ========== 6. ПРИМЕНЯЕМ ФИЛЬТРЫ ==========
+            # ========== 8. ПРИМЕНЯЕМ ФИЛЬТРЫ ==========
             direction = match_result.get("direction", "LONG")
 
             # Инициализируем переменные
@@ -457,7 +508,7 @@ class UnifiedAutoScanner:
             mtf_aligned = 0
             mtf_agreement = 0
 
-            # 6.1 CONFIRM FILTER
+            # 8.1 CONFIRM FILTER
             if hasattr(self.bot, "confirm_filter") and self.bot.confirm_filter:
                 logger.info(f"🔍 Применение Confirm Filter для {symbol}...")
 
@@ -492,7 +543,7 @@ class UnifiedAutoScanner:
 
                 logger.info(f"✅ {symbol}: Confirm Filter пройден")
 
-            # 6.2 MULTI-TF FILTER + ПОЛУЧЕНИЕ MTF ДАННЫХ
+            # 8.2 MULTI-TF FILTER + ПОЛУЧЕНИЕ MTF ДАННЫХ
             if hasattr(self.bot, "multi_tf_filter") and self.bot.multi_tf_filter:
                 logger.info(f"🔍 Применение Multi-TF Filter для {symbol}...")
 
@@ -541,12 +592,12 @@ class UnifiedAutoScanner:
                         f"   📊 {symbol} MTF: {trend_1h}/{trend_4h}/{trend_1d} ({mtf_agreement}%)"
                     )
 
-            # ========== 7. ПРОВЕРЯЕМ STATUS ==========
+            # ========== 9. ПРОВЕРЯЕМ STATUS ==========
             if match_result.get("status") == "observation":
                 logger.debug(f"⏭️ {symbol}: observation режим, пропускаем")
                 return None
 
-            # ========== 8. ВАЛИДАЦИЯ TP/SL ==========
+            # ========== 10. ВАЛИДАЦИЯ TP/SL ==========
             entry_price = match_result.get("entry_price", 0)
             stop_loss = match_result.get("stop_loss", 0)
             tp1 = match_result.get("tp1", 0)
@@ -565,7 +616,7 @@ class UnifiedAutoScanner:
                 logger.warning(f"⚠️ {symbol}: Невалидные TP/SL, пропускаем сигнал")
                 return None
 
-            # ========== 9. ПОЛУЧАЕМ ДОПОЛНИТЕЛЬНЫЕ ДАННЫЕ ==========
+            # ========== 11. ПОЛУЧАЕМ ДОПОЛНИТЕЛЬНЫЕ ДАННЫЕ ==========
             # Funding Rate
             funding_rate = 0.0
             try:
@@ -592,7 +643,7 @@ class UnifiedAutoScanner:
             except Exception as e:
                 logger.debug(f"   ⚠️ Не удалось получить L/S Ratio для {symbol}: {e}")
 
-            # ========== 10. ФОРМИРУЕМ СИГНАЛ ==========
+            # ========== 12. ФОРМИРУЕМ СИГНАЛ ==========
             signal = {
                 "signal": True,
                 "symbol": symbol,
@@ -620,6 +671,8 @@ class UnifiedAutoScanner:
                 "mtf_aligned": mtf_aligned,
                 "mtf_agreement": mtf_agreement,
             }
+            self.last_signal_time[symbol] = now
+            logger.info(f"✅ {symbol}: сигнал найден, cooldown активен")
             return signal
 
         except Exception as e:

@@ -219,70 +219,6 @@ class OKXConnector:
         logger.info(f"✅ Установлено {len(callbacks)} callbacks для OKX WebSocket")
 
 
-
-    def get_cvd_percentage(self, symbol: str) -> float:
-        """
-        Возвращает CVD в процентах от общего объёма
-
-        Args:
-            symbol: Торговая пара
-
-        Returns:
-            float: CVD в процентах (-100 до +100)
-        """
-        try:
-            if symbol not in self.cvd_trades or not self.cvd_trades[symbol]:
-                return 0
-
-            # Сумма всех трейдов (по модулю)
-            total_volume = sum(abs(d) for ts, d in self.cvd_trades[symbol])
-
-            if total_volume == 0:
-                return 0
-
-            # CVD в процентах
-            cvd_pct = (self.cvd[symbol] / total_volume) * 100
-            return cvd_pct
-
-        except Exception as e:
-            logger.error(f"❌ OKX CVD percentage error: {e}")
-            return 0
-
-
-            # Суммируем объёмы (первые 20 уровней)
-            total_bids = sum([float(bid[1]) for bid in bids[:20]])
-            total_asks = sum([float(ask[1]) for ask in asks[:20]])
-
-            if total_bids + total_asks == 0:
-                return 0.0
-
-            # Рассчитываем buy pressure (0-100%)
-            buy_pressure = (total_bids / (total_bids + total_asks)) * 100
-
-            # Нормализуем от -100 до +100
-            # 50% = 0 (neutral), 100% = +100 (strong buy), 0% = -100 (strong sell)
-            pressure = (buy_pressure - 50) * 2
-
-            return round(pressure, 2)
-
-        except Exception as e:
-            logger.error(f"❌ _calculate_orderbook_pressure error {symbol}: {e}")
-            return 0.0
-
-
-    def set_callbacks(self, callbacks: Dict[str, Callable]):
-        """
-        Установить callback функции для WebSocket
-
-        Args:
-            callbacks: {
-                'on_orderbook_update': func,
-                'on_trade': func,
-            }
-        """
-        self.callbacks = callbacks
-        logger.info(f"✅ Установлено {len(callbacks)} callbacks для OKX WebSocket")
-
     # ===========================================
     # AUTHENTICATION
     # ===========================================
@@ -290,6 +226,7 @@ class OKXConnector:
     def _generate_signature(
         self, timestamp: str, method: str, request_path: str, body: str = ""
     ) -> str:
+
         """
         Генерация подписи для OKX API
 
@@ -667,7 +604,6 @@ class OKXConnector:
             self.stats["ws_messages"] += 1
             self.stats["ws_orderbook_updates"] += 1
 
-            # ✅ ДОБАВЬ ЭТУ ЧАСТЬ:
             # Рассчитываем и сохраняем давление
             bids = orderbook["bids"]
             asks = orderbook["asks"]
@@ -683,16 +619,16 @@ class OKXConnector:
                 'pressure': pressure
             }
 
-            # Логируем давление (throttled)
+            # ✅ ЛОГИРУЕМ ТОЛЬКО ЭКСТРЕМАЛЬНОЕ ДАВЛЕНИЕ (>50%)
             current_time = time.time()
             last_log = self.last_pressure_log.get(symbol, 0)
 
-            if abs(pressure) > 20 and (current_time - last_log > 30):  # Раз в 30 секунд
+            if abs(pressure) > 50 and (current_time - last_log > 30):
                 direction = "📈 BUY" if pressure > 0 else "📉 SELL"
-                logger.info(f"📊 OKX {symbol} Pressure: {pressure:+.1f}% {direction}")
+                logger.info(f"🔥 OKX {symbol}: {abs(pressure):.1f}% {direction} pressure")
                 self.last_pressure_log[symbol] = current_time
 
-            # ========== РАСЧЁТ ДИСБАЛАНСА (существующий код) ==========
+            # ✅ РАСЧЁТ ДИСБАЛАНСА (только экстремальный >90%)
             try:
                 if bids and asks:
                     bid_volume = sum([bid[1] for bid in bids[:5]])
@@ -702,26 +638,20 @@ class OKXConnector:
                     if total > 0:
                         imbalance = ((bid_volume - ask_volume) / total) * 100
 
-                        # Проверка дисбаланса
-                        if abs(imbalance) >= 70:
-                            # ✅ ДОБАВИТЬ БАТЧИНГ:
-                            from utils.log_batcher import log_batcher
-                            if hasattr(log_batcher, 'log_imbalance'):
-                                log_batcher.log_imbalance('OKX', symbol, imbalance)
-                            else:
-                                # Fallback: логируем реже (раз в 10 секунд)
-                                if not hasattr(self, '_last_imbalance_log'):
-                                    self._last_imbalance_log = {}
+                        # ✅ ТОЛЬКО ЭКСТРЕМАЛЬНЫЙ ДИСБАЛАНС (>90%)
+                        if abs(imbalance) >= 90:
+                            if not hasattr(self, '_last_imbalance_log'):
+                                self._last_imbalance_log = {}
 
-                                now = datetime.now().timestamp()
-                                last_log = self._last_imbalance_log.get(symbol, 0)
+                            now = datetime.now().timestamp()
+                            last_log = self._last_imbalance_log.get(symbol, 0)
 
-                                if now - last_log > 10:  # Раз в 10 секунд
-                                    direction = "📈 BUY" if imbalance > 0 else "📉 SELL"
-                                    logger.info(
-                                        f"🔥 OKX {symbol}: {abs(imbalance):.1f}% {direction} pressure"
-                                    )
-                                    self._last_imbalance_log[symbol] = now
+                            if now - last_log > 30:  # Раз в 30 секунд
+                                direction = "📈 BUY" if imbalance > 0 else "📉 SELL"
+                                logger.info(
+                                    f"🔥 OKX {symbol}: {abs(imbalance):.1f}% {direction} pressure"
+                                )
+                                self._last_imbalance_log[symbol] = now
 
             except Exception as e:
                 logger.debug(f"⚠️ OKX imbalance calc error: {e}")
@@ -729,6 +659,7 @@ class OKXConnector:
             # Callback
             if "on_orderbook_update" in self.callbacks:
                 await self.callbacks["on_orderbook_update"](symbol, orderbook)
+
 
 
     async def _handle_trade(self, symbol: str, data: Dict):
@@ -759,11 +690,29 @@ class OKXConnector:
             # Calculate trade value
             trade_value = price * quantity
 
-            # ⭐ НОВОЕ: Обнаружение крупных трейдов (whale activity)
+            # ⭐ WHALE TRACKER INTEGRATION
+            if hasattr(self, 'whale_tracker') and self.whale_tracker:
+                self.whale_tracker.add_trade(
+                    symbol=symbol.replace('-', ''),  # BTC-USDT -> BTCUSDT
+                    side=side.upper(),               # buy -> BUY
+                    size=quantity,
+                    price=price
+                )
+
+            # ⭐ CVD CALCULATOR INTEGRATION
+            if hasattr(self, 'cvd_calculator') and self.cvd_calculator:
+                self.cvd_calculator.process_trade(
+                    symbol=symbol.replace('-', ''),
+                    side=side.upper(),
+                    price=price,
+                    quantity=quantity
+                )
+
+            # Локальное хранение крупных трейдов
             if trade_value >= self.large_trade_threshold:
                 whale_trade = {
-                    'symbol': symbol.replace('-', ''),  # BTC-USDT -> BTCUSDT
-                    'side': side.upper(),  # buy -> BUY
+                    'symbol': symbol.replace('-', ''),
+                    'side': side.upper(),
                     'size': quantity,
                     'price': price,
                     'value': trade_value,
@@ -771,24 +720,22 @@ class OKXConnector:
                     'exchange': 'OKX'
                 }
 
-                # Добавляем в список
                 self.large_trades.append(whale_trade)
 
                 # Ограничиваем размер (храним последние 100)
                 if len(self.large_trades) > 100:
                     self.large_trades = self.large_trades[-100:]
 
-                # Логируем крупную сделку
-                logger.info(
-                    f"🐋 OKX {symbol} Large Trade {side.upper()} "
-                    f"{quantity:.4f} @ ${price:,.2f} = ${trade_value:,.0f}"
-                )
+                # ✅ ЛОГИРОВАНИЕ ОТКЛЮЧЕНО (whale_tracker уже батчит)
+                pass
 
             self.stats["ws_messages"] += 1
             self.stats["ws_trade_updates"] += 1
 
             if "on_trade" in self.callbacks:
                 await self.callbacks["on_trade"](symbol, trade_data)
+
+
 
 
     # HELPER METHODS

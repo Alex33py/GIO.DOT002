@@ -40,10 +40,14 @@ for directory in [DATA_DIR, LOGS_DIR, SCENARIOS_DIR, CACHE_DIR]:
 # ============================================================================
 BYBIT_API_KEY = os.getenv("BYBIT_API_KEY", "")
 BYBIT_SECRET_KEY = os.getenv("BYBIT_SECRET_KEY", "")
+
 CRYPTOPANIC_API_KEY = os.getenv("CRYPTOPANIC_API_KEY", "")
 CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY", "")
+
 BINANCE_API_KEY = os.getenv("BINANCE_API_KEY", "")
 BINANCE_API_SECRET = os.getenv("BINANCE_API_SECRET", "")
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # ============================================================================
 # TELEGRAM BOT CONFIGURATION

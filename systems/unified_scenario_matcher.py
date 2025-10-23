@@ -509,6 +509,52 @@ class EnhancedScenarioMatcher:
         except (ValueError, TypeError):
             return 1.0
 
+    async def find_matching_scenarios(
+        self,
+        symbol: str,
+        market_data: Dict,
+        limit: int = 3
+    ) -> List[Dict]:
+        """
+        Алиас для match_scenario() — для совместимости с bot.py
+
+        Args:
+            symbol: Торговая пара
+            market_data: Все рыночные данные
+            limit: Максимальное количество сценариев (не используется, т.к. возвращаем 1 лучший)
+
+        Returns:
+            List[Dict]: Список сценариев (обычно 1 элемент или пустой)
+        """
+        try:
+            # Извлекаем данные из market_data
+            indicators = market_data.get("indicators", {})
+            mtf_trends = market_data.get("mtf_trends", {})
+            volume_profile = market_data.get("volume_profile", {})
+            news_sentiment = market_data.get("news_sentiment", {})
+            veto_checks = market_data.get("veto_checks", {})
+
+            # Вызываем основной метод
+            signal = self.match_scenario(
+                symbol=symbol,
+                market_data=market_data,
+                indicators=indicators,
+                mtf_trends=mtf_trends,
+                volume_profile=volume_profile,
+                news_sentiment=news_sentiment,
+                veto_checks=veto_checks
+            )
+
+            # Возвращаем список с 1 сценарием или пустой список
+            if signal:
+                return [signal]
+            else:
+                return []
+
+        except Exception as e:
+            logger.error(f"❌ find_matching_scenarios: {e}")
+            return []
+
 
 
 # Экспорт

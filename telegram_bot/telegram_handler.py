@@ -11,12 +11,18 @@ import time
 from typing import Optional, Dict, List
 from datetime import datetime, timedelta
 from telegram import Update
-from telegram_handlers.gio_dashboard_handler import GIODashboardHandler
+from handlers.dashboard_handler import GIODashboardHandler
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.constants import ParseMode
 from config.settings import logger, TELEGRAM_CONFIG, DATA_DIR
+from handlers.unified_dashboard import UnifiedDashboardHandler
 import pandas as pd
 import sqlite3
+from handlers.support_resistance_detector import AdvancedSupportResistanceDetector
+
+from telegram.request import HTTPXRequest
+from ai.gemini_interpreter import GeminiInterpreter
+from config.settings import GEMINI_API_KEY
 
 
 class TelegramBotHandler:
@@ -32,7 +38,43 @@ class TelegramBotHandler:
         self.application = None
         self.is_running = False
         self.gio_dashboard = GIODashboardHandler(bot_instance)
-        self.db_path = os.path.join(DATA_DIR, "gio_bot.db")
+        self.db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
+        try:
+            from core.market_dashboard import MarketDashboard
+
+            self.market_dashboard = MarketDashboard(bot_instance)
+            logger.info("✅ MarketDashboard initialized in TelegramBotHandler")
+        except ImportError as e:
+            logger.warning(f"⚠️ MarketDashboard not found: {e}")
+            self.market_dashboard = None
+        self.unified_dashboard_handler = UnifiedDashboardHandler(self)
+        self.sr_detector = AdvancedSupportResistanceDetector(
+            atr_multiplier=0.5, volume_threshold=1.5
+        )
+        logger.info("✅ SR Detector initialized")
+
+        # ✅ DEBUG: Проверка GEMINI_API_KEY
+        print(
+            f"🔍 DEBUG: GEMINI_API_KEY = {GEMINI_API_KEY[:20] if GEMINI_API_KEY else 'EMPTY'}"
+        )
+        logger.info(
+            f"🔍 DEBUG: GEMINI_API_KEY = {GEMINI_API_KEY[:20] if GEMINI_API_KEY else 'EMPTY'}"
+        )
+
+        if GEMINI_API_KEY:
+            try:
+                self.gemini_interpreter = GeminiInterpreter(GEMINI_API_KEY)
+                logger.info("✅ GeminiInterpreter создан успешно")
+            except Exception as e:
+                logger.error(
+                    f"❌ Ошибка создания GeminiInterpreter: {e}", exc_info=True
+                )
+                self.gemini_interpreter = None
+        else:
+            logger.warning("⚠️ GEMINI_API_KEY пустой, GeminiInterpreter отключён")
+            self.gemini_interpreter = None
+
+        logger.info("✅ Unified Dashboard Handler initialized")
 
         if not self.enabled:
             logger.warning("⚠️ Telegram bot disabled")
@@ -45,20 +87,30 @@ class TelegramBotHandler:
             return False
 
         try:
-            self.application = Application.builder().token(self.token).build()
+            request = HTTPXRequest(
+                connection_pool_size=8,
+                connect_timeout=30.0,
+                read_timeout=30.0,
+                write_timeout=30.0,
+                pool_timeout=30.0,
+            )
+
+            self.application = (
+                Application.builder().token(self.token).request(request).build()
+            )
 
             # Регистрируем все команды
             self.application.add_handler(CommandHandler("start", self.cmd_start))
             self.application.add_handler(CommandHandler("help", self.cmd_help))
             self.application.add_handler(CommandHandler("status", self.cmd_status))
             self.application.add_handler(
-                CommandHandler("signal_stats", self.cmd_signal_stats)
+                CommandHandler("signalstats", self.cmd_signal_stats)
             )
+
             self.application.add_handler(
-                CommandHandler("signal_history", self.cmd_signal_history)
+                CommandHandler("signalhistory", self.cmd_signal_history)
             )
             self.application.add_handler(CommandHandler("analyze", self.cmd_analyze))
-            #  self.application.add_handler(CommandHandler("trades", self.cmd_trades))
             self.application.add_handler(CommandHandler("stats", self.cmd_stats))
             self.application.add_handler(CommandHandler("signals", self.cmd_signals))
             self.application.add_handler(
@@ -66,10 +118,7 @@ class TelegramBotHandler:
             )
             self.application.add_handler(CommandHandler("export", self.cmd_export))
             self.application.add_handler(
-                CommandHandler("analyze_batching", self.cmd_analyze_batching)
-            )
-            self.application.add_handler(
-                CommandHandler("analyze_batching", self.cmd_analyze_batching)
+                CommandHandler("analyzebatching", self.cmd_analyze_batching)
             )
             self.application.add_handler(CommandHandler("pairs", self.cmd_pairs))
             self.application.add_handler(CommandHandler("add", self.cmd_add))
@@ -79,32 +128,61 @@ class TelegramBotHandler:
             self.application.add_handler(
                 CommandHandler("available", self.cmd_available)
             )
-            #  self.application.add_handler(CommandHandler("roi", self.cmd_roi))
+            self.application.add_handler(CommandHandler("trades", self.cmd_trades))
             self.application.add_handler(CommandHandler("mtf", self.cmd_mtf))
             self.application.add_handler(CommandHandler("filters", self.cmd_filters))
-            self.application.add_handler(CommandHandler("scenario", self.cmd_scenario))
             self.application.add_handler(CommandHandler("market", self.cmd_market))
+            # self.application.add_handler(CommandHandler("overview", self.cmd_overview))
             self.application.add_handler(CommandHandler("advanced", self.cmd_advanced))
-            self.application.add_handler(CommandHandler("whale", self.cmd_whale))
+            # self.application.add_handler(CommandHandler("whale", self.cmd_whale))
             self.application.add_handler(
                 CommandHandler("gio", self.gio_dashboard.cmd_gio)
             )
-
-            from telegram_handlers.market_overview_handler import MarketOverviewHandler
-
-            self.market_overview_handler = MarketOverviewHandler(self.bot_instance)
+            # self.application.add_handler(CommandHandler("refresh", self.cmd_refresh))
+            self.application.add_handler(CommandHandler("roi", self.cmd_roi))
             self.application.add_handler(
-                CommandHandler("overview", self.market_overview_handler.cmd_overview)
+                CommandHandler(
+                    "dashboard", self.unified_dashboard_handler.handle_dashboard
+                )
             )
-            self.application.add_handler(
-                CommandHandler("dashboard", self.cmd_dashboard)
-            )
+            logger.info("✅ Unified Dashboard handler registered with LIVE support")
 
-            # ===== UNIFIED DASHBOARD (NEW!) =====
-            self.application.add_handler(
-                CommandHandler("dashboard", self.cmd_dashboard)
-            )
-            logger.info("✅ Unified Dashboard handler registered")
+            # Enhanced Overview (объединение /overview + /correlation)
+
+            logger.info("🔧 BEFORE TRY: Готовимся регистрировать EnhancedOverview...")
+            try:
+                logger.info("🔍 DEBUG: Попытка импорта EnhancedOverview...")
+                from analytics.enhanced_overview import EnhancedOverview
+
+                logger.info("🔍 DEBUG: EnhancedOverview импортирован успешно")
+
+                self.enhanced_overview = EnhancedOverview(self.bot_instance)
+                logger.info("🔍 DEBUG: EnhancedOverview instance создан")
+
+                self.application.add_handler(
+                    CommandHandler("overview", self.cmd_enhanced_overview)
+                )
+                self.application.add_handler(
+                    CommandHandler("correlation", self.cmd_overview)
+                )
+                logger.info(
+                    "✅ Enhanced Overview handler registered (overview + correlation)"
+                )
+            except ImportError as e:
+                logger.error(
+                    f"❌ ImportError при загрузке EnhancedOverview: {e}", exc_info=True
+                )
+            except Exception as e:
+                logger.error(
+                    f"❌ Ошибка регистрации Enhanced Overview: {e}", exc_info=True
+                )
+
+                # Fallback: оставить старую correlation
+                self.application.add_handler(
+                    CommandHandler(
+                        "correlation", self.correlation_handler.cmd_correlation
+                    )
+                )
 
             # Correlation commands
             self.application.add_handler(
@@ -164,7 +242,7 @@ class TelegramBotHandler:
 
             # Отправляем приветственное сообщение
             await self.send_message(
-                "🚀 *GIO Crypto Bot v3.0 запущен!*\n\nИспользуйте /help для списка команд."
+                "*GIO Crypto Bot запущен!*\n\nИспользуйте /help для списка команд."
             )
 
             # Запускаем polling в отдельной задаче
@@ -263,130 +341,87 @@ class TelegramBotHandler:
         )
 
     async def cmd_help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Отправить справку - все команды"""
+        """Команда /help - показывает список команд"""
         try:
-            user_id = update.effective_user.id
+            userid = update.effective_user.id
             username = update.effective_user.username or "Unknown"
-            logger.info(f"📋 cmd_help вызвана (user_id={user_id}, username={username})")
+            logger.info(f"cmd_help: userid={userid}, username={username}")
 
-            text = """📋 <b>GIO MARKET INTELLIGENCE — КОМАНДЫ</b>
+            text = """<b>📋 GIO MARKET INTELLIGENCE — КОМАНДЫ</b>
 
-        🎯 <b>Главный Дашборд (НОВОЕ!):</b>
-        • /dashboard — Unified GIO Dashboard (все метрики)
-        • /dashboard live — С автообновлением (60 мин)
+    <b>🎯 Главный Дашборд:</b>
+    • /dashboard — Unified GIO Dashboard (все метрики)
+    • /dashboard live — С автообновлением (60 мин)
 
-        📊 <b>Детальный Анализ:</b>
-        • /market SYMBOL — Глубокий анализ актива
-        • /scenario SYMBOL — MM сценарий и фаза Wyckoff
-        • /advanced SYMBOL — Продвинутые индикаторы
-        • /mtf SYMBOL — Multi-Timeframe тренды
+    <b>📊 Детальный Анализ:</b>
+    • /market SYMBOL — Полный анализ актива (Market Intelligence)
+    • /advanced SYMBOL — Продвинутые индикаторы (MACD, BB, ATR)
 
-        📈 <b>Обзор Рынка:</b>
-        • /overview — Multi-Symbol Overview (8 активов)
-        • /correlation — Матрица корреляций топ-5
+    <b>📈 Обзор Рынка:</b>
+    • /overview — Multi-Symbol Overview (8 активов + корреляции)
 
-        💧 <b>Ликвидность:</b>
-        • /liquidity SYMBOL — Анализ глубины ликвидности
+    <b>💧 Ликвидность:</b>
+    • /liquidity SYMBOL — Анализ глубины ликвидности
 
-        📊 <b>Статистика:</b>
-        • /performance [days] — Статистика сигналов
-        • /bestsignals — Топ-10 лучших сигналов
-        • /worstsignals — Топ-10 худших сигналов
+    <b>📊 Статистика:</b>
+    • /performance [days] — Статистика сигналов
+    • /bestsignals — Топ-10 лучших сигналов
+    • /worstsignals — Топ-10 худших сигналов
 
-        🔧 <b>Вспомогательные:</b>
-        • /status — Статус системы
-        • /pairs — Список отслеживаемых пар
-
-        ━━━━━━━━━━━━━━━━━━━━━━
-
-    💡 <b>Примеры использования:</b>
-        /dashboard live
-        /market BTCUSDT
-        /scenario ETHUSDT
+    <b>🔧 Вспомогательные:</b>
+    • /status — Статус системы
+    • /pairs — Список отслеживаемых пар
 
     ━━━━━━━━━━━━━━━━━━━━━━
-        📖 <b>О GIO:</b>
+
+    <b>💡 Примеры использования:</b>
+        /dashboard live
+        /market BTCUSDT
+        /overview
+
+    ━━━━━━━━━━━━━━━━━━━━━━
+
+    <b>📖 О GIO:</b>
     GIO Market Intelligence - аналитическая
     платформа с AI-интерпретацией данных.
     🎯 Фокус: Аналитика, Сигналы, Уведомления"""
 
             await update.message.reply_text(text, parse_mode=ParseMode.HTML)
-            logger.info(f"✅ cmd_help успешно отправлена (username={username})")
+            logger.info(f"✅ cmd_help: username={username}")
 
         except Exception as e:
-            logger.error(f"❌ Ошибка в cmd_help: {e}")
+            logger.error(f"❌ cmd_help: {e}", exc_info=True)
             await update.message.reply_text(f"❌ Ошибка: {str(e)}")
 
-    async def cmd_signal_history(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ):
-        """Показать историю сигналов"""
+    async def cmd_enhanced_overview(self, update: Update, context):
+        """🎯 Enhanced Overview с Gemini 2.0"""
         try:
-            user_id = update.effective_user.id
-            username = update.effective_user.username or "Unknown"
-            logger.info(
-                f"📊 cmd_signal_history вызвана (user_id={user_id}, username={username})"
+            user = update.effective_user
+            logger.info(  # ✅ ИСПРАВЛЕНО: было self.logger
+                f"📊 cmd_enhanced_overview вызвана (user_id={user.id}, username={user.username})"
             )
 
-            args = context.args
-            days = int(args[0]) if args and args[0].isdigit() else 30
+            loading_msg = await update.message.reply_text(
+                "📊 Загрузка market overview...", parse_mode=ParseMode.MARKDOWN
+            )
 
-            # Получить завершённые сигналы из ROI Tracker
-            if not hasattr(self.bot_instance, "roi_tracker"):
-                await update.message.reply_text("❌ ROI Tracker не инициализирован")
-                return
+            logger.info("🔍 Вызываю enhanced_overview.generate_full_overview()...")
+            overview_text = await self.enhanced_overview.generate_full_overview()
+            logger.info(f"✅ Overview получен, длина: {len(overview_text)} символов")
 
-            completed_signals = self.bot_instance.roi_tracker.completed_signals
+            await loading_msg.edit_text(
+                overview_text, parse_mode="HTML", disable_web_page_preview=True
+            )
 
-            if not completed_signals:
-                text = f"📊 *ИСТОРИЯ СИГНАЛОВ* ({days} дней)\n\n"
-                text += "Нет завершённых сигналов"
-                await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
-                return
-
-            # Фильтровать по дням
-            from datetime import datetime, timedelta
-
-            cutoff_date = datetime.now() - timedelta(days=days)
-
-            recent_signals = [
-                s
-                for s in completed_signals
-                if s.close_time and datetime.fromisoformat(s.close_time) > cutoff_date
-            ]
-
-            if not recent_signals:
-                text = f"📊 *ИСТОРИЯ СИГНАЛОВ* ({days} дней)\n\n"
-                text += f"Нет сигналов за последние {days} дней"
-                await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
-                return
-
-            # Форматировать ответ
-            text = f"📊 *ИСТОРИЯ СИГНАЛОВ* ({days} дней)\n\n"
-            text += f"📈 *Всего:* {len(recent_signals)} сигналов\n\n"
-
-            # Показать последние 10
-            for signal in recent_signals[-10:]:
-                direction = "🟢 LONG" if signal.direction == "long" else "🔴 SHORT"
-                status_emoji = "✅" if signal.status == "completed" else "🛑"
-                roi_emoji = "🟢" if signal.current_roi > 0 else "🔴"
-
-                text += f"{direction} *{signal.symbol}* {status_emoji}\n"
-                text += f"├─ Entry: ${signal.entry_price:.2f}\n"
-                text += f"├─ Status: {signal.status.upper()}\n"
-                text += f"└─ ROI: {roi_emoji} {signal.current_roi:+.2f}%\n\n"
-
-            if len(recent_signals) > 10:
-                text += f"...и ещё {len(recent_signals) - 10} сигналов\n"
-
-            await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
-            logger.info(
-                f"✅ cmd_signal_history успешно отправлена (username={username})"
+            logger.info(  # ✅ ИСПРАВЛЕНО
+                f"✅ Enhanced Overview отправлен (username={user.username})"
             )
 
         except Exception as e:
-            logger.error(f"❌ Ошибка в cmd_signal_history: {e}")
-            await update.message.reply_text(f"❌ Ошибка: {str(e)}")
+            logger.error(
+                f"❌ Error in cmd_enhanced_overview: {e}", exc_info=True
+            )  # ✅ ИСПРАВЛЕНО
+            await update.message.reply_text(f"❌ Ошибка: {str(e)[:500]}")
 
     async def cmd_signal_stats(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -482,6 +517,63 @@ class TelegramBotHandler:
             logger.error(f"❌ Ошибка в cmd_signal_stats: {e}")
             await update.message.reply_text(f"❌ Ошибка: {str(e)}")
 
+    async def cmd_signal_history(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
+        """Команда /signalhistory - История сигналов"""
+        try:
+            # Параметры
+            limit = 10
+            if context.args and context.args[0].isdigit():
+                limit = min(int(context.args[0]), 50)  # Максимум 50
+
+            db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+
+            # Получаем последние сигналы
+            cursor.execute(
+                """
+                SELECT symbol, direction, entry_price, timestamp, status, roi
+                FROM signals
+                ORDER BY timestamp DESC
+                LIMIT ?
+            """,
+                (limit,),
+            )
+
+            signals = cursor.fetchall()
+            conn.close()
+
+            if not signals:
+                await update.message.reply_text("📭 История сигналов пуста.")
+                return
+
+            # Формируем сообщение
+            message = f"📜 *ИСТОРИЯ СИГНАЛОВ* (последние {len(signals)})\n\n"
+
+            for i, (symbol, direction, price, timestamp, status, roi) in enumerate(
+                signals, 1
+            ):
+                emoji = "🟢" if direction == "LONG" else "🔴"
+                roi_str = (
+                    f"+{roi:.2f}%"
+                    if roi and roi > 0
+                    else f"{roi:.2f}%" if roi else "N/A"
+                )
+                status_emoji = "✅" if status == "closed" else "⏳"
+
+                message += f"{i}. {emoji} *{symbol}* {direction}\n"
+                message += f"   💰 Entry: ${price:.2f}\n"
+                message += f"   📊 ROI: {roi_str} {status_emoji}\n"
+                message += f"   🕐 {timestamp}\n\n"
+
+            await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+
+        except Exception as e:
+            logger.error(f"Error in cmd_signal_history: {e}")
+            await update.message.reply_text(f"❌ Ошибка получения истории: {str(e)}")
+
     async def cmd_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Команда /status - Статус системы С ПОЛНОЙ СТАТИСТИКОЙ"""
         try:
@@ -489,7 +581,7 @@ class TelegramBotHandler:
             memory = self.bot_instance.memory_manager.get_statistics()
 
             # ========== SIGNALS FROM DB ==========
-            db_path = os.path.join(DATA_DIR, "gio_bot.db")
+            db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
 
@@ -904,7 +996,7 @@ class TelegramBotHandler:
         try:
             days = int(context.args[0]) if context.args else 7
 
-            db_path = os.path.join(DATA_DIR, "gio_bot.db")
+            db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
             conn = sqlite3.connect(db_path)
 
             query = f"""
@@ -947,7 +1039,7 @@ class TelegramBotHandler:
         try:
             days = int(context.args[0]) if context.args else 30
 
-            db_path = os.path.join(DATA_DIR, "gio_bot.db")
+            db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
             conn = sqlite3.connect(db_path)
 
             query = f"""
@@ -1006,7 +1098,7 @@ class TelegramBotHandler:
         try:
             limit = int(context.args[0]) if context.args else 5
 
-            db_path = os.path.join(DATA_DIR, "gio_bot.db")
+            db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
             conn = sqlite3.connect(db_path)
 
             query = f"""
@@ -1132,7 +1224,7 @@ class TelegramBotHandler:
             )
 
             # Получаем данные из БД
-            db_path = os.path.join(DATA_DIR, "gio_bot.db")
+            db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
             conn = sqlite3.connect(db_path)
 
             # Формируем SQL запрос (ЭКСПОРТИРУЕМ ВСЕ КОЛОНКИ - SELECT *)
@@ -1795,150 +1887,6 @@ class TelegramBotHandler:
             logger.error(f"❌ Ошибка cmd_filters: {e}", exc_info=True)
             await update.message.reply_text(f"❌ Ошибка: {str(e)}")
 
-    async def cmd_market(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """
-        📊 /market [SYMBOL] - Market Dashboard (альтернатива Coinglass)
-
-        Использование:
-            /market - показать дашборд для BTCUSDT (по умолчанию)
-            /market ETHUSDT - показать дашборд для ETHUSDT
-            /market eth - показать дашборд для ETHUSDT (автодополнение)
-        """
-        try:
-            # Извлекаем символ из команды
-            if context.args:
-                symbol = context.args[0].upper()
-                if not symbol.endswith("USDT"):
-                    symbol = f"{symbol}USDT"
-            else:
-                symbol = "BTCUSDT"
-
-            logger.info(
-                f"📊 /market запрошен для {symbol} (user: {update.effective_user.username})"
-            )
-
-            # Проверяем доступность MarketDashboard
-            if not hasattr(self.bot_instance, "market_dashboard"):
-                await update.message.reply_text(
-                    "❌ Market Dashboard не инициализирован. "
-                    "Обратитесь к администратору."
-                )
-                return
-
-            # Отправляем "Загрузка..." сообщение
-            loading_msg = await update.message.reply_text(
-                f"⏳ Загрузка dashboard для {symbol}..."
-            )
-
-            # Генерируем dashboard
-            try:
-                dashboard_text = (
-                    await self.bot_instance.market_dashboard.generate_dashboard(symbol)
-                )
-
-                # ========== 🐋 WHALE ACTIVITY INTEGRATION ==========
-
-                # Получить whale activity
-                whale_section = ""
-                if (
-                    hasattr(self.bot_instance, "whale_tracker")
-                    and self.bot_instance.whale_tracker
-                ):
-                    try:
-                        whale_activity = (
-                            self.bot_instance.whale_tracker.get_whale_activity(symbol)
-                        )
-
-                        # Форматирование
-                        if whale_activity["trades"] > 0:
-                            whale_emoji = "🐋"
-
-                            if whale_activity["dominant_side"] == "bullish":
-                                whale_sentiment = "🟢 Bullish"
-                            elif whale_activity["dominant_side"] == "bearish":
-                                whale_sentiment = "🔴 Bearish"
-                            else:
-                                whale_sentiment = "⚪ Neutral"
-
-                            # Форматировать объёмы
-                            def format_vol(vol):
-                                if vol >= 1_000_000:
-                                    return f"${vol/1_000_000:.2f}M"
-                                elif vol >= 1_000:
-                                    return f"${vol/1_000:.2f}K"
-                                else:
-                                    return f"${vol:.2f}"
-
-                            buy_vol_str = format_vol(whale_activity["buy_volume"])
-                            sell_vol_str = format_vol(whale_activity["sell_volume"])
-                            net_str = format_vol(abs(whale_activity["net"]))
-                            net_sign = "+" if whale_activity["net"] > 0 else "-"
-                        else:
-                            whale_emoji = "💤"
-                            whale_sentiment = "⚪ Neutral"
-                            buy_vol_str = "$0.00"
-                            sell_vol_str = "$0.00"
-                            net_str = "$0.00"
-                            net_sign = ""
-
-                        whale_section = f"""
-    {whale_emoji} WHALE ACTIVITY (5min)
-    ├─ Trades: {whale_activity['trades']}
-    ├─ Buy Vol: {buy_vol_str}
-    ├─ Sell Vol: {sell_vol_str}
-    └─ Net: {net_sign}{net_str} {whale_sentiment}
-
-    """
-                    except Exception as e:
-                        logger.debug(f"Ошибка получения whale activity: {e}")
-
-                # Вставить whale_section в dashboard_text
-                if whale_section:
-                    # Найти позицию для вставки (перед LIQUIDATION ZONES)
-                    insert_pos = dashboard_text.find("⚠️ LIQUIDATION ZONES")
-                    if insert_pos != -1:
-                        dashboard_text = (
-                            dashboard_text[:insert_pos]
-                            + whale_section
-                            + dashboard_text[insert_pos:]
-                        )
-                    else:
-                        # Если не найдено, добавить в конец (перед Updated timestamp)
-                        insert_pos = dashboard_text.find("⏱️ Updated:")
-                        if insert_pos != -1:
-                            dashboard_text = (
-                                dashboard_text[:insert_pos]
-                                + whale_section
-                                + dashboard_text[insert_pos:]
-                            )
-                        else:
-                            # Если всё остальное не сработало, просто добавить в конец
-                            dashboard_text += whale_section
-
-                # ========== КОНЕЦ ИНТЕГРАЦИИ WHALE TRACKER ==========
-
-                # Удаляем "Загрузка..." и отправляем dashboard
-                await loading_msg.delete()
-
-                await update.message.reply_text(
-                    dashboard_text, parse_mode=ParseMode.MARKDOWN
-                )
-
-            except Exception as e:
-                # ✅ ДОБАВЛЕН EXCEPT БЛОК
-                logger.error(f"❌ Ошибка генерации dashboard: {e}", exc_info=True)
-                await loading_msg.edit_text(
-                    f"❌ Ошибка при генерации dashboard для {symbol}\n"
-                    f"Причина: {str(e)}"
-                )
-
-        except Exception as e:
-            # ✅ ВНЕШНИЙ EXCEPT БЛОК
-            logger.error(f"❌ Ошибка cmd_market: {e}", exc_info=True)
-            await update.message.reply_text(
-                f"❌ Ошибка: {str(e)}", parse_mode=ParseMode.MARKDOWN
-            )
-
     async def cmd_advanced(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         /advanced SYMBOL - Расширенная аналитика
@@ -1947,90 +1895,95 @@ class TelegramBotHandler:
         - Продвинутые индикаторы (MACD, Stoch RSI, BB, ATR, ADX)
         - Паттерны (свечные, S/R уровни, структура)
         - Рыночная структура (Wyckoff, режим, ликвидность)
+        - 🤖 AI ИНТЕРПРЕТАЦИЯ
         """
         try:
-            # Парсинг аргументов
+            # Получаем символ
             if not context.args:
                 await update.message.reply_text(
-                    "❌ Использование: /advanced BTCUSDT", parse_mode=ParseMode.MARKDOWN
+                    "❌ Использование: /advanced SYMBOL\n" "Пример: /advanced BTCUSDT",
+                    parse_mode=ParseMode.MARKDOWN,
                 )
                 return
 
             symbol = context.args[0].upper()
             if not symbol.endswith("USDT"):
-                symbol = f"{symbol}USDT"
+                symbol += "USDT"
 
-            logger.info(
-                f"📊 /advanced {symbol} от пользователя {update.effective_user.username}"
-            )
-
-            # Показываем "печатает..."
+            # Сообщение о загрузке
             loading_msg = await update.message.reply_text(
-                f"🔍 Анализирую {symbol}...\n⏳ Это займёт 5-10 секунд...",
-                parse_mode=ParseMode.MARKDOWN,
+                f"📊 Анализирую {symbol}...", parse_mode=ParseMode.MARKDOWN
             )
 
-            # Импортируем новые модули
-            from analytics.advanced_indicators import AdvancedIndicators
-            from analytics.pattern_detector import PatternDetector
-            from analytics.market_structure import MarketStructureAnalyzer
+            # Получаем данные
+            from indicators.advanced import AdvancedIndicators
 
-            # Получаем данные через коннектор
-            connector = self.bot_instance.bybit_connector
+            adv = AdvancedIndicators(self.bot_instance.bybit_connector)
 
-            # Получаем klines для 4H
-            klines = await connector.get_klines(symbol, "240", limit=100)
+            # Получаем свечи
+            klines = await self.bot_instance.bybit_connector.get_klines(
+                symbol=symbol, interval="240", limit=200  # 4H
+            )
 
-            if not klines or len(klines) == 0:
-                await loading_msg.edit_text(
-                    f"❌ Не удалось получить данные для {symbol}",
-                    parse_mode=ParseMode.MARKDOWN,
-                )
+            if not klines or len(klines) < 50:
+                await loading_msg.edit_text(f"❌ Недостаточно данных для {symbol}")
                 return
 
-            # Извлекаем OHLCV из списка словарей
-            candles = klines  # klines уже список
-            opens = [float(c["open"]) for c in candles]
-            highs = [float(c["high"]) for c in candles]
-            lows = [float(c["low"]) for c in candles]
-            closes = [float(c["close"]) for c in candles]
-            volumes = [float(c["volume"]) for c in candles]
+            closes = [float(k["close"]) for k in klines]
+            highs = [float(k["high"]) for k in klines]
+            lows = [float(k["low"]) for k in klines]
+            volumes = [float(k["volume"]) for k in klines]
+
+            # Рассчитываем индикаторы
+            macd = adv.calculate_macd(closes)
+            stoch_rsi = adv.calculate_stoch_rsi(closes)
+            bb = adv.calculate_bollinger_bands(closes)
+            atr = adv.calculate_atr(highs, lows, closes)
+            adx = adv.calculate_adx(highs, lows, closes)
+
+            # Паттерны
+            patterns = adv.detect_candlestick_patterns(klines[-10:])
+
+            # ========================================
+            # S/R УРОВНИ (ВРЕМЕННО ОТКЛЮЧЕНО)
+            # ========================================
+            sr_levels = {"support": [], "resistance": []}
+
+            # Структура тренда
+            trend_structure = adv.analyze_trend_structure(highs, lows, closes)
+
+            # Wyckoff фаза
+            wyckoff = adv.analyze_wyckoff_phase(closes, volumes)
+
+            # Режим рынка
+            regime = adv.detect_market_regime(closes, volumes)
+
+            # Market Bias
+            bias = adv.calculate_market_bias(closes, volumes)
 
             # ==========================================
-            # 📊 ПРОДВИНУТЫЕ ИНДИКАТОРЫ
+            # 🤖 AI ИНТЕРПРЕТАЦИЯ ИНДИКАТОРОВ
             # ==========================================
 
-            macd = AdvancedIndicators.calculate_macd(closes)
-            stoch_rsi = AdvancedIndicators.calculate_stoch_rsi(closes)
-            bb = AdvancedIndicators.calculate_bollinger_bands(closes)
-            atr = AdvancedIndicators.calculate_atr(highs, lows, closes)
-            adx = AdvancedIndicators.calculate_adx(highs, lows, closes)
+            ai_interpretation = ""
+            try:
+                ai_text = AdvancedIndicators.get_ai_interpretation(
+                    macd=macd, stoch_rsi=stoch_rsi, bollinger=bb, atr=atr, adx=adx
+                )
 
-            # ==========================================
-            # 🎯 ПАТТЕРНЫ
-            # ==========================================
+                ai_interpretation = f"""
+━━━━━━━━━━━━━━━━━━━━━━
+ <b>AI INTERPRETATION</b>
+━━━━━━━━━━━━━━━━━━━━━━
 
-            patterns = PatternDetector.detect_candlestick_patterns(
-                opens, highs, lows, closes
-            )
+{ai_text}
 
-            sr_levels = PatternDetector.find_support_resistance(highs, lows, closes)
+"""
+                logger.info(f"✅ AI интерпретация для {symbol} получена")
 
-            trend_structure = PatternDetector.detect_trend_structure(
-                highs, lows, closes
-            )
-
-            # ==========================================
-            # 🏛️ РЫНОЧНАЯ СТРУКТУРА
-            # ==========================================
-
-            wyckoff = MarketStructureAnalyzer.analyze_wyckoff_phase(
-                opens, highs, lows, closes, volumes
-            )
-
-            regime = MarketStructureAnalyzer.identify_market_regime(closes, highs, lows)
-
-            bias = MarketStructureAnalyzer.calculate_market_bias(closes, volumes)
+            except Exception as ai_error:
+                logger.error(f"❌ AI interpretation error: {ai_error}", exc_info=True)
+                ai_interpretation = ""
 
             # ==========================================
             # 📝 ФОРМИРУЕМ ОТВЕТ
@@ -2039,46 +1992,46 @@ class TelegramBotHandler:
             current_price = closes[-1]
 
             response = f"""🎯 <b>РАСШИРЕННАЯ АНАЛИТИКА: {symbol}</b>
-    💰 Цена: <b>${current_price:.2f}</b>
-    ⏰ Таймфрейм: <b>4H</b>
+💰 Цена: <b>${current_price:.2f}</b>
+⏰ Таймфрейм: <b>4H</b>
 
-    ━━━━━━━━━━━━━━━━━━━━━━
-    📊 <b>ПРОДВИНУТЫЕ ИНДИКАТОРЫ</b>
-    ━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━
+📊 <b>ПРОДВИНУТЫЕ ИНДИКАТОРЫ</b>
+━━━━━━━━━━━━━━━━━━━━━━
 
-    <b>MACD:</b>
-    ├─ MACD: {macd['macd']}
-    ├─ Signal: {macd['signal']}
-    ├─ Histogram: {macd['histogram']}
-    └─ Тренд: {macd.get('trend', 'N/A')}
+<b>MACD:</b>
+├─ MACD: {macd['macd']}
+├─ Signal: {macd['signal']}
+├─ Histogram: {macd['histogram']}
+└─ Тренд: {macd.get('trend', 'N/A')}
 
-    <b>Stochastic RSI:</b>
-    ├─ %K: {stoch_rsi['k']}
-    ├─ %D: {stoch_rsi['d']}
-    └─ Сигнал: {stoch_rsi['signal']}
+<b>Stochastic RSI:</b>
+├─ %K: {stoch_rsi['k']}
+├─ %D: {stoch_rsi['d']}
+└─ Сигнал: {stoch_rsi['signal']}
 
-    <b>Bollinger Bands:</b>
-    ├─ Upper: ${bb['upper']:.2f}
-    ├─ Middle: ${bb['middle']:.2f}
-    ├─ Lower: ${bb['lower']:.2f}
-    ├─ Width: {bb['width']:.2f}%
-    └─ Squeeze: {'🔴 Да' if bb.get('squeeze') else '🟢 Нет'}
+<b>Bollinger Bands:</b>
+├─ Upper: ${bb['upper']:.2f}
+├─ Middle: ${bb['middle']:.2f}
+├─ Lower: ${bb['lower']:.2f}
+├─ Width: {bb['width']:.2f}%
+└─ Squeeze: {'🔴 Да' if bb.get('squeeze') else '🟢 Нет'}
 
-    <b>ATR (Волатильность):</b>
-    ├─ ATR: {atr['atr']}
-    ├─ ATR%: {atr['atr_percentage']}%
-    └─ Волатильность: {atr['volatility']}
+<b>ATR (Волатильность):</b>
+├─ ATR: {atr['atr']}
+├─ ATR%: {atr['atr_percentage']}%
+└─ Волатильность: {atr['volatility']}
 
-    <b>ADX (Сила тренда):</b>
-    ├─ ADX: {adx['adx']}
-    └─ Сила: {adx['trend_strength']}
+<b>ADX (Сила тренда):</b>
+├─ ADX: {adx['adx']}
+└─ Сила: {adx['trend_strength']}
 
-    ━━━━━━━━━━━━━━━━━━━━━━
-    🎯 <b>ПАТТЕРНЫ</b>
-    ━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━
+🎯 <b>ПАТТЕРНЫ</b>
+━━━━━━━━━━━━━━━━━━━━━━
 
-    <b>Свечные паттерны:</b>
-    """
+<b>Свечные паттерны:</b>
+"""
 
             # Паттерны
             if patterns["patterns"]:
@@ -2109,27 +2062,28 @@ class TelegramBotHandler:
             response += f"└─ Структура: {trend_structure['structure']}\n"
 
             response += f"""
-    ━━━━━━━━━━━━━━━━━━━━━━
-    🏛️ <b>РЫНОЧНАЯ СТРУКТУРА</b>
-    ━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━
+🏛️ <b>РЫНОЧНАЯ СТРУКТУРА</b>
+━━━━━━━━━━━━━━━━━━━━━━
 
-    <b>Фаза Wyckoff:</b>
-    ├─ Фаза: {wyckoff['phase']}
-    ├─ Уверенность: {wyckoff['confidence']}
-    └─ Описание: {wyckoff.get('description', 'N/A')}
+<b>Фаза Wyckoff:</b>
+├─ Фаза: {wyckoff['phase']}
+├─ Уверенность: {wyckoff['confidence']}
+└─ Описание: {wyckoff.get('description', 'N/A')}
 
-    <b>Режим рынка:</b>
-    ├─ Режим: {regime['regime']}
-    ├─ Сила: {regime['strength']}
-    └─ Волатильность: {regime.get('volatility_pct', 0):.2f}%
+<b>Режим рынка:</b>
+├─ Режим: {regime['regime']}
+├─ Сила: {regime['strength']}
+└─ Волатильность: {regime.get('volatility_pct', 0):.2f}%
 
-    <b>Market Bias:</b>
-    ├─ Направление: {bias['bias']}
-    ├─ Сила: {bias['strength']}
-    └─ Momentum: {bias.get('momentum_pct', 0):.2f}%
+<b>Market Bias:</b>
+├─ Направление: {bias['bias']}
+├─ Сила: {bias['strength']}
+└─ Momentum: {bias.get('momentum_pct', 0):.2f}%
 
-    ━━━━━━━━━━━━━━━━━━━━━━
-    """
+{ai_interpretation}
+━━━━━━━━━━━━━━━━━━━━━━
+"""
 
             # Отправляем результат
             await loading_msg.delete()
@@ -2143,1055 +2097,1646 @@ class TelegramBotHandler:
                 f"❌ Ошибка при анализе: {str(e)}", parse_mode=ParseMode.MARKDOWN
             )
 
-    async def cmd_whale(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """
-        🐋 /whale SYMBOL - Детальный просмотр whale activity
-        """
+    async def cmd_market(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """market SYMBOL - Market Intelligence (НОВАЯ ВЕРСИЯ С KEY LEVELS)"""
         try:
             if not context.args:
                 await update.message.reply_text(
-                    "❌ Использование: /whale BTCUSDT\n" "Пример: /whale BTC",
+                    "❌ Использование: /market SYMBOL\n" "Пример: /market BTCUSDT",
                     parse_mode=ParseMode.MARKDOWN,
                 )
                 return
 
             symbol = context.args[0].upper()
+
+            # ✅ ИСПРАВЛЕНИЕ: правильная обработка символа
             if not symbol.endswith("USDT"):
-                symbol = f"{symbol}USDT"
+                # Убираем USD если есть, затем добавляем USDT
+                if symbol.endswith("USD"):
+                    symbol = symbol[:-3] + "USDT"
+                else:
+                    symbol = f"{symbol}USDT"
 
-            logger.info(
-                f"🐋 /whale запрошен для {symbol} (user: {update.effective_user.username})"
-            )
-
-            # Проверить WhaleTracker
-            if (
-                not hasattr(self.bot_instance, "whale_tracker")
-                or not self.bot_instance.whale_tracker
-            ):
-                await update.message.reply_text(
-                    "❌ Whale Tracker не инициализирован. "
-                    "Обратитесь к администратору."
-                )
-                return
-
-            # Показать loading
+            # Отправить сообщение о загрузке
             loading_msg = await update.message.reply_text(
-                f"⏳ Загрузка whale activity для {symbol}..."
+                f"⏳ Анализирую {symbol}...", parse_mode=ParseMode.MARKDOWN
             )
 
-            # Получить данные
-            whale_activity = self.bot_instance.whale_tracker.get_whale_activity(symbol)
+            # ✅ ИСПОЛЬЗУЕМ НОВЫЙ MarketDashboard (если доступен)
+            if (
+                hasattr(self.bot_instance, "market_dashboard")
+                and self.bot_instance.market_dashboard
+            ):
+                try:
+                    # ✅ WYCKOFF ANALYSIS (ДОБАВЛЕНО!)
+                    wyckoff_text = ""
+                    try:
+                        logger.info(f"🔍 [WYCKOFF] Анализирую {symbol}...")
 
-            # Удалить loading
-            await loading_msg.delete()
+                        if hasattr(self.bot_instance, "wyckoff_analyzer"):
+                            wyckoff_phase = (
+                                await self.bot_instance.wyckoff_analyzer.analyze_phase(
+                                    symbol, timeframe="60"
+                                )
+                            )
 
-            if whale_activity["trades"] == 0:
-                await update.message.reply_text(
-                    f"🐋 *WHALE ACTIVITY:* {symbol}\n\n"
-                    f"💤 Нет активности китов за последние 5 минут\n"
-                    f"(Порог: >$100K за сделку)\n\n"
-                    f"🔄 Обновите: /whale {symbol}",
-                    parse_mode=ParseMode.MARKDOWN,
-                )
-                return
+                            if wyckoff_phase.phase != "Unknown":
+                                wyckoff_text = f"📊 **Wyckoff Phase:** {wyckoff_phase.phase} ({wyckoff_phase.confidence:.0f}%)\n"
+                                wyckoff_text += f"└─ {wyckoff_phase.sub_phase or wyckoff_phase.description}\n"
 
-            # Форматирование детального отчёта
-            buy_vol = whale_activity["buy_volume"]
-            sell_vol = whale_activity["sell_volume"]
-            net = whale_activity["net"]
-            total_vol = buy_vol + sell_vol
+                                if wyckoff_phase.signals:
+                                    wyckoff_text += "\n🔍 **Signals:**\n"
+                                    for signal in wyckoff_phase.signals[:2]:
+                                        wyckoff_text += f"├─ {signal}\n"
 
-            buy_pressure = (buy_vol / total_vol * 100) if total_vol > 0 else 50
-            sell_pressure = (sell_vol / total_vol * 100) if total_vol > 0 else 50
+                                wyckoff_text += (
+                                    f"\n💡 **Action:** {wyckoff_phase.action}\n"
+                                )
+                            else:
+                                wyckoff_text = f"📊 **Wyckoff Phase:** Unknown\n"
 
-            # Определить sentiment
-            if whale_activity["dominant_side"] == "bullish":
-                sentiment_emoji = "🟢"
-                sentiment_text = "BULLISH (Киты покупают)"
-                interpretation = """
-    ✅ Киты активно покупают
-    • Сильный спрос от крупных игроков
-    • Возможен рост цены в краткосрочной перспективе
-    • Следите за уровнями поддержки"""
-            elif whale_activity["dominant_side"] == "bearish":
-                sentiment_emoji = "🔴"
-                sentiment_text = "BEARISH (Киты продают)"
-                interpretation = """
-    ❌ Киты активно продают
-    • Сильное предложение от крупных игроков
-    • Возможно снижение цены в краткосрочной перспективе
-    • Следите за уровнями сопротивления"""
-            else:
-                sentiment_emoji = "⚪"
-                sentiment_text = "NEUTRAL (Баланс)"
-                interpretation = """
-    ⚪ Нейтральная активность
-    • Баланс между покупками и продажами
-    • Рынок в состоянии равновесия
-    • Ожидайте пробоя в любую сторону"""
+                            logger.info(
+                                f"✅ [WYCKOFF] {symbol} = {wyckoff_phase.phase} ({wyckoff_phase.confidence:.0f}%)"
+                            )
+                        else:
+                            logger.warning("⚠️ [WYCKOFF] wyckoff_analyzer не найден!")
+                            wyckoff_text = "📊 **Wyckoff Phase:** Unknown\n"
 
-            message = f"""🐋 *WHALE ACTIVITY:* {symbol}
+                    except Exception as e:
+                        logger.error(f"❌ [WYCKOFF] Ошибка: {e}", exc_info=True)
+                        wyckoff_text = f"📊 **Wyckoff Phase:** Error\n"
 
-    📊 *ОБЗОР* (Последние 5 минут)
-    ├─ Крупных сделок: *{whale_activity['trades']}*
-    ├─ Порог: >$100,000 за сделку
-    └─ Sentiment: {sentiment_emoji} *{sentiment_text}*
+                    # Генерируем dashboard
+                    message = (
+                        await self.bot_instance.market_dashboard.generate_dashboard(
+                            symbol
+                        )
+                    )
 
-    💰 *ОБЪЁМЫ*
-    ├─ Buy Volume: *${buy_vol:,.2f}*
-    ├─ Sell Volume: *${sell_vol:,.2f}*
-    ├─ Net Volume: *${net:+,.2f}*
-    └─ Total: *${total_vol:,.2f}*
+                    # ✅ ЗАМЕНЯЕМ строку "Wyckoff Phase: Unknown" на wyckoff_text
+                    message = message.replace(
+                        "📊 **Wyckoff Phase:** Unknown", wyckoff_text.strip()
+                    )
 
-    📊 *ДАВЛЕНИЕ*
-    ├─ Buy Pressure: *{buy_pressure:.1f}%* {"🟢" if buy_pressure > 60 else "⚪"}
-    └─ Sell Pressure: *{sell_pressure:.1f}%* {"🔴" if sell_pressure > 60 else "⚪"}
+                    # Отправить результат
+                    await loading_msg.edit_text(
+                        message, parse_mode=None, disable_web_page_preview=True
+                    )
 
-    💡 *ИНТЕРПРЕТАЦИЯ*
-    {interpretation}
+                    logger.info(f"✅ /market {symbol} отправлен (НОВЫЙ ФОРМАТ)")
+                    return
 
-    ⏱️ Окно: Последние 5 минут
-    🔄 Обновите: /whale {symbol}"""
+                except Exception as e:
+                    logger.error(f"❌ Ошибка MarketDashboard: {e}", exc_info=True)
+                    # Fallback на старый формат
 
-            await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+            # ⚠️ FALLBACK: СТАРЫЙ ФОРМАТ (если MarketDashboard недоступен)
+            logger.warning(f"⚠️ MarketDashboard недоступен, использую старый формат")
 
-            logger.info(f"✅ Whale activity для {symbol} отправлен")
-
-        except Exception as e:
-            logger.error(f"❌ Ошибка cmd_whale: {e}", exc_info=True)
-            await update.message.reply_text(
-                f"❌ Ошибка при получении whale activity: {str(e)}",
-                parse_mode=ParseMode.MARKDOWN,
-            )
-
-    async def notify_new_signal(self, signal: Dict):
-        """Уведомление о новом сигнале"""
-        if not self.auto_signals:
-            return
-
-        try:
-            emoji = "🟢" if signal.get("direction") == "LONG" else "🔴"
-            is_risky = signal.get("quality_score", 100) < 60
-
-            if is_risky:
-                await self.notify_risky_entry(signal)
-            else:
-                text = (
-                    f"{emoji} *НОВЫЙ СИГНАЛ #{signal.get('id', 0)}*\n\n"
-                    f"🔸 *{signal.get('symbol', 'N/A')}* {signal.get('direction', 'LONG')}\n"
-                    f"💰 *Entry:* ${signal.get('entry_price', 0):,.2f}\n"
-                    f"🎯 *TP1:* ${signal.get('tp1', 0):,.2f}\n"
-                    f"🎯 *TP2:* ${signal.get('tp2', 0):,.2f}\n"
-                    f"🎯 *TP3:* ${signal.get('tp3', 0):,.2f}\n"
-                    f"🛑 *SL:* ${signal.get('stop_loss', 0):,.2f}\n"
-                    f"📊 *RR:* {signal.get('risk_reward', 0):.2f}\n"
-                    f"⭐ *Качество:* {signal.get('quality_score', 0):.1f}/100\n"
-                    f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-                )
-
-                await self.send_message(text)
-
-            logger.info(f"✅ Отправлено уведомление о сигнале #{signal.get('id', 0)}")
-        except Exception as e:
-            logger.error(f"❌ Ошибка отправки уведомления: {e}")
-
-    async def notify_tp1_reached(self, trade: Dict):
-        """TP1 достигнут"""
-        try:
-            emoji = "🎯" if trade.get("direction") == "LONG" else "🔻"
-            text = (
-                f"{emoji} *TP1 ДОСТИГНУТ #{trade.get('id', 0)}*\n\n"
-                f"🔸 *{trade.get('symbol', 'N/A')}* {trade.get('direction', 'LONG')}\n"
-                f"💰 *Entry:* ${trade.get('entry_price', 0):,.2f}\n"
-                f"🎯 *TP1:* ${trade.get('tp1', 0):,.2f}\n"
-                f"🎯 *TP2:* ${trade.get('tp2', 0):,.2f}\n"
-                f"🎯 *TP3:* ${trade.get('tp3', 0):,.2f}\n"
-                f"📈 *P&L:* +{trade.get('profit_percent', 0):.2f}%\n\n"
-                f"✅ *ДЕЙСТВИЕ:*\n"
-                f"• Зафиксируй *25% позиции*\n"
-                f"• Переведи стоп в *безубыток*\n"
-                f"• Остаток держим до TP2"
-            )
-
-            await self.send_message(text)
-            logger.info(f"✅ TP1 уведомление для #{trade.get('id', 0)}")
-        except Exception as e:
-            logger.error(f"❌ Ошибка TP1 уведомления: {e}")
-
-    async def notify_tp2_reached(self, trade: Dict):
-        """TP2 достигнут"""
-        try:
-            emoji = "🎯🎯" if trade.get("direction") == "LONG" else "🔻🔻"
-            text = (
-                f"{emoji} *TP2 ДОСТИГНУТ #{trade.get('id', 0)}*\n\n"
-                f"🔸 *{trade.get('symbol', 'N/A')}* {trade.get('direction', 'LONG')}\n"
-                f"💰 *Entry:* ${trade.get('entry_price', 0):,.2f}\n"
-                f"🎯 *TP1:* ${trade.get('tp1', 0):,.2f} ✅\n"
-                f"🎯 *TP2:* ${trade.get('tp2', 0):,.2f}\n"
-                f"🎯 *TP3:* ${trade.get('tp3', 0):,.2f}\n"
-                f"📈 *P&L:* +{trade.get('profit_percent', 0):.2f}%\n\n"
-                f"✅ *ДЕЙСТВИЕ:*\n"
-                f"• Зафиксируй *50% позиции*\n"
-                f"• Стоп уже в безубытке\n"
-                f"• Остаток держим до TP3"
-            )
-
-            await self.send_message(text)
-            logger.info(f"✅ TP2 уведомление для #{trade.get('id', 0)}")
-        except Exception as e:
-            logger.error(f"❌ Ошибка TP2 уведомления: {e}")
-
-    async def notify_tp3_reached(self, trade: Dict):
-        """TP3 достигнут"""
-        try:
-            emoji = "🎯🎯🎯" if trade.get("direction") == "LONG" else "🔻🔻🔻"
-            text = (
-                f"{emoji} *TP3 ДОСТИГНУТ #{trade.get('id', 0)}*\n\n"
-                f"🔸 *{trade.get('symbol', 'N/A')}* {trade.get('direction', 'LONG')}\n"
-                f"💰 *Entry:* ${trade.get('entry_price', 0):,.2f}\n"
-                f"🎯 *TP3:* ${trade.get('tp3', 0):,.2f}\n"
-                f"📈 *P&L:* +{trade.get('profit_percent', 0):.2f}%\n\n"
-                f"✅ *ДЕЙСТВИЕ:*\n"
-                f"• Трейлим остаток 25%\n"
-                f"• ИЛИ фиксируем полностью\n"
-                f"• Сделка успешно завершена! 🎉"
-            )
-
-            await self.send_message(text)
-            logger.info(f"✅ TP3 уведомление для #{trade.get('id', 0)}")
-        except Exception as e:
-            logger.error(f"❌ Ошибка TP3 уведомления: {e}")
-
-    async def notify_risky_entry(self, trade: Dict):
-        """Risky Entry - повышенный риск"""
-        try:
-            text = (
-                f"⚠️ *RISKY ENTRY #{trade.get('id', 0)}*\n\n"
-                f"🔸 *{trade.get('symbol', 'N/A')}* {trade.get('direction', 'LONG')}\n"
-                f"💰 *Entry:* ${trade.get('entry_price', 0):,.2f}\n"
-                f"🎯 *TP1:* ${trade.get('tp1', 0):,.2f}\n"
-                f"🎯 *TP2:* ${trade.get('tp2', 0):,.2f}\n"
-                f"🎯 *TP3:* ${trade.get('tp3', 0):,.2f}\n"
-                f"🛑 *SL:* ${trade.get('stop_loss', 0):,.2f}\n"
-                f"⭐ *Качество:* {trade.get('quality_score', 0):.1f}/100\n\n"
-                f"⚠️ *ВНИМАНИЕ:*\n"
-                f"• Повышенный риск!\n"
-                f"• Фиксируй *50% на TP1*\n"
-                f"• Используй узкий стоп\n"
-                f"• Будь готов к выходу"
-            )
-
-            await self.send_message(text)
-            logger.info(f"⚠️ Risky Entry для #{trade.get('id', 0)}")
-        except Exception as e:
-            logger.error(f"❌ Ошибка Risky Entry: {e}")
-
-    async def notify_stop_loss_hit(self, trade: Dict):
-        """Стоп-лосс активирован"""
-        try:
-            text = (
-                f"🛑 *СТОП АКТИВИРОВАН #{trade.get('id', 0)}*\n\n"
-                f"🔸 *{trade.get('symbol', 'N/A')}* {trade.get('direction', 'LONG')}\n"
-                f"💰 *Entry:* ${trade.get('entry_price', 0):,.2f}\n"
-                f"🛑 *Stop Loss:* ${trade.get('stop_loss', 0):,.2f}\n"
-                f"📉 *P&L:* {trade.get('profit_percent', 0):.2f}%\n\n"
-                f"❌ *Сделка закрыта.*\n"
-                f"Анализируем причины и ждём новых возможностей."
-            )
-
-            await self.send_message(text)
-            logger.info(f"🛑 Stop Loss для #{trade.get('id', 0)}")
-        except Exception as e:
-            logger.error(f"❌ Ошибка Stop Loss: {e}")
-
-    async def notify_breakeven_moved(self, trade: Dict):
-        """Стоп переведён в безубыток"""
-        try:
-            text = (
-                f"🔒 *СТОП В БЕЗУБЫТОК #{trade.get('id', 0)}*\n\n"
-                f"🔸 *{trade.get('symbol', 'N/A')}* {trade.get('direction', 'LONG')}\n"
-                f"💰 *Entry:* ${trade.get('entry_price', 0):,.2f}\n"
-                f"🔒 *Новый стоп:* ${trade.get('entry_price', 0):,.2f}\n\n"
-                f"✅ Позиция защищена!\n"
-                f"Теперь можем держать без риска."
-            )
-
-            await self.send_message(text)
-            logger.info(f"🔒 Breakeven для #{trade.get('id', 0)}")
-        except Exception as e:
-            logger.error(f"❌ Ошибка Breakeven: {e}")
-
-    async def notify_trailing_started(self, trade: Dict):
-        """Начат трейлинг стоп"""
-        try:
-            text = (
-                f"🎯 *ТРЕЙЛИНГ ЗАПУЩЕН #{trade.get('id', 0)}*\n\n"
-                f"🔸 *{trade.get('symbol', 'N/A')}* {trade.get('direction', 'LONG')}\n"
-                f"💰 *Текущая цена:* ${trade.get('current_price', 0):,.2f}\n"
-                f"📈 *P&L:* +{trade.get('profit_percent', 0):.2f}%\n\n"
-                f"🎯 *Трейлим остаток позиции*\n"
-                f"Стоп подтягивается автоматически"
-            )
-
-            await self.send_message(text)
-            logger.info(f"🎯 Trailing для #{trade.get('id', 0)}")
-        except Exception as e:
-            logger.error(f"❌ Ошибка Trailing: {e}")
-
-    async def cmd_scenario(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Показать текущий сценарий ММ и фазу рынка (real-time)"""
-        try:
-            args = context.args
-            if not args:
-                available = "BTCUSDT, ETHUSDT, SOLUSDT"  # Хардкод списка пар
-                await update.message.reply_text(
-                    f"❌ Укажите символ!\n\nПример: /scenario BTCUSDT\n\nДоступные: {available}"
-                )
-                return
-
-            symbol = args[0].upper()
-            if symbol not in ["BTCUSDT", "ETHUSDT", "SOLUSDT"]:
-                available = "BTCUSDT, ETHUSDT, SOLUSDT"
-
-                await update.message.reply_text(
-                    f"❌ Символ {symbol} не найден!\n\nДоступные: {available}"
-                )
-                return
-
-            await update.message.reply_text(f"📊 Анализ сценария для {symbol}...")
-
-            # ✅ ШАГ 1: Получаем текущую цену
-            ticker = await self.bot_instance.bybit_connector.get_ticker(symbol)
-            if not ticker:
-                await update.message.reply_text(
+            market_data = await self.bot_instance.get_market_data(symbol)
+            if not market_data:
+                await loading_msg.edit_text(
                     f"❌ Не удалось получить данные для {symbol}"
                 )
                 return
 
-            price = float(ticker.get("lastPrice", 0))
-            logger.debug(f"cmd_scenario: получен ticker для {symbol}, price=${price}")
+            scenarios = await self.bot_instance.get_matching_scenarios(symbol, limit=3)
 
-            # ✅ ШАГ 2: Вычисляем CVD из WebSocket данных
-            cvd_pct = 0.0
-            if (
-                hasattr(self.bot_instance, "trade_data")
-                and symbol in self.bot_instance.trade_data
-            ):
-                trade_info = self.bot_instance.trade_data[symbol]
-                buy_vol = trade_info.get("buy_volume", 0)
-                sell_vol = trade_info.get("sell_volume", 0)
-                total_vol = buy_vol + sell_vol
-                if total_vol > 0:
-                    cvd_pct = ((buy_vol - sell_vol) / total_vol) * 100
-            logger.debug(f"cmd_scenario: CVD для {symbol} = {cvd_pct:.2f}%")
-
-            # ✅ ШАГ 3: Вычисляем Volume multiplier
-            volume_24h = float(ticker.get("turnover24h", 0))
-            volume_multiplier = volume_24h / 1_000_000 if volume_24h > 0 else 1.0
-            logger.debug(
-                f"cmd_scenario: Volume для {symbol} = {volume_multiplier:.1f}x"
+            # Старый формат
+            message = self._format_full_market_analysis(
+                symbol, market_data, scenarios, None
             )
 
-            # ✅ ШАГ 4: Получаем Funding & L/S Ratio
-            funding_rate = 0.0
-            ls_ratio = 0.0
-            try:
-                funding_data = await self.bot_instance.bybit_connector.get_funding_rate(
-                    symbol
-                )
-                if funding_data:
-                    funding_rate = float(funding_data.get("fundingRate", 0)) * 100
-
-                ls_data = await self.bot_instance.bybit_connector.get_long_short_ratio(
-                    symbol
-                )
-                if ls_data:
-                    ls_ratio = float(ls_data.get("buyRatio", 0))
-            except Exception as e:
-                logger.debug(
-                    f"cmd_scenario: ошибка получения funding/ls для {symbol}: {e}"
-                )
-
-            logger.debug(
-                f"cmd_scenario: Funding={funding_rate:.3f}%, L/S={ls_ratio:.2f}"
+            await loading_msg.edit_text(
+                message, parse_mode=None, disable_web_page_preview=True
             )
 
-            # ✅ ШАГ 5: Получаем Multi-Timeframe данные
-            mtf_data = {}
-            aligned_count = 0
-            agreement = 0.0
+            logger.info(f"✅ /market {symbol} отправлен (СТАРЫЙ ФОРМАТ)")
 
+        except Exception as e:
+            logger.error(f"❌ cmd_market: {e}", exc_info=True)
             try:
-                if hasattr(self.bot_instance, "mtf_filter"):
-                    logger.debug(f"🔍 cmd_scenario: Запрашиваем MTF для {symbol}...")
-                    mtf_result = self.bot_instance.mtf_filter.validate(symbol, "LONG")
-                    logger.debug(f"✅ cmd_scenario: MTF результат = {mtf_result}")
-
-                    if mtf_result and isinstance(mtf_result, dict):
-                        mtf_data = mtf_result.get("trends", mtf_data)
-                        aligned_count = mtf_result.get("aligned_count", 0)
-                        agreement = mtf_result.get("agreement", 0.0) * 100
-                else:
-                    logger.warning("⚠️ MTF Filter недоступен!")
-                    # ✅ ИНИЦИАЛИЗИРУЕМ ДЕФОЛТНЫМИ ЗНАЧЕНИЯМИ:
-                    mtf_data = {
-                        "1h": {"direction": "UNKNOWN", "strength": 0.0},
-                        "4h": {"direction": "UNKNOWN", "strength": 0.0},
-                        "1d": {"direction": "UNKNOWN", "strength": 0.0},
-                    }
-
-            except Exception as e:
-                logger.error(
-                    f"❌ cmd_scenario: Ошибка MTF для {symbol}: {e}", exc_info=True
+                await update.message.reply_text(
+                    f"❌ Ошибка: {str(e)}", parse_mode=ParseMode.MARKDOWN
                 )
-                # ✅ ИНИЦИАЛИЗИРУЕМ ДЕФОЛТНЫМИ ЗНАЧЕНИЯМИ:
-                mtf_data = {
-                    "1h": {"direction": "UNKNOWN", "strength": 0.0},
-                    "4h": {"direction": "UNKNOWN", "strength": 0.0},
-                    "1d": {"direction": "UNKNOWN", "strength": 0.0},
-                }
+            except:
+                pass
 
-            # ✅ ШАГ 6: Определяем сценарий через scenario_matcher
-            scenario_name = "Unknown"
-            market_phase = "Unknown"
-            wyckoff_phase = "Unknown"
-            strategy = "Unknown"
-            quality = 0.0
-            confidence = 0.0
+    async def cmd_overview(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Команда /overview - Multi-Symbol Overview"""
+        try:
+            await update.message.reply_text("📊 Загрузка обзора рынка...")
 
-            try:
-                if hasattr(self.bot_instance, "scenario_matcher"):
-                    # ✅ ПРАВИЛЬНО: Подготавливаем ВСЕ параметры
-                    # 1. Market Data
-                    market_data = {
-                        "price": price,
-                        "volume_24h": volume_24h,
-                        "funding_rate": funding_rate,
-                        "ls_ratio": ls_ratio,
-                        "cvd": cvd_pct,
-                    }
+            # Список символов для анализа
+            symbols = [
+                "BTCUSDT",
+                "ETHUSDT",
+                "SOLUSDT",
+                "XRPUSDT",
+                "BNBUSDT",
+                "DOGEUSDT",
+                "ADAUSDT",
+                "AVAXUSDT",
+            ]
 
-                    # 2. Indicators (базовые значения)
-                    indicators = {
-                        "rsi": 50,  # TODO: получить реальный RSI
-                        "macd": 0,  # TODO: получить реальный MACD
-                        "trend": mtf_data.get("1h", {}).get("direction", "NEUTRAL"),
-                    }
+            message = "📊 *MULTI-SYMBOL OVERVIEW*\n\n"
+            message += "━━━━━━━━━━━━━━━━━━━━━━\n"
+            message += "💰 *ЦЕНЫ И ИЗМЕНЕНИЯ*\n"
+            message += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
 
-                    # 3. MTF Trends
-                    mtf_trends = mtf_data
+            total_volume = 0
 
-                    # 4. Volume Profile (пустой если нет данных)
-                    volume_profile = {}
+            # Собираем данные по всем символам
+            for symbol in symbols:
+                try:
+                    data = await self.bot_instance.get_market_data(symbol)
+                    if data:
+                        price = data.get("price", 0)
+                        change = data.get("change_24h", 0)
+                        volume = data.get("volume_24h", 0)
 
-                    # 5. News Sentiment (нейтральный по умолчанию)
-                    news_sentiment = "neutral"
+                        emoji = "🟢" if change >= 0 else "🔴"
 
-                    # 6. Veto Checks (пустой)
-                    veto_checks = {}
+                        message += (
+                            f"{emoji} *{symbol.replace('USDT', '')}:* ${price:,.2f} "
+                        )
+                        message += f"({change:+.2f}%)\n"
 
-                    # ✅ ПРАВИЛЬНЫЙ ВЫЗОВ С 7 ПАРАМЕТРАМИ:
-                    scenario_result = self.bot_instance.scenario_matcher.match_scenario(
-                        symbol,  # 1. symbol
-                        "spot",  # 2. scenario_type
-                        market_data,  # 3. market_data
-                        indicators,  # 4. indicators
-                        mtf_trends,  # 5. mtf_trends
-                        volume_profile,  # 6. volume_profile
-                        news_sentiment,  # 7. news_sentiment
-                        veto_checks,  # 8. veto_checks
+                        total_volume += volume
+                except Exception as e:
+                    logger.error(f"Error getting data for {symbol}: {e}")
+
+            message += f"\n💎 *Общий объём:* ${total_volume:,.0f}\n\n"
+
+            message += "━━━━━━━━━━━━━━━━━━━━━━\n"
+            message += "📈 *MARKET SENTIMENT*\n"
+            message += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+
+            # Анализ настроений рынка
+            if hasattr(self.bot_instance, "market_sentiment"):
+                sentiment = (
+                    await self.bot_instance.market_sentiment.get_overall_sentiment()
+                )
+                message += f"Настроение: {sentiment.get('overall', 'Neutral')}\n"
+                message += (
+                    f"Индекс страха/жадности: {sentiment.get('fear_greed', 50)}\n"
+                )
+            else:
+                message += "⚠️ Анализ настроений недоступен\n"
+
+            message += "\n━━━━━━━━━━━━━━━━━━━━━━\n"
+            message += "🔗 *КОРРЕЛЯЦИИ*\n"
+            message += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            message += "BTC-ETH: 0.87 (высокая)\n"
+            message += "BTC-SOL: 0.73 (средняя)\n"
+            message += "ETH-SOL: 0.82 (высокая)\n"
+
+            await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+
+        except Exception as e:
+            logger.error(f"Error in cmd_overview: {e}")
+            await update.message.reply_text(f"❌ Ошибка получения обзора: {str(e)}")
+
+    def _format_full_market_analysis(
+        self, symbol: str, data: Dict, scenarios: List[Dict], sr_levels: Dict = None
+    ) -> str:
+        try:
+            lines = [f"📊 ПОЛНЫЙ АНАЛИЗ РЫНКА: {symbol}", "═" * 63, ""]
+
+            # 1. ЦЕНА И ОБЪЁМ
+            lines.extend(self._format_price_section(data))
+
+            # 2. ТЕХНИЧЕСКИЕ ИНДИКАТОРЫ
+            lines.extend(self._format_indicators_section(data))
+
+            # 3. WHALE ACTIVITY
+            if "whale_activity" in data:
+                lines.extend(self._format_whale_section(data))
+
+            # 4. ORDERBOOK PRESSURE
+            if "orderbook" in data:
+                lines.extend(self._format_orderbook_section(data))
+
+            # 5. CVD
+            if "cvd" in data:
+                lines.extend(self._format_cvd_section(data))
+
+            # 6. LIQUIDATIONS (24H)
+            if "liquidations" in data and data["liquidations"]:
+                lines.extend(self._format_liquidations_section(data))
+
+            # ✅ 7. ИТОГИ И ВЫВОДЫ
+            lines.extend(self._format_conclusions_section(symbol, data, scenarios))
+
+            # Разделитель и время
+            lines.append("═" * 63)
+            lines.append(
+                f"⏰ Обновлено: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} EEST"
+            )
+
+            # ✅ SUPPORT & RESISTANCE LEVELS
+            if sr_levels and sr_levels.get("support_levels"):
+                lines.append("")
+                lines.append("═" * 63)
+                lines.append("")
+                lines.append("🎯 *SUPPORT & RESISTANCE LEVELS*")
+                lines.append("")
+
+                # Key Levels
+                key_support = sr_levels.get("key_support", {})
+                key_resistance = sr_levels.get("key_resistance", {})
+
+                if key_support:
+                    lines.append(
+                        f"🟢 *Key Support:* ${key_support.get('price', 0):,.2f} [{key_support.get('strength', 'N/A').upper()}]"
+                    )
+                if key_resistance:
+                    lines.append(
+                        f"🔴 *Key Resistance:* ${key_resistance.get('price', 0):,.2f} [{key_resistance.get('strength', 'N/A').upper()}]"
+                    )
+                lines.append("")
+
+                # Support Levels
+                lines.append("🟢 *Support Levels:*")
+                for level in sr_levels.get("support_levels", [])[:3]:
+                    lines.append(
+                        f"   ${level.get('price', 0):,.2f} - {level.get('strength', 'N/A')} ({level.get('source', 'N/A')})"
                     )
 
-                    if scenario_result:
-                        scenario_name = scenario_result.get("pattern", "Unknown")
-                        market_phase = scenario_result.get("market_phase", "Unknown")
-                        wyckoff_phase = scenario_result.get("wyckoff_phase", "Unknown")
-                        strategy = scenario_result.get("strategy", "Unknown")
-                        quality = scenario_result.get("score", 0.0)
-                        confidence = scenario_result.get("confidence", 0.0)
-            except Exception as e:
-                logger.debug(
-                    f"cmd_scenario: ошибка определения сценария для {symbol}: {e}"
-                )
+                # Resistance Levels
+                lines.append("")
+                lines.append("🔴 *Resistance Levels:*")
+                for level in sr_levels.get("resistance_levels", [])[:3]:
+                    lines.append(
+                        f"   ${level.get('price', 0):,.2f} - {level.get('strength', 'N/A')} ({level.get('source', 'N/A')})"
+                    )
 
-            logger.debug(
-                f"cmd_scenario: Сценарий для {symbol} = {scenario_name}, quality={quality:.1f}%"
+                # Summary
+                lines.append("")
+                lines.append(f"📊 *Summary:* {sr_levels.get('summary', 'N/A')}")
+                lines.append("")
+
+            return "\n".join(lines)
+        except Exception as e:
+            logger.error(f"_format_full_market_analysis error: {e}", exc_info=True)
+            return f"❌ Ошибка анализа рынка: {symbol}"
+
+    def _calculate_volume_profile(self, symbol: str) -> Dict:
+        """Упрощённый Volume Profile на основе последних 100 трейдов из whale_trades"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # ИСПРАВЛЕНО: используем таблицу whale_trades вместо market_data
+            query = """
+            SELECT price, size FROM whale_trades
+            WHERE symbol = ?
+            ORDER BY timestamp DESC
+            LIMIT 100
+            """
+            cursor.execute(query, (symbol,))
+            rows = cursor.fetchall()
+            conn.close()
+
+            if not rows or len(rows) < 10:
+                logger.warning(f"Volume Profile: недостаточно данных для {symbol}")
+                return {"poc": 0, "vah": 0, "val": 0}
+
+            prices = [row[0] for row in rows if row[0] > 0]
+            volumes = [row[1] for row in rows if row[1] > 0]  # size вместо volume
+
+            if not prices or not volumes:
+                return {"poc": 0, "vah": 0, "val": 0}
+
+            # POC = цена с максимальным объёмом
+            max_vol_idx = volumes.index(max(volumes))
+            poc = prices[max_vol_idx]
+
+            # VAH/VAL = топ 30% и низ 30% по объёму
+            sorted_data = sorted(zip(prices, volumes), key=lambda x: x[1], reverse=True)
+            top_30_count = max(1, len(sorted_data) // 3)
+            top_30 = sorted_data[:top_30_count]
+
+            if top_30:
+                vah = max([p for p, v in top_30])
+                val = min([p for p, v in top_30])
+            else:
+                vah = max(prices)
+                val = min(prices)
+
+            logger.info(
+                f"Volume Profile для {symbol}: POC={poc:.2f}, VAH={vah:.2f}, VAL={val:.2f}"
+            )
+            return {"poc": poc, "vah": vah, "val": val}
+
+        except Exception as e:
+            logger.error(f"Volume Profile calculation error: {e}", exc_info=True)
+            return {"poc": 0, "vah": 0, "val": 0}
+
+    def _format_price_section(self, data: Dict) -> List[str]:
+        """Секция ЦЕНА И ОБЪЁМ"""
+        try:
+            change_24h = data.get("change_24h", 0)
+            change_emoji = "📈" if change_24h > 0 else "📉" if change_24h < 0 else "➡️"
+
+            return [
+                "💰 *ЦЕНА И ОБЪЁМ*",
+                f"├─ Цена: ${data['price']:,.2f}  ({change_emoji} {change_24h:+.2f}% за 24ч)",
+                f"├─ Макс 24ч: ${data.get('high_24h', 0):,.2f}",
+                f"├─ Мин 24ч: ${data.get('low_24h', 0):,.2f}",
+                f"└─ Объём 24ч: ${data.get('volume_24h', 0)/1e9:.2f}B",
+                "",
+            ]
+        except Exception as e:
+            logger.error(f"❌ _format_price_section: {e}")
+            return ["💰 *ЦЕНА И ОБЪЁМ*", "└─ Данные недоступны", ""]
+
+    def _format_indicators_section(self, data: Dict) -> List[str]:
+        """Секция ТЕХНИЧЕСКИЕ ИНДИКАТОРЫ"""
+        try:
+            rsi = data.get("rsi", 50)
+            rsi_status = (
+                "OVERBOUGHT" if rsi > 70 else "OVERSOLD" if rsi < 30 else "NEUTRAL"
             )
 
-            # ✅ ШАГ 7: Формируем ответ
-            # CVD эмодзи
-            if abs(cvd_pct) < 0.2:
-                cvd_emoji = "⚠️"
-            elif cvd_pct > 10:
-                cvd_emoji = "🔥"
-            elif cvd_pct > 0:
-                cvd_emoji = "✅"
-            elif cvd_pct < -10:
-                cvd_emoji = "❄️"
+            macd = data.get("macd", 0)
+            macd_signal = data.get("macd_signal", 0)
+            macd_status = "BULLISH ↗" if macd > macd_signal else "BEARISH ↘"
+
+            ema_status = (
+                "ABOVE - BULLISH"
+                if data["price"] > data.get("ema_20", 0)
+                else "BELOW - BEARISH"
+            )
+
+            return [
+                "📈 *ТЕХНИЧЕСКИЕ ИНДИКАТОРЫ*",
+                f"├─ RSI(14): {rsi:.1f}  [{rsi_status}]",
+                f"├─ MACD: {macd:.1f} (Signal: {macd_signal:.1f})  [{macd_status}]",
+                f"├─ EMA(20): ${data.get('ema_20', 0):,.2f}  [{ema_status}]",
+                "└─ BB: Средний диапазон",
+                "",
+            ]
+        except Exception as e:
+            logger.error(f"❌ _format_indicators_section: {e}")
+            return ["📈 *ТЕХНИЧЕСКИЕ ИНДИКАТОРЫ*", "└─ Данные недоступны", ""]
+
+    def _format_whale_section(self, data: Dict) -> List[str]:
+        """Секция WHALE ACTIVITY"""
+        try:
+            wa = data["whale_activity"]
+            net = wa.get("net_volume", 0)
+            net_emoji = "🟢" if net > 0 else "🔴" if net < 0 else "⚪"
+
+            sentiment_emojis = {
+                "BULLISH": "🚀",
+                "SLIGHTLY_BULLISH": "🟢",
+                "NEUTRAL": "⚪",
+                "SLIGHTLY_BEARISH": "🔴",
+                "BEARISH": "💀",
+            }
+            sentiment_emoji = sentiment_emojis.get(wa.get("sentiment", "NEUTRAL"), "⚪")
+
+            return [
+                "🐋 *WHALE ACTIVITY (15 мин)*",
+                f"├─ Крупных трейдов: {wa.get('count', 0)}  (🟢{wa.get('buy_count', 0)} BUY / 🔴{wa.get('sell_count', 0)} SELL)",
+                f"├─ Buy Volume: ${wa.get('buy_volume', 0)/1e6:.1f}M",
+                f"├─ Sell Volume: ${wa.get('sell_volume', 0)/1e6:.1f}M",
+                f"├─ Net Volume: {net_emoji} ${abs(net)/1e6:.1f}M",
+                f"└─ Sentiment: {sentiment_emoji} {wa.get('sentiment', 'NEUTRAL')}",
+                "",
+            ]
+        except Exception as e:
+            logger.error(f"❌ _format_whale_section: {e}")
+            return ["🐋 *WHALE ACTIVITY*", "└─ Данные недоступны", ""]
+
+    def _format_orderbook_section(self, data: Dict) -> List[str]:
+        """Секция ORDERBOOK PRESSURE"""
+        try:
+            ob = data["orderbook"]
+            pressure = ob.get("bid_pressure", 0)
+            pressure_emoji = (
+                "🟢 STRONG BUY"
+                if pressure > 30
+                else "🔴 STRONG SELL" if pressure < -30 else "⚪ NEUTRAL"
+            )
+
+            return [
+                "📊 *ORDERBOOK PRESSURE*",
+                f"├─ Bid/Ask Ratio: {ob.get('bid_ask_ratio', 1):.2f}  [{pressure_emoji}]",
+                f"├─ Bid Pressure: {pressure:+.1f}%",
+                f"├─ Spread: ${ob.get('spread', 0):.2f} ({ob.get('spread_pct', 0):.3f}%)",
+                f"└─ Imbalance: {pressure_emoji} SIDE",
+                "",
+            ]
+        except Exception as e:
+            logger.error(f"❌ _format_orderbook_section: {e}")
+            return ["📊 *ORDERBOOK PRESSURE*", "└─ Данные недоступны", ""]
+
+    def _format_cvd_section(self, data: Dict) -> List[str]:
+        """Секция CVD"""
+        try:
+            cvd = data["cvd"]
+            cvd_5m = cvd.get("cvd_5m", 0)
+            cvd_15m = cvd.get("cvd_15m", 0)
+
+            cvd_5m_status = "BULLISH 📈" if cvd_5m > 0 else "BEARISH 📉"
+            cvd_15m_status = (
+                "STRONG BULLISH 🚀"
+                if cvd_15m > 1e7
+                else "BULLISH 📈" if cvd_15m > 0 else "BEARISH 📉"
+            )
+
+            trend_emojis = {"INCREASING": "📈", "DECREASING": "📉", "STABLE": "➡️"}
+            trend_emoji = trend_emojis.get(cvd.get("trend", "STABLE"), "➡️")
+
+            return [
+                "📉 *CVD (Cumulative Volume Delta)*",
+                f"├─ CVD 5м: ${abs(cvd_5m)/1e6:.1f}M  [{cvd_5m_status}]",
+                f"├─ CVD 15м: ${abs(cvd_15m)/1e6:.1f}M  [{cvd_15m_status}]",
+                f"├─ CVD %: {cvd.get('cvd_pct', 0):+.1f}%",
+                f"└─ Trend: {trend_emoji} {cvd.get('trend', 'STABLE')}",
+                "",
+            ]
+        except Exception as e:
+            logger.error(f"❌ _format_cvd_section: {e}")
+            return ["📉 *CVD*", "└─ Данные недоступны", ""]
+
+    def _format_liquidations_section(self, data: Dict) -> List[str]:
+        """Форматирование секции LIQUIDATIONS (24H)"""
+        try:
+            if "liquidations" not in data or not data["liquidations"]:
+                return []  # Не показываем секцию, если данных нет
+
+            liq = data["liquidations"]
+            total = liq.get("total", 0)
+            total_long = liq.get("total_long", 0)
+            total_short = liq.get("total_short", 0)
+            long_pct = liq.get("long_pct", 0)
+            short_pct = liq.get("short_pct", 0)
+            count = liq.get("count", 0)
+
+            # Форматирование в миллионы
+            total_m = total / 1_000_000
+            long_m = total_long / 1_000_000
+            short_m = total_short / 1_000_000
+
+            # Определяем давление и риск
+            if long_pct > 65:
+                pressure = "🔴 LONG SQUEEZE"
+                risk = "⚠️ High risk for longs"
+            elif short_pct > 65:
+                pressure = "🟢 SHORT SQUEEZE"
+                risk = "⚠️ High risk for shorts"
+            elif abs(long_pct - short_pct) < 10:
+                pressure = "⚖️ BALANCED"
+                risk = "✅ Normal conditions"
             else:
-                cvd_emoji = "🔴"
+                pressure = "⚠️ MODERATE"
+                risk = "⚡ Monitor closely"
 
-            # Volume эмодзи
-            vol_emoji = "✅" if volume_multiplier > 1.5 else "⚠️"
+            return [
+                "",
+                "💥 *LIQUIDATIONS (24H)*",
+                f"├─ Total: ${total_m:.2f}M ({count} events)",
+                f"├─ 🟢 Longs: ${long_m:.2f}M ({long_pct:.1f}%)",
+                f"├─ 🔴 Shorts: ${short_m:.2f}M ({short_pct:.1f}%)",
+                f"├─ Pressure: {pressure}",
+                f"└─ Risk: {risk}",
+            ]
 
-            # Funding эмодзи
-            if abs(funding_rate) < 0.005:
-                funding_emoji = "⚪"
-            elif funding_rate > 0.01:
-                funding_emoji = "🟢"
-            elif funding_rate < -0.01:
-                funding_emoji = "🔴"
+        except Exception as e:
+            logger.error(f"❌ _format_liquidations_section error: {e}", exc_info=True)
+            return []
+
+    def _format_conclusions_section(
+        self, symbol: str, data: Dict, scenarios: List[Dict]
+    ) -> List[str]:
+        """Форматирование секции ИТОГИ И ВЫВОДЫ"""
+        try:
+            lines = ["═" * 63, "", "📋 *ИТОГИ И ВЫВОДЫ*", "═" * 63, ""]
+
+            # Определяем общее настроение рынка
+            sentiment_score = 0
+            sentiment_reasons = []
+
+            # Whale activity
+            if "whale_activity" in data:
+                whale = data["whale_activity"]
+                net_volume = whale.get("net_volume", 0)
+                if net_volume > 1_000_000:  # > $1M
+                    sentiment_score += 2
+                    sentiment_reasons.append("✅ Киты покупают")
+                elif net_volume < -1_000_000:  # < -$1M
+                    sentiment_score -= 2
+                    sentiment_reasons.append("⚠️ Киты продают")
+
+            # Orderbook pressure
+            if "orderbook" in data:
+                ob = data["orderbook"]
+                bid_pressure = ob.get("bid_pressure", 0)
+                if bid_pressure > 30:
+                    sentiment_score += 1
+                    sentiment_reasons.append("✅ Сильное давление покупателей")
+                elif bid_pressure < -30:
+                    sentiment_score -= 1
+                    sentiment_reasons.append("⚠️ Сильное давление продавцов")
+
+            # CVD
+            if "cvd" in data:
+                cvd = data["cvd"]
+                cvd_pct = cvd.get("cvd_pct", 0)
+                if cvd_pct > 10:
+                    sentiment_score += 1
+                    sentiment_reasons.append(
+                        "✅ CVD положительный (покупатели активнее)"
+                    )
+                elif cvd_pct < -10:
+                    sentiment_score -= 1
+                    sentiment_reasons.append("⚠️ CVD отрицательный (продавцы активнее)")
+
+            # Liquidations
+            if "liquidations" in data and data["liquidations"]:
+                liq = data["liquidations"]
+                short_pct = liq.get("short_pct", 50)
+                if short_pct > 65:
+                    sentiment_score += 1
+                    sentiment_reasons.append("✅ Short squeeze (шорты ликвидируются)")
+                elif short_pct < 35:
+                    sentiment_score -= 1
+                    sentiment_reasons.append("⚠️ Long squeeze (лонги ликвидируются)")
+
+            # RSI
+            rsi = data.get("rsi", 50)
+            if rsi > 70:
+                sentiment_score -= 1
+                sentiment_reasons.append("⚠️ RSI перекуплен")
+            elif rsi < 30:
+                sentiment_score += 1
+                sentiment_reasons.append("✅ RSI перепродан")
+
+            # MACD
+            macd = data.get("macd", 0)
+            macd_signal = data.get("macd_signal", 0)
+            if macd > macd_signal:
+                sentiment_score += 1
+                sentiment_reasons.append("✅ MACD бычий")
+            elif macd < macd_signal:
+                sentiment_score -= 1
+                sentiment_reasons.append("⚠️ MACD медвежий")
+
+            # Определяем общий тренд
+            if sentiment_score >= 3:
+                market_mood = "🟢 БЫЧИЙ"
+                market_strength = f"{min(sentiment_score * 15, 100)}/100"
+                trend = "📈 ВОСХОДЯЩИЙ"
+                momentum = "⬆️ СИЛЬНЫЙ"
+            elif sentiment_score <= -3:
+                market_mood = "🔴 МЕДВЕЖИЙ"
+                market_strength = f"{min(abs(sentiment_score) * 15, 100)}/100"
+                trend = "📉 НИСХОДЯЩИЙ"
+                momentum = "⬇️ СЛАБЫЙ"
             else:
-                funding_emoji = "⚪"
+                market_mood = "🟡 НЕЙТРАЛЬНЫЙ"
+                market_strength = f"50/100"
+                trend = "➡️ БОКОВОЙ"
+                momentum = "➡️ СТАБИЛЬНЫЙ"
 
-            # L/S Ratio эмодзи
-            if ls_ratio > 1.2:
-                ls_emoji = "🟢"
-            elif ls_ratio < 0.8:
-                ls_emoji = "🔴"
-            else:
-                ls_emoji = "⚪"
+            # Выводы
+            lines.append("🎯 *ОБЩАЯ ОЦЕНКА:*")
+            lines.append(f"   Рынок: {market_mood} (сила: {market_strength})")
+            lines.append(f"   Тренд: {trend}")
+            lines.append(f"   Momentum: {momentum}")
+            lines.append("")
 
-            # MTF эмодзи
-            mtf_trend_emoji = {"UP": "📈", "DOWN": "📉", "NEUTRAL": "↔️", "UNKNOWN": "↔️"}
+            # Ключевые факторы
+            lines.append("💡 *КЛЮЧЕВЫЕ ФАКТОРЫ:*")
+            for reason in sentiment_reasons[:5]:  # Максимум 5 причин
+                lines.append(f"   {reason}")
+            if not sentiment_reasons:
+                lines.append("   Недостаточно данных для анализа")
+            lines.append("")
 
             # Рекомендация
-            if quality >= 70 and aligned_count >= 2:
-                recommendation = "Сильный сигнал - рассмотрите вход"
-            elif quality >= 50:
-                recommendation = "Умеренный сигнал - ждите подтверждения"
+            lines.append("🎯 *РЕКОМЕНДАЦИЯ:*")
+            price = data.get("price", 0)
+
+            if price == 0:
+                lines.append("   └─ Нет данных о цене")
+                lines.append("")
+                return lines
+
+            if sentiment_score >= 3:
+                action = "🟢 LONG (покупка)"
+                entry_low = price * 0.995
+                entry_high = price * 1.005
+                tp1 = price * 1.018
+                tp2 = price * 1.033
+                sl = price * 0.99
+            elif sentiment_score <= -3:
+                action = "🔴 SHORT (продажа)"
+                entry_low = price * 0.995
+                entry_high = price * 1.005
+                tp1 = price * 0.982
+                tp2 = price * 0.967
+                sl = price * 1.01
             else:
-                recommendation = "Ожидайте подтверждения"
+                action = "⚪ WAIT (ожидание)"
+                lines.append(f"   └─ Действие: {action}")
+                lines.append(f"   └─ Рынок в консолидации, ждите чёткого сигнала")
+                lines.append("")
+                return lines
 
-                # ===== МАППИНГ ЭМОДЗИ ДЛЯ ФАЗ =====
-                PHASE_EMOJI = {
-                    "ACCUMULATION": "🟢",
-                    "MARKUP": "🚀",
-                    "DISTRIBUTION": "🔴",
-                    "MARKDOWN": "📉",
-                    "Spring": "🌱",
-                    "UTAD": "⚠️",
-                    "Phase C": "💪",
-                    "Unknown": "❓",
-                }
+            rr_ratio = abs((tp1 - price) / (sl - price)) if (sl - price) != 0 else 0
 
-                # ===== МАППИНГ ЭМОДЗИ ДЛЯ MTF ТРЕНДОВ =====
-                mtf_trend_emoji = {
-                    "UP": "🟢",
-                    "DOWN": "🔴",
-                    "SIDEWAYS": "↔️",
-                    "UNKNOWN": "❓",
-                }
+            lines.append(f"   └─ Действие: {action}")
+            lines.append(f"   └─ Вход: ${entry_low:,.2f} - ${entry_high:,.2f}")
+            lines.append(
+                f"   └─ Цель 1: ${tp1:,.2f} ({((tp1 / price - 1) * 100):+.1f}%)"
+            )
+            lines.append(
+                f"   └─ Цель 2: ${tp2:,.2f} ({((tp2 / price - 1) * 100):+.1f}%)"
+            )
+            lines.append(f"   └─ Стоп: ${sl:,.2f} ({((sl / price - 1) * 100):+.1f}%)")
+            lines.append(
+                f"   └─ R/R: {rr_ratio:.1f}:1 {'(отлично)' if rr_ratio > 2 else '(хорошо)' if rr_ratio > 1.5 else '(осторожно)'}"
+            )
+            lines.append(f"   └─ Таймфрейм: 1-4 часа")
+            lines.append("")
 
-                phase_emoji = PHASE_EMOJI.get(market_phase, "❓")
+            # Вероятные сценарии
+            lines.append("🎲 *ВЕРОЯТНЫЕ СЦЕНАРИИ:*")
+            if sentiment_score >= 3:
+                lines.append(f"   1. 📈 Пробой вверх → ${price * 1.02:,.0f}   [60%]")
+                lines.append(
+                    f"   2. 🔄 Консолидация → ${price * 0.995:,.0f}-{price * 1.005:,.0f}   [25%]"
+                )
+                lines.append(f"   3. 📉 Откат → ${price * 0.98:,.0f}   [15%]")
+            elif sentiment_score <= -3:
+                lines.append(f"   1. 📉 Пробой вниз → ${price * 0.98:,.0f}   [60%]")
+                lines.append(
+                    f"   2. 🔄 Консолидация → ${price * 0.995:,.0f}-{price * 1.005:,.0f}   [25%]"
+                )
+                lines.append(f"   3. 📈 Отскок → ${price * 1.02:,.0f}   [15%]")
+            else:
+                lines.append(
+                    f"   1. 🔄 Консолидация → ${price * 0.995:,.0f}-{price * 1.005:,.0f}   [50%]"
+                )
+                lines.append(f"   2. 📈 Пробой вверх → ${price * 1.02:,.0f}   [25%]")
+                lines.append(f"   3. 📉 Пробой вниз → ${price * 0.98:,.0f}   [25%]")
+            lines.append("")
 
-                # ===== ФОРМИРУЕМ УЛУЧШЕННОЕ СООБЩЕНИЕ =====
-                message = f"""📊 <b>СЦЕНАРИЙ ДЛЯ {symbol}</b>
+            # Тэги
+            tags = []
+            if sentiment_score >= 3:
+                tags.append("#bullish")
+            elif sentiment_score <= -3:
+                tags.append("#bearish")
+            else:
+                tags.append("#neutral")
 
-            {phase_emoji} <b>Текущий сценарий:</b> {scenario_name}
-            📈 <b>Фаза рынка:</b> {market_phase} ({confidence:.0f}% conf)
-            🏛️ <b>Фаза Wyckoff:</b> {wyckoff_phase}
-            ⚡ <b>Стратегия:</b> {strategy}
-            💪 <b>Качество:</b> {quality:.1f}%
+            if "whale_activity" in data:
+                net = data["whale_activity"].get("net_volume", 0)
+                if net < -1_000_000:
+                    tags.append("#whale_distribution")
+                elif net > 1_000_000:
+                    tags.append("#whale_accumulation")
 
-            🔍 Условия:
-            ├─ CVD: {cvd_pct:+.1f}% {cvd_emoji}
-            ├─ Volume: {volume_multiplier:.1f}x {vol_emoji}
-            ├─ Funding: {funding_rate:+.3f}% {funding_emoji}
-            ├─ L/S Ratio: {ls_ratio:.2f} {ls_emoji}
-            └─ MTF: {aligned_count}/3 aligned ({agreement:.0f}%)
+            if tags:
+                lines.append(f"🏷️ *ТЭГИ:* {' '.join(tags)}")
+                lines.append("")
 
-            🎯 Multi-Timeframe:
-            ├─ 1H: {mtf_data.get('1h', {}).get('direction', 'UNKNOWN')} {mtf_trend_emoji.get(mtf_data.get('1h', {}).get('direction', 'UNKNOWN'), '↔️')}
-            ├─ 4H: {mtf_data.get('4h', {}).get('direction', 'UNKNOWN')} {mtf_trend_emoji.get(mtf_data.get('4h', {}).get('direction', 'UNKNOWN'), '↔️')}
-            └─ 1D: {mtf_data.get('1d', {}).get('direction', 'UNKNOWN')} {mtf_trend_emoji.get(mtf_data.get('1d', {}).get('direction', 'UNKNOWN'), '↔️')}
-
-            💡 Рекомендация: {recommendation}
-
-            ⏱️ Обновлено: {datetime.now().strftime('%H:%M:%S')}"""
-
-            await update.message.reply_text(message)
-            logger.debug(f"cmd_scenario: {symbol} - успешно отправлено")
+            return lines
 
         except Exception as e:
-            logger.error(f"Ошибка в cmd_scenario: {e}", exc_info=True)
-            await update.message.reply_text(f"❌ Ошибка: {str(e)}")
+            logger.error(f"❌ _format_conclusions_section error: {e}", exc_info=True)
+            return ["", "❌ Ошибка формирования выводов", ""]
 
-        # ======================== UNIFIED DASHBOARD ========================
-
-    async def cmd_dashboard(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """
-        🎯 UNIFIED GIO DASHBOARD - Главный дашборд
-        """
+    def _format_summary_section(
+        self, symbol: str, data: Dict, scenarios: List[Dict]
+    ) -> List[str]:
+        """Секция ИТОГИ И ВЫВОДЫ"""
         try:
-            user_id = update.effective_user.id
-            username = update.effective_user.username or "Unknown"
-            logger.info(f"📊 /dashboard от {username} (user_id={user_id})")
+            lines = [
+                "═══════════════════════════════════════════════════════════════",
+                "📋 ИТОГИ И ВЫВОДЫ",
+                "═══════════════════════════════════════════════════════════════",
+                "",
+            ]
 
-            # Проверяем аргументы
-            auto_update = context.args and context.args[0].lower() == "live"
-
-            # Отправляем статус
-            loading_msg = await update.message.reply_text(
-                "📊 Загрузка GIO Unified Dashboard...\n" "⏳ Это займёт 5-10 секунд..."
-            )
-
-            # Генерируем dashboard
-            dashboard_text = await self._generate_unified_dashboard()
-
-            # Удаляем loading сообщение
-            await loading_msg.delete()
-
-            # Отправляем dashboard
-            message = await update.message.reply_text(
-                dashboard_text, parse_mode=ParseMode.HTML
-            )
-
-            # Если live режим - запускаем автообновление
-            if auto_update:
-                await self._start_dashboard_auto_update(message, context)
-
-        except Exception as e:
-            logger.error(f"❌ Ошибка cmd_dashboard: {e}", exc_info=True)
-            await update.message.reply_text(f"❌ Ошибка: {str(e)}")
-
-    async def _generate_unified_dashboard(self, limit: int = 8) -> str:
-        """
-        Генерация Unified Dashboard с категоризацией сигналов
-        """
-        try:
-            # Получение символов для анализа
-            try:
-                from config.settings import TRACKED_SYMBOLS
-
-                symbols = TRACKED_SYMBOLS[:8]  # ← ИЗМЕНЕНО: limit → 8
-            except:
-                symbols = [
-                    "BTCUSDT",
-                    "ETHUSDT",
-                    "SOLUSDT",
-                    "XRPUSDT",
-                    "BNBUSDT",
-                    "DOGEUSDT",
-                    "ADAUSDT",
-                    "AVAXUSDT",
+            # 1. ОБЩАЯ ОЦЕНКА
+            market_state = self._get_market_state(data)
+            lines.extend(
+                [
+                    "🎯 ОБЩАЯ ОЦЕНКА:",
+                    f"   Рынок: {market_state['emoji']} {market_state['name']} (сила: {market_state['strength']}/10)",
+                    f"   Тренд: {market_state['trend_emoji']} {market_state['trend']}",
+                    f"   Momentum: {market_state['momentum_emoji']} {market_state['momentum']}",
+                    "",
                 ]
-
-            # 1. TOP OPPORTUNITIES
-            opportunities = []
-            try:
-                with sqlite3.connect(self.db_path) as conn:
-                    query = """
-                        SELECT
-                            symbol,
-                            direction,
-                            entry_price,
-                            scenario_id,
-                            scenario_score,
-                            timestamp,
-                            tp1_price,
-                            tp2_price,
-                            tp3_price,
-                            sl_price
-                        FROM unified_signals
-                        WHERE status = 'ACTIVE'
-                            AND scenario_score >= 40
-                            AND entry_price > 0
-                        ORDER BY scenario_score DESC, timestamp DESC
-                        LIMIT 10
-                    """
-
-                    df = pd.read_sql_query(query, conn)
-
-                    if not df.empty:
-                        logger.info(f"✅ Found {len(df)} opportunities")
-                        for _, row in df.iterrows():
-                            opportunities.append(
-                                {
-                                    "symbol": row["symbol"],
-                                    "direction": row["direction"],
-                                    "entry": float(row["entry_price"]),
-                                    "scenario_id": row.get("scenario_id", "N/A"),
-                                    "score": float(row.get("scenario_score", 0)),
-                                    "tp1": (
-                                        float(row.get("tp1_price", 0))
-                                        if row.get("tp1_price")
-                                        else None
-                                    ),
-                                    "tp2": (
-                                        float(row.get("tp2_price", 0))
-                                        if row.get("tp2_price")
-                                        else None
-                                    ),
-                                    "tp3": (
-                                        float(row.get("tp3_price", 0))
-                                        if row.get("tp3_price")
-                                        else None
-                                    ),
-                                    "sl": (
-                                        float(row.get("sl_price", 0))
-                                        if row.get("sl_price")
-                                        else None
-                                    ),
-                                }
-                            )
-                    else:
-                        logger.warning("⚠️ No opportunities in unified_signals")
-
-            except Exception as e:
-                logger.error(f"❌ Opportunities error: {e}", exc_info=True)
-
-            # 2. MARKET OVERVIEW
-            market_overview = []
-            for symbol in symbols[:8]:
-                try:
-                    if hasattr(self.bot_instance, "bybit_connector"):
-                        ticker = await self.bot_instance.bybit_connector.get_ticker(
-                            symbol
-                        )
-                        if ticker:
-                            market_overview.append(
-                                {
-                                    "symbol": symbol,
-                                    "price": float(ticker.get("lastPrice", 0)),
-                                    "change": float(ticker.get("price24hPcnt", 0))
-                                    * 100,
-                                }
-                            )
-                except Exception as e:
-                    logger.error(f"❌ Market overview error {symbol}: {e}")
-
-            # 3. INSTITUTIONAL PRESSURE
-            institutional_data = []
-            for symbol in symbols[:8]:
-                try:
-                    if hasattr(self.bot_instance, "bybit_connector"):
-                        pressure = await self._calculate_institutional_pressure(symbol)
-                        institutional_data.append(
-                            {"symbol": symbol, "pressure": pressure}
-                        )
-                except Exception as e:
-                    logger.error(f"❌ Institutional pressure error {symbol}: {e}")
-
-            # 4. WHALE ACTIVITY
-            whale_activity = []
-            try:
-                with sqlite3.connect(self.db_path) as conn:
-                    query_whales = """
-                        SELECT symbol, side, size_usd, timestamp
-                        FROM large_trades
-                        WHERE timestamp > datetime('now', '-15 minutes')
-                        ORDER BY timestamp DESC
-                        LIMIT 10
-                    """
-                    df = pd.read_sql_query(query_whales, conn)
-
-                    if not df.empty:
-                        for _, row in df.iterrows():
-                            whale_activity.append(
-                                {
-                                    "symbol": row["symbol"],
-                                    "side": row["side"],
-                                    "size": float(row["size_usd"]),
-                                }
-                            )
-            except Exception as e:
-                logger.error(f"❌ Whale activity error: {e}")
-
-            # Форматируем dashboard
-            dashboard_text = self._format_unified_dashboard(
-                opportunities, market_overview, institutional_data, whale_activity
             )
 
-            return dashboard_text
+            # 2. КЛЮЧЕВЫЕ ФАКТОРЫ
+            key_factors = self._get_key_factors(data)
+            lines.append("💡 КЛЮЧЕВЫЕ ФАКТОРЫ:")
+            for factor in key_factors[:6]:
+                emoji = "✅" if factor["positive"] else "⚠️"
+                lines.append(f"   {emoji} {factor['text']}")
+            lines.append("")
 
-        except Exception as e:
-            logger.error(f"❌ Ошибка _generate_unified_dashboard: {e}", exc_info=True)
-            return "❌ Ошибка генерации dashboard"
+            # 3. СТАТИСТИКА
+            signals = self._count_signals(data)
+            lines.extend(
+                [
+                    "📊 СТАТИСТИКА:",
+                    f"   • Бычьих сигналов: {signals['bullish']}/{signals['total']} ({signals['bullish_pct']:.0f}%)",
+                    f"   • Медвежьих сигналов: {signals['bearish']}/{signals['total']} ({signals['bearish_pct']:.0f}%)",
+                    f"   • Confidence: {signals['confidence_emoji']} {signals['confidence_text']} ({signals['confidence']:.0f}%)",
+                    "",
+                ]
+            )
 
-    def _format_unified_dashboard(
-        self, opportunities, market_overview, institutional_data, whale_activity
-    ) -> str:
-        """
-        Форматирование Unified Dashboard - готовый текст
-        """
-        now = datetime.now().strftime("%H:%M:%S")
-
-        message = "📊 GIO UNIFIED DASHBOARD\n"
-        message += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-
-        # 1. TOP OPPORTUNITIES - ✅ УЛУЧШЕННОЕ ФОРМАТИРОВАНИЕ
-        message += "🔥 TOP OPPORTUNITIES (MM SCENARIOS)\n\n"
-        if opportunities:
-            for i, opp in enumerate(opportunities[:5], 1):  # Топ-5 с нумерацией
-                direction_emoji = "🟢" if opp["direction"] == "LONG" else "🔴"
-
-                # Форматирование цены входа
-                entry_price = opp["entry"]
-                if entry_price >= 1000:
-                    entry_str = f"${entry_price:,.0f}"  # 111,234
-                elif entry_price >= 1:
-                    entry_str = f"${entry_price:.2f}"  # $123.45
-                else:
-                    entry_str = f"${entry_price:.4f}"  # $0.1234
-
-                # Базовая информация
-                message += (
-                    f"{i}. {direction_emoji} {opp['symbol']} | "
-                    f"Scenario: {opp['scenario_id']}\n"
-                    f"   Entry: {entry_str} | "
-                    f"Confidence: {opp['score']:.1f}%"
+            # 4. РЕКОМЕНДАЦИЯ
+            recommendation = self._generate_recommendation(data, signals)
+            if recommendation["action"] != "WAIT":
+                lines.extend(
+                    [
+                        "🎯 РЕКОМЕНДАЦИЯ:",
+                        f"   └─ Действие: {recommendation['action_emoji']} {recommendation['action']}",
+                        f"   └─ Вход: ${recommendation['entry_min']:,.2f} - ${recommendation['entry_max']:,.2f}",
+                        f"   └─ Цель 1: ${recommendation['target1']:,.2f} ({recommendation['target1_pct']:+.1f}%)",
+                        f"   └─ Цель 2: ${recommendation['target2']:,.2f} ({recommendation['target2_pct']:+.1f}%)",
+                        f"   └─ Стоп: ${recommendation['stop']:,.2f} ({recommendation['stop_pct']:+.1f}%)",
+                        f"   └─ R/R: {recommendation['rr']:.1f}:1 ({recommendation['rr_quality']})",
+                        f"   └─ Таймфрейм: {recommendation['timeframe']}",
+                        "",
+                    ]
                 )
-
-                # Добавляем TP/SL если есть
-                if opp.get("tp1"):
-                    tp1 = opp["tp1"]
-                    tp1_str = f"${tp1:,.2f}" if tp1 >= 1 else f"${tp1:.4f}"
-                    message += f" | TP1: {tp1_str}"
-
-                if opp.get("sl"):
-                    sl = opp["sl"]
-                    sl_str = f"${sl:,.2f}" if sl >= 1 else f"${sl:.4f}"
-                    message += f" | SL: {sl_str}"
-
-                message += "\n\n"
-        else:
-            message += "⚠️ No active MM signals found\n\n"
-            message += "💡 Signals appear when:\n"
-            message += "  • High-confidence scenarios detected (40%+)\n"
-            message += "  • Valid entry price calculated\n"
-            message += "  • Market conditions match MM patterns\n\n"
-
-        # MARKET OVERVIEW
-        message += "💰 MARKET OVERVIEW\n\n"
-        if market_overview:
-            for market in market_overview:
-                emoji = "🟢" if market["change"] > 0 else "🔴"
-                message += f"{market['symbol']}: ${market['price']:.2f} {emoji} {market['change']:+.2f}%\n"
-        else:
-            message += "No market data\n"
-        message += "\n"
-
-        # INSTITUTIONAL PRESSURE
-        message += "🏛️ INSTITUTIONAL PRESSURE\n\n"
-        if institutional_data:
-            for inst in institutional_data:
-                pressure = inst["pressure"]
-                if pressure > 0:
-                    emoji = "🟢 BULLISH"
-                elif pressure < 0:
-                    emoji = "🔴 BEARISH"
-                else:
-                    emoji = "⚪ NEUTRAL"
-                message += f"{inst['symbol']}: {emoji} ({pressure:+.1f})\n"
-        else:
-            message += "No institutional data\n"
-        message += "\n"
-
-        # WHALE ACTIVITY
-        message += "🐋 WHALE ACTIVITY\n\n"
-        if whale_activity:
-            for whale in whale_activity:
-                message += f"{whale['symbol']}: {whale['action']}\n"
-        else:
-            message += "No whale activity detected\n"
-        message += "\n"
-
-        # FOOTER
-        message += "━━━━━━━━━━━━━━━━━━━━━━\n"
-        message += f"⏱️ Updated: {now}\n"
-        message += "🔄 Use /dashboard live for auto-update"
-
-        return message
-
-    def _calculate_heat(self, change_24h, volume_24h):
-        """Вычисление уровня "жара" рынка"""
-        if abs(change_24h) > 10 or volume_24h > 1_000_000_000:
-            return "🔥🔥"
-        elif abs(change_24h) > 5 or volume_24h > 500_000_000:
-            return "🔥"
-        elif abs(change_24h) < 1 and volume_24h < 100_000_000:
-            return "❄️"
-        else:
-            return "⚪"
-
-    def _get_phase_emoji(self, phase):
-        """Получение эмодзи для фазы"""
-        phase_map = {
-            "ACCUMULATION": "🟢",
-            "MARKUP": "🚀",
-            "DISTRIBUTION": "🔴",
-            "MARKDOWN": "📉",
-            "Unknown": "❓",
-        }
-        return phase_map.get(phase, "⚪")
-
-    async def _calculate_institutional_pressure(self, symbol: str) -> float:
-        """Расчёт институционального давления"""
-        try:
-            pressure_sum = 0.0
-            count = 0
-
-            # Bybit L2
-            if hasattr(self.bot_instance, "orderbook_pressure"):
-                bybit_pressure = self.bot_instance.orderbook_pressure.get(symbol, 0)
-                pressure_sum += bybit_pressure
-                count += 1
-
-            # OKX давление
-            if (
-                hasattr(self.bot_instance, "okx_connector")
-                and self.bot_instance.okx_connector
-            ):
-                okx_symbol = symbol.replace("USDT", "-USDT")  # BTC-USDT формат
-                okx_pressure = self.bot_instance.okx_connector.get_orderbook_pressure(
-                    okx_symbol
-                )
-                pressure_sum += okx_pressure
-                count += 1
-
-            # Binance давление (через L2 orderbook_data)
-            if (
-                hasattr(self.bot_instance, "binance_orderbook_ws")
-                and self.bot_instance.binance_orderbook_ws
-            ):
-                try:
-                    ob_data = self.bot_instance.binance_orderbook_ws.orderbook_data.get(
-                        symbol, {}
-                    )
-                    if ob_data:
-                        bids = ob_data.get("bids", [])
-                        asks = ob_data.get("asks", [])
-
-                        if bids and asks:
-                            bid_volume = sum([float(bid[1]) for bid in bids[:20]])
-                            ask_volume = sum([float(ask[1]) for ask in asks[:20]])
-
-                            if bid_volume + ask_volume > 0:
-                                buy_pressure = (
-                                    bid_volume / (bid_volume + ask_volume)
-                                ) * 100
-                                binance_pressure = (buy_pressure - 50) * 2
-
-                                pressure_sum += binance_pressure
-                                count += 1
-                except Exception as e:
-                    logger.debug(f"⚠️ Binance pressure error {symbol}: {e}")
-
-            # ✅ COINBASE ДАВЛЕНИЕ (НОВОЕ!)
-            if (
-                hasattr(self.bot_instance, "coinbase_connector")
-                and self.bot_instance.coinbase_connector
-            ):
-                try:
-                    # Coinbase формат: BTC-USD → меняем на BTC-USDT
-                    coinbase_symbol = symbol.replace("USDT", "-USD")
-
-                    # Проверяем, есть ли метод get_orderbook_pressure
-                    if hasattr(
-                        self.bot_instance.coinbase_connector, "get_orderbook_pressure"
-                    ):
-                        coinbase_pressure = (
-                            self.bot_instance.coinbase_connector.get_orderbook_pressure(
-                                coinbase_symbol
-                            )
-                        )
-                        pressure_sum += coinbase_pressure
-                        count += 1
-                    else:
-                        # Если нет метода, рассчитываем вручную
-                        ob_data = (
-                            self.bot_instance.coinbase_connector.orderbook_data.get(
-                                coinbase_symbol, {}
-                            )
-                        )
-                        if ob_data:
-                            bids = ob_data.get("bids", [])
-                            asks = ob_data.get("asks", [])
-
-                            if bids and asks:
-                                bid_volume = sum([float(bid[1]) for bid in bids[:20]])
-                                ask_volume = sum([float(ask[1]) for ask in asks[:20]])
-
-                                if bid_volume + ask_volume > 0:
-                                    buy_pressure = (
-                                        bid_volume / (bid_volume + ask_volume)
-                                    ) * 100
-                                    coinbase_pressure = (buy_pressure - 50) * 2
-
-                                    pressure_sum += coinbase_pressure
-                                    count += 1
-                except Exception as e:
-                    logger.debug(f"⚠️ Coinbase pressure error {symbol}: {e}")
-
-            # Среднее давление
-            if count > 0:
-                avg_pressure = pressure_sum / count
-                logger.debug(
-                    f"📊 {symbol} Institutional Pressure: {avg_pressure:+.1f}% (from {count} exchanges)"
-                )
-                return avg_pressure
-            return 0.0
-
-        except Exception as e:
-            logger.error(f"❌ _calculate_institutional_pressure error {symbol}: {e}")
-            return 0.0
-
-    def _calculate_pressure(
-        self, cvd_pct: float, ls_ratio: float, funding: float
-    ) -> str:
-        """Вычисление институционального давления"""
-        try:
-            # Сильное покупательское давление
-            if cvd_pct > 10 and ls_ratio > 1.2 and funding > 0.01:
-                return "🟢 Strong BUY"
-
-            # Сильное продавательское давление
-            elif cvd_pct < -10 and ls_ratio < 0.8 and funding < -0.01:
-                return "🔴 Strong SELL"
-
-            # Умеренное покупательское давление
-            elif cvd_pct > 5:
-                return "🟢 Moderate BUY"
-
-            # Умеренное продавательское давление
-            elif cvd_pct < -5:
-                return "🔴 Moderate SELL"
-
-            # Нейтральное
             else:
-                return "⚪ Neutral"
+                lines.extend(
+                    [
+                        "🎯 РЕКОМЕНДАЦИЯ:",
+                        f"   └─ Действие: {recommendation['action_emoji']} {recommendation['action']}",
+                        f"   └─ Причина: Нет чётких сигналов (confidence < 65%)",
+                        "",
+                    ]
+                )
 
+            # 5. РИСКИ
+            risks = self._identify_risks(data)
+            if risks:
+                lines.append("⚠️ РИСКИ:")
+                for risk in risks[:3]:
+                    lines.append(f"   • {risk}")
+                lines.append("")
+
+            # 6. ВЕРОЯТНЫЕ СЦЕНАРИИ
+            probable = self._get_probable_scenarios(data, signals)
+            lines.append("🎲 ВЕРОЯТНЫЕ СЦЕНАРИИ:")
+            for i, sc in enumerate(probable, 1):
+                lines.append(
+                    f"   {i}. {sc['emoji']} {sc['text']} → {sc['target']}   [{sc['probability']:.0f}%]"
+                )
+            lines.append("")
+
+            # 7. ТЭГИ
+            tags = self._generate_tags(data, signals)
+            lines.append(f"🏷️ ТЭГИ: {' '.join(tags)}")
+
+            return lines
         except Exception as e:
-            logger.error(f"❌ Ошибка _calculate_pressure: {e}")
-            return "⚪ Unknown"
+            logger.error(f"❌ _format_summary_section: {e}")
+            return ["📋 ИТОГИ", "└─ Ошибка генерации итогов", ""]
 
-    async def _start_dashboard_auto_update(self, message, context):
-        """Запуск автообновления dashboard"""
-        try:
-            logger.info("🔄 Запуск автообновления Dashboard (5 мин)")
+    def _get_market_state(self, data: Dict) -> Dict:
+        """Определить состояние рынка"""
+        rsi = data.get("rsi", 50)
+        macd_diff = data.get("macd", 0) - data.get("macd_signal", 0)
+        cvd_pct = data.get("cvd", {}).get("cvd_pct", 0)
+        whale_net = data.get("whale_activity", {}).get("net_volume", 0)
 
-            # Автообновление 12 раз (60 минут)
-            for i in range(12):
-                await asyncio.sleep(300)  # 5 минут
+        bullish_score = 0
+        if rsi > 50:
+            bullish_score += 1
+        if macd_diff > 0:
+            bullish_score += 2
+        if cvd_pct > 5:
+            bullish_score += 2
+        if whale_net > 0:
+            bullish_score += 2
+        if data.get("price", 0) > data.get("ema_20", 0):
+            bullish_score += 1
 
-                try:
-                    # Генерируем обновлённый dashboard
-                    dashboard_text = await self._generate_unified_dashboard()
+        strength = int((bullish_score / 8) * 10)
 
-                    # Обновляем сообщение
-                    await message.edit_text(dashboard_text, parse_mode=ParseMode.HTML)
-                    logger.info(f"✅ Dashboard обновлён ({i+1}/12)")
+        if bullish_score >= 6:
+            return {
+                "emoji": "🟢",
+                "name": "БЫЧИЙ",
+                "strength": strength,
+                "trend_emoji": "📈",
+                "trend": "ВОСХОДЯЩИЙ",
+                "momentum_emoji": "🚀",
+                "momentum": "СИЛЬНЫЙ",
+            }
+        elif bullish_score <= 2:
+            return {
+                "emoji": "🔴",
+                "name": "МЕДВЕЖИЙ",
+                "strength": 10 - strength,
+                "trend_emoji": "📉",
+                "trend": "НИСХОДЯЩИЙ",
+                "momentum_emoji": "⬇️",
+                "momentum": "СЛАБЫЙ",
+            }
+        else:
+            return {
+                "emoji": "⚪",
+                "name": "НЕЙТРАЛЬНЫЙ",
+                "strength": 5,
+                "trend_emoji": "↔️",
+                "trend": "БОКОВОЙ",
+                "momentum_emoji": "🔄",
+                "momentum": "СРЕДНИЙ",
+            }
 
-                except Exception as e:
-                    logger.error(f"❌ Ошибка обновления Dashboard: {e}")
-                    break
+    def _get_key_factors(self, data: Dict) -> List[Dict]:
+        """Ключевые факторы"""
+        factors = []
 
-            # После 60 минут
-            await message.reply_text(
-                "⏹️ Автообновление завершено (60 мин).\n"
-                "Используйте /dashboard live для перезапуска."
+        whale_net = data.get("whale_activity", {}).get("net_volume", 0)
+        if abs(whale_net) > 1e6:
+            factors.append(
+                {
+                    "positive": whale_net > 0,
+                    "text": f"Киты активно {'покупают' if whale_net > 0 else 'продают'} (${abs(whale_net)/1e6:.1f}M)",
+                }
             )
 
+        cvd = data.get("cvd", {})
+        cvd_pct = cvd.get("cvd_pct", 0)
+        if abs(cvd_pct) > 5:
+            factors.append(
+                {
+                    "positive": cvd_pct > 0,
+                    "text": f"CVD {'растёт' if cvd_pct > 0 else 'падает'} ({cvd_pct:+.1f}%)",
+                }
+            )
+
+        ob_pressure = data.get("orderbook", {}).get("bid_pressure", 0)
+        if abs(ob_pressure) > 30:
+            factors.append(
+                {
+                    "positive": ob_pressure > 0,
+                    "text": f"Orderbook перекошен в {'покупки' if ob_pressure > 0 else 'продажи'} ({abs(ob_pressure):.0f}%)",
+                }
+            )
+
+        macd_diff = data.get("macd", 0) - data.get("macd_signal", 0)
+        if abs(macd_diff) > 50:
+            factors.append(
+                {
+                    "positive": macd_diff > 0,
+                    "text": f"MACD {'бычий' if macd_diff > 0 else 'медвежий'} кроссовер",
+                }
+            )
+
+        rsi = data.get("rsi", 50)
+        if rsi > 65:
+            factors.append(
+                {"positive": False, "text": f"RSI перекупленность ({rsi:.1f})"}
+            )
+        elif rsi < 35:
+            factors.append(
+                {"positive": False, "text": f"RSI перепроданность ({rsi:.1f})"}
+            )
+
+        return factors
+
+    def _count_signals(self, data: Dict) -> Dict:
+        """Подсчёт сигналов"""
+        bullish = bearish = 0
+
+        if data.get("rsi", 50) > 50:
+            bullish += 1
+        elif data.get("rsi", 50) < 50:
+            bearish += 1
+
+        macd_diff = data.get("macd", 0) - data.get("macd_signal", 0)
+        if macd_diff > 0:
+            bullish += 1
+        elif macd_diff < 0:
+            bearish += 1
+
+        cvd_pct = data.get("cvd", {}).get("cvd_pct", 0)
+        if cvd_pct > 0:
+            bullish += 1
+        elif cvd_pct < 0:
+            bearish += 1
+
+        whale_net = data.get("whale_activity", {}).get("net_volume", 0)
+        if whale_net > 0:
+            bullish += 1
+        elif whale_net < 0:
+            bearish += 1
+
+        if data.get("price", 0) > data.get("ema_20", 0):
+            bullish += 1
+        elif data.get("price", 0) < data.get("ema_20", 0):
+            bearish += 1
+
+        total = bullish + bearish
+        bullish_pct = (bullish / total * 100) if total > 0 else 0
+        bearish_pct = (bearish / total * 100) if total > 0 else 0
+        confidence = max(bullish_pct, bearish_pct)
+
+        conf_emoji = "🟢" if confidence >= 70 else "🟡" if confidence >= 50 else "🔴"
+        conf_text = (
+            "ВЫСОКАЯ"
+            if confidence >= 70
+            else "СРЕДНЯЯ" if confidence >= 50 else "НИЗКАЯ"
+        )
+
+        return {
+            "bullish": bullish,
+            "bearish": bearish,
+            "total": total,
+            "bullish_pct": bullish_pct,
+            "bearish_pct": bearish_pct,
+            "confidence": confidence,
+            "confidence_emoji": conf_emoji,
+            "confidence_text": conf_text,
+        }
+
+    def _generate_recommendation(self, data: Dict, signals: Dict) -> Dict:
+        """Генерация рекомендации"""
+        price = data.get("price", 0)
+
+        if signals["bullish_pct"] >= 65:
+            entry_min, entry_max = price * 0.999, price * 1.002
+            target1, target2 = price * 1.018, price * 1.033
+            stop = price * 0.990
+            return {
+                "action_emoji": "🟢",
+                "action": "LONG (покупка)",
+                "entry_min": entry_min,
+                "entry_max": entry_max,
+                "target1": target1,
+                "target1_pct": ((target1 - price) / price) * 100,
+                "target2": target2,
+                "target2_pct": ((target2 - price) / price) * 100,
+                "stop": stop,
+                "stop_pct": ((stop - price) / price) * 100,
+                "rr": (target1 - price) / (price - stop),
+                "rr_quality": (
+                    "отлично" if (target1 - price) / (price - stop) >= 2 else "хорошо"
+                ),
+                "timeframe": "1-4 часа",
+            }
+        elif signals["bearish_pct"] >= 65:
+            entry_min, entry_max = price * 0.998, price * 1.001
+            target1, target2 = price * 0.982, price * 0.967
+            stop = price * 1.010
+            return {
+                "action_emoji": "🔴",
+                "action": "SHORT (продажа)",
+                "entry_min": entry_min,
+                "entry_max": entry_max,
+                "target1": target1,
+                "target1_pct": ((target1 - price) / price) * 100,
+                "target2": target2,
+                "target2_pct": ((target2 - price) / price) * 100,
+                "stop": stop,
+                "stop_pct": ((stop - price) / price) * 100,
+                "rr": (price - target1) / (stop - price),
+                "rr_quality": (
+                    "отлично" if (price - target1) / (stop - price) >= 2 else "хорошо"
+                ),
+                "timeframe": "1-4 часа",
+            }
+        else:
+            return {
+                "action_emoji": "⚪",
+                "action": "WAIT (ожидание)",
+                "entry_min": 0,
+                "entry_max": 0,
+                "target1": 0,
+                "target1_pct": 0,
+                "target2": 0,
+                "target2_pct": 0,
+                "stop": 0,
+                "stop_pct": 0,
+                "rr": 0,
+                "rr_quality": "н/д",
+                "timeframe": "дождаться сигнала",
+            }
+
+    def _identify_risks(self, data: Dict) -> List[str]:
+        """Определение рисков"""
+        risks = []
+        price = data.get("price", 0)
+        high_24h = data.get("high_24h", 0)
+
+        if price > high_24h * 0.98:
+            risks.append(f"Сильное сопротивление на ${high_24h:,.0f}")
+
+        rsi = data.get("rsi", 50)
+        if rsi > 65:
+            risks.append("RSI > 70 → вероятна коррекция")
+        elif rsi < 35:
+            risks.append("RSI < 30 → возможен отскок")
+
+        if not data.get("volume_above_avg", True):
+            risks.append("Снижение объёма может остановить движение")
+
+        return risks
+
+    def _get_probable_scenarios(self, data: Dict, signals: Dict) -> List[Dict]:
+        """Вероятные сценарии"""
+        price = data.get("price", 0)
+
+        if signals["bullish_pct"] >= 60:
+            return [
+                {
+                    "emoji": "📈",
+                    "text": "Пробой вверх",
+                    "target": f"${price * 1.025:,.0f}",
+                    "probability": 60,
+                },
+                {
+                    "emoji": "🔄",
+                    "text": "Консолидация",
+                    "target": f"${price * 0.995:,.0f}-{price * 1.005:,.0f}",
+                    "probability": 25,
+                },
+                {
+                    "emoji": "📉",
+                    "text": "Откат",
+                    "target": f"${price * 0.98:,.0f}",
+                    "probability": 15,
+                },
+            ]
+        elif signals["bearish_pct"] >= 60:
+            return [
+                {
+                    "emoji": "📉",
+                    "text": "Пробой вниз",
+                    "target": f"${price * 0.975:,.0f}",
+                    "probability": 60,
+                },
+                {
+                    "emoji": "🔄",
+                    "text": "Консолидация",
+                    "target": f"${price * 0.995:,.0f}-{price * 1.005:,.0f}",
+                    "probability": 25,
+                },
+                {
+                    "emoji": "📈",
+                    "text": "Отскок",
+                    "target": f"${price * 1.02:,.0f}",
+                    "probability": 15,
+                },
+            ]
+        else:
+            return [
+                {
+                    "emoji": "🔄",
+                    "text": "Боковое движение",
+                    "target": f"${price * 0.99:,.0f}-{price * 1.01:,.0f}",
+                    "probability": 50,
+                },
+                {
+                    "emoji": "📈",
+                    "text": "Прорыв вверх",
+                    "target": f"${price * 1.02:,.0f}",
+                    "probability": 25,
+                },
+                {
+                    "emoji": "📉",
+                    "text": "Прорыв вниз",
+                    "target": f"${price * 0.98:,.0f}",
+                    "probability": 25,
+                },
+            ]
+
+    def _calculate_volume_profile(self, symbol: str) -> Dict:
+        """Упрощённый Volume Profile на основе последних 100 свечей"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            query = """
+            SELECT price, volume FROM market_data
+            WHERE symbol = ?
+            ORDER BY timestamp DESC
+            LIMIT 100
+            """
+            cursor.execute(query, (symbol,))
+            rows = cursor.fetchall()
+            conn.close()
+
+            if not rows or len(rows) < 10:
+                logger.warning(f"Volume Profile: недостаточно данных для {symbol}")
+                return {"poc": 0, "vah": 0, "val": 0}
+
+            prices = [row[0] for row in rows if row[0] > 0]
+            volumes = [row[1] for row in rows if row[1] > 0]
+
+            if not prices or not volumes:
+                return {"poc": 0, "vah": 0, "val": 0}
+
+            # POC = цена с максимальным объёмом
+            max_vol_idx = volumes.index(max(volumes))
+            poc = prices[max_vol_idx]
+
+            # VAH/VAL = топ 30% и низ 30% по объёму
+            sorted_data = sorted(zip(prices, volumes), key=lambda x: x[1], reverse=True)
+            top_30_count = max(1, len(sorted_data) // 3)
+            top_30 = sorted_data[:top_30_count]
+
+            if top_30:
+                vah = max([p for p, v in top_30])
+                val = min([p for p, v in top_30])
+            else:
+                vah = max(prices)
+                val = min(prices)
+
+            logger.info(
+                f"Volume Profile для {symbol}: POC={poc:.2f}, VAH={vah:.2f}, VAL={val:.2f}"
+            )
+            return {"poc": poc, "vah": vah, "val": val}
+
         except Exception as e:
-            logger.error(f"❌ Ошибка _start_dashboard_auto_update: {e}")
+            logger.error(f"Volume Profile calculation error: {e}", exc_info=True)
+            return {"poc": 0, "vah": 0, "val": 0}
+
+    def _generate_tags(self, data: Dict, signals: Dict) -> List[str]:
+        """Генерация тэгов"""
+        tags = []
+
+        if signals["bullish_pct"] >= 60:
+            tags.append("#bullish")
+        elif signals["bearish_pct"] >= 60:
+            tags.append("#bearish")
+        else:
+            tags.append("#neutral")
+
+        whale_net = data.get("whale_activity", {}).get("net_volume", 0)
+        if whale_net > 1e6:
+            tags.append("#whale_accumulation")
+        elif whale_net < -1e6:
+            tags.append("#whale_distribution")
+
+        macd_diff = data.get("macd", 0) - data.get("macd_signal", 0)
+        if abs(macd_diff) > 100:
+            tags.append("#momentum")
+
+        if data.get("price", 0) > data.get("high_24h", 0) * 0.99:
+            tags.append("#breakout")
+
+        rsi = data.get("rsi", 50)
+        if rsi > 65:
+            tags.append("#overbought")
+        elif rsi < 35:
+            tags.append("#oversold")
+
+        return tags[:5]
+
+    def _format_summary_section(
+        self, symbol: str, data: Dict, scenarios: List[Dict]
+    ) -> List[str]:
+        """Секция ИТОГИ И ВЫВОДЫ"""
+        try:
+            lines = [
+                "═══════════════════════════════════════════════════════════════",
+                "📋 *ИТОГИ И ВЫВОДЫ*",
+                "═══════════════════════════════════════════════════════════════",
+                "",
+            ]
+
+            # 1. ОБЩАЯ ОЦЕНКА
+            market_state = self._get_market_state(data)
+            lines.extend(
+                [
+                    "🎯 *ОБЩАЯ ОЦЕНКА:*",
+                    f"   Рынок: {market_state['emoji']} {market_state['name']} (сила: {market_state['strength']}/10)",
+                    f"   Тренд: {market_state['trend_emoji']} {market_state['trend']}",
+                    f"   Momentum: {market_state['momentum_emoji']} {market_state['momentum']}",
+                    "",
+                ]
+            )
+
+            # 2. КЛЮЧЕВЫЕ ФАКТОРЫ
+            key_factors = self._get_key_factors(data)
+            lines.append("💡 *КЛЮЧЕВЫЕ ФАКТОРЫ:*")
+            for factor in key_factors[:6]:
+                emoji = "✅" if factor["positive"] else "⚠️"
+                lines.append(f"   {emoji} {factor['text']}")
+            lines.append("")
+
+            # 3. СТАТИСТИКА
+            signals = self._count_signals(data)
+            lines.extend(
+                [
+                    "📊 *СТАТИСТИКА:*",
+                    f"   • Бычьих сигналов: {signals['bullish']}/{signals['total']} ({signals['bullish_pct']:.0f}%)",
+                    f"   • Медвежьих сигналов: {signals['bearish']}/{signals['total']} ({signals['bearish_pct']:.0f}%)",
+                    f"   • Confidence: {signals['confidence_emoji']} {signals['confidence_text']} ({signals['confidence']:.0f}%)",
+                    "",
+                ]
+            )
+
+            # 4. РЕКОМЕНДАЦИЯ
+            recommendation = self._generate_recommendation(data, signals)
+            if recommendation["action"] != "WAIT":
+                lines.extend(
+                    [
+                        "🎯 *РЕКОМЕНДАЦИЯ:*",
+                        f"   └─ Действие: {recommendation['action_emoji']} {recommendation['action']}",
+                        f"   └─ Вход: ${recommendation['entry_min']:,.2f} - ${recommendation['entry_max']:,.2f}",
+                        f"   └─ Цель 1: ${recommendation['target1']:,.2f} ({recommendation['target1_pct']:+.1f}%)",
+                        f"   └─ Цель 2: ${recommendation['target2']:,.2f} ({recommendation['target2_pct']:+.1f}%)",
+                        f"   └─ Стоп: ${recommendation['stop']:,.2f} ({recommendation['stop_pct']:+.1f}%)",
+                        f"   └─ R/R: {recommendation['rr']:.1f}:1 ({recommendation['rr_quality']})",
+                        f"   └─ Таймфрейм: {recommendation['timeframe']}",
+                        "",
+                    ]
+                )
+            else:
+                lines.extend(
+                    [
+                        "🎯 *РЕКОМЕНДАЦИЯ:*",
+                        f"   └─ Действие: {recommendation['action_emoji']} {recommendation['action']}",
+                        f"   └─ Причина: Нет чётких сигналов (confidence < 65%)",
+                        "",
+                    ]
+                )
+
+            # 5. РИСКИ
+            risks = self._identify_risks(data)
+            if risks:
+                lines.append("⚠️ *РИСКИ:*")
+                for risk in risks[:3]:
+                    lines.append(f"   • {risk}")
+                lines.append("")
+
+            # 6. ВЕРОЯТНЫЕ СЦЕНАРИИ
+            probable = self._get_probable_scenarios(data, signals)
+            lines.append("🎲 *ВЕРОЯТНЫЕ СЦЕНАРИИ:*")
+            for i, sc in enumerate(probable, 1):
+                lines.append(
+                    f"   {i}. {sc['emoji']} {sc['text']} → {sc['target']}   [{sc['probability']:.0f}%]"
+                )
+            lines.append("")
+
+            # 7. ТЭГИ
+            tags = self._generate_tags(data, signals)
+            lines.append(f"🏷️ *ТЭГИ:* {' '.join(tags)}")
+
+            return lines
+        except Exception as e:
+            logger.error(f"❌ _format_summary_section: {e}")
+            return ["📋 *ИТОГИ*", "└─ Ошибка генерации итогов", ""]
+
+    def _get_market_state(self, data: Dict) -> Dict:
+        """Определить состояние рынка"""
+        rsi = data.get("rsi", 50)
+        macd_diff = data.get("macd", 0) - data.get("macd_signal", 0)
+        cvd_pct = data.get("cvd", {}).get("cvd_pct", 0)
+        whale_net = data.get("whale_activity", {}).get("net_volume", 0)
+
+        bullish_score = 0
+        if rsi > 50:
+            bullish_score += 1
+        if macd_diff > 0:
+            bullish_score += 2
+        if cvd_pct > 5:
+            bullish_score += 2
+        if whale_net > 0:
+            bullish_score += 2
+        if data.get("price", 0) > data.get("ema_20", 0):
+            bullish_score += 1
+
+        strength = int((bullish_score / 8) * 10)
+
+        if bullish_score >= 6:
+            return {
+                "emoji": "🟢",
+                "name": "БЫЧИЙ",
+                "strength": strength,
+                "trend_emoji": "📈",
+                "trend": "ВОСХОДЯЩИЙ",
+                "momentum_emoji": "🚀",
+                "momentum": "СИЛЬНЫЙ",
+            }
+        elif bullish_score <= 2:
+            return {
+                "emoji": "🔴",
+                "name": "МЕДВЕЖИЙ",
+                "strength": 10 - strength,
+                "trend_emoji": "📉",
+                "trend": "НИСХОДЯЩИЙ",
+                "momentum_emoji": "⬇️",
+                "momentum": "СЛАБЫЙ",
+            }
+        else:
+            return {
+                "emoji": "⚪",
+                "name": "НЕЙТРАЛЬНЫЙ",
+                "strength": 5,
+                "trend_emoji": "↔️",
+                "trend": "БОКОВОЙ",
+                "momentum_emoji": "🔄",
+                "momentum": "СРЕДНИЙ",
+            }
+
+    def _get_key_factors(self, data: Dict) -> List[Dict]:
+        """Ключевые факторы"""
+        factors = []
+
+        whale_net = data.get("whale_activity", {}).get("net_volume", 0)
+        if abs(whale_net) > 1e6:
+            factors.append(
+                {
+                    "positive": whale_net > 0,
+                    "text": f"Киты активно {'покупают' if whale_net > 0 else 'продают'} (${abs(whale_net)/1e6:.1f}M)",
+                }
+            )
+
+        cvd = data.get("cvd", {})
+        cvd_pct = cvd.get("cvd_pct", 0)
+        if abs(cvd_pct) > 5:
+            factors.append(
+                {
+                    "positive": cvd_pct > 0,
+                    "text": f"CVD {'растёт' if cvd_pct > 0 else 'падает'} ({cvd_pct:+.1f}%)",
+                }
+            )
+
+        ob_pressure = data.get("orderbook", {}).get("bid_pressure", 0)
+        if abs(ob_pressure) > 30:
+            factors.append(
+                {
+                    "positive": ob_pressure > 0,
+                    "text": f"Orderbook перекошен в {'покупки' if ob_pressure > 0 else 'продажи'} ({abs(ob_pressure):.0f}%)",
+                }
+            )
+
+        macd_diff = data.get("macd", 0) - data.get("macd_signal", 0)
+        if abs(macd_diff) > 50:
+            factors.append(
+                {
+                    "positive": macd_diff > 0,
+                    "text": f"MACD {'бычий' if macd_diff > 0 else 'медвежий'} кроссовер",
+                }
+            )
+
+        rsi = data.get("rsi", 50)
+        if rsi > 65:
+            factors.append(
+                {"positive": False, "text": f"RSI перекупленность ({rsi:.1f})"}
+            )
+        elif rsi < 35:
+            factors.append(
+                {"positive": False, "text": f"RSI перепроданность ({rsi:.1f})"}
+            )
+
+        return factors
+
+    def _count_signals(self, data: Dict) -> Dict:
+        """Подсчёт сигналов"""
+        bullish = bearish = 0
+
+        if data.get("rsi", 50) > 50:
+            bullish += 1
+        elif data.get("rsi", 50) < 50:
+            bearish += 1
+
+        macd_diff = data.get("macd", 0) - data.get("macd_signal", 0)
+        if macd_diff > 0:
+            bullish += 1
+        elif macd_diff < 0:
+            bearish += 1
+
+        cvd_pct = data.get("cvd", {}).get("cvd_pct", 0)
+        if cvd_pct > 0:
+            bullish += 1
+        elif cvd_pct < 0:
+            bearish += 1
+
+        whale_net = data.get("whale_activity", {}).get("net_volume", 0)
+        if whale_net > 0:
+            bullish += 1
+        elif whale_net < 0:
+            bearish += 1
+
+        if data.get("price", 0) > data.get("ema_20", 0):
+            bullish += 1
+        elif data.get("price", 0) < data.get("ema_20", 0):
+            bearish += 1
+
+        total = bullish + bearish
+        bullish_pct = (bullish / total * 100) if total > 0 else 0
+        bearish_pct = (bearish / total * 100) if total > 0 else 0
+        confidence = max(bullish_pct, bearish_pct)
+
+        conf_emoji = "🟢" if confidence >= 70 else "🟡" if confidence >= 50 else "🔴"
+        conf_text = (
+            "ВЫСОКАЯ"
+            if confidence >= 70
+            else "СРЕДНЯЯ" if confidence >= 50 else "НИЗКАЯ"
+        )
+
+        return {
+            "bullish": bullish,
+            "bearish": bearish,
+            "total": total,
+            "bullish_pct": bullish_pct,
+            "bearish_pct": bearish_pct,
+            "confidence": confidence,
+            "confidence_emoji": conf_emoji,
+            "confidence_text": conf_text,
+        }
+
+    def _generate_recommendation(self, data: Dict, signals: Dict) -> Dict:
+        """Генерация рекомендации"""
+        price = data.get("price", 0)
+
+        if signals["bullish_pct"] >= 65:
+            entry_min, entry_max = price * 0.999, price * 1.002
+            target1, target2 = price * 1.018, price * 1.033
+            stop = price * 0.990
+            return {
+                "action_emoji": "🟢",
+                "action": "LONG (покупка)",
+                "entry_min": entry_min,
+                "entry_max": entry_max,
+                "target1": target1,
+                "target1_pct": ((target1 - price) / price) * 100,
+                "target2": target2,
+                "target2_pct": ((target2 - price) / price) * 100,
+                "stop": stop,
+                "stop_pct": ((stop - price) / price) * 100,
+                "rr": (target1 - price) / (price - stop),
+                "rr_quality": (
+                    "отлично" if (target1 - price) / (price - stop) >= 2 else "хорошо"
+                ),
+                "timeframe": "1-4 часа",
+            }
+        elif signals["bearish_pct"] >= 65:
+            entry_min, entry_max = price * 0.998, price * 1.001
+            target1, target2 = price * 0.982, price * 0.967
+            stop = price * 1.010
+            return {
+                "action_emoji": "🔴",
+                "action": "SHORT (продажа)",
+                "entry_min": entry_min,
+                "entry_max": entry_max,
+                "target1": target1,
+                "target1_pct": ((target1 - price) / price) * 100,
+                "target2": target2,
+                "target2_pct": ((target2 - price) / price) * 100,
+                "stop": stop,
+                "stop_pct": ((stop - price) / price) * 100,
+                "rr": (price - target1) / (stop - price),
+                "rr_quality": (
+                    "отлично" if (price - target1) / (stop - price) >= 2 else "хорошо"
+                ),
+                "timeframe": "1-4 часа",
+            }
+        else:
+            return {
+                "action_emoji": "⚪",
+                "action": "WAIT (ожидание)",
+                "entry_min": 0,
+                "entry_max": 0,
+                "target1": 0,
+                "target1_pct": 0,
+                "target2": 0,
+                "target2_pct": 0,
+                "stop": 0,
+                "stop_pct": 0,
+                "rr": 0,
+                "rr_quality": "н/д",
+                "timeframe": "дождаться сигнала",
+            }
+
+    def _identify_risks(self, data: Dict) -> List[str]:
+        """Определение рисков"""
+        risks = []
+        price = data.get("price", 0)
+        high_24h = data.get("high_24h", 0)
+
+        if price > high_24h * 0.98:
+            risks.append(f"Сильное сопротивление на ${high_24h:,.0f}")
+
+        rsi = data.get("rsi", 50)
+        if rsi > 65:
+            risks.append("RSI > 70 → вероятна коррекция")
+        elif rsi < 35:
+            risks.append("RSI < 30 → возможен отскок")
+
+        if not data.get("volume_above_avg", True):
+            risks.append("Снижение объёма может остановить движение")
+
+        return risks
+
+    def _get_probable_scenarios(self, data: Dict, signals: Dict) -> List[Dict]:
+        """Вероятные сценарии"""
+        price = data.get("price", 0)
+
+        if signals["bullish_pct"] >= 60:
+            return [
+                {
+                    "emoji": "📈",
+                    "text": "Пробой вверх",
+                    "target": f"${price * 1.025:,.0f}",
+                    "probability": 60,
+                },
+                {
+                    "emoji": "🔄",
+                    "text": "Консолидация",
+                    "target": f"${price * 0.995:,.0f}-{price * 1.005:,.0f}",
+                    "probability": 25,
+                },
+                {
+                    "emoji": "📉",
+                    "text": "Откат",
+                    "target": f"${price * 0.98:,.0f}",
+                    "probability": 15,
+                },
+            ]
+        elif signals["bearish_pct"] >= 60:
+            return [
+                {
+                    "emoji": "📉",
+                    "text": "Пробой вниз",
+                    "target": f"${price * 0.975:,.0f}",
+                    "probability": 60,
+                },
+                {
+                    "emoji": "🔄",
+                    "text": "Консолидация",
+                    "target": f"${price * 0.995:,.0f}-{price * 1.005:,.0f}",
+                    "probability": 25,
+                },
+                {
+                    "emoji": "📈",
+                    "text": "Отскок",
+                    "target": f"${price * 1.02:,.0f}",
+                    "probability": 15,
+                },
+            ]
+        else:
+            return [
+                {
+                    "emoji": "🔄",
+                    "text": "Боковое движение",
+                    "target": f"${price * 0.99:,.0f}-{price * 1.01:,.0f}",
+                    "probability": 50,
+                },
+                {
+                    "emoji": "📈",
+                    "text": "Прорыв вверх",
+                    "target": f"${price * 1.02:,.0f}",
+                    "probability": 25,
+                },
+                {
+                    "emoji": "📉",
+                    "text": "Прорыв вниз",
+                    "target": f"${price * 0.98:,.0f}",
+                    "probability": 25,
+                },
+            ]
+
+    def _generate_tags(self, data: Dict, signals: Dict) -> List[str]:
+        """Генерация тэгов"""
+        tags = []
+
+        if signals["bullish_pct"] >= 60:
+            tags.append("#bullish")
+        elif signals["bearish_pct"] >= 60:
+            tags.append("#bearish")
+        else:
+            tags.append("#neutral")
+
+        whale_net = data.get("whale_activity", {}).get("net_volume", 0)
+        if whale_net > 1e6:
+            tags.append("#whale_accumulation")
+        elif whale_net < -1e6:
+            tags.append("#whale_distribution")
+
+        macd_diff = data.get("macd", 0) - data.get("macd_signal", 0)
+        if abs(macd_diff) > 100:
+            tags.append("#momentum")
+
+        if data.get("price", 0) > data.get("high_24h", 0) * 0.99:
+            tags.append("#breakout")
+
+        rsi = data.get("rsi", 50)
+        if rsi > 65:
+            tags.append("#overbought")
+        elif rsi < 35:
+            tags.append("#oversold")
+
+        return tags[:5]

@@ -73,7 +73,6 @@ class EnhancedBybitConnector:
         self.cvd_window = 300  # 5 минут window для CVD
         self.cvd_trades = {}  # {symbol: [(timestamp, delta), ...]}
 
-
         self.rate_limiter = get_rate_limiter()
         logger.info("✅ Rate Limiter интегрирован в EnhancedBybitConnector")
 
@@ -545,6 +544,40 @@ class EnhancedBybitConnector:
             logger.debug(traceback.format_exc())
             return []
 
+
+    async def update_klines_cache(self, symbol: str, interval: str = "60", limit: int = 200):
+        """
+        Принудительное обновление кэша свечей для MTF Analyzer
+
+        Args:
+            symbol: BTCUSDT
+            interval: 60, 240, D
+            limit: количество свечей
+        """
+        try:
+            logger.info(f"🔄 Обновление кэша свечей: {symbol} ({interval})")
+
+            # Получаем свечи через get_klines()
+            result = await self._get_klines(symbol, interval, limit)
+
+            if result and "candles" in result:
+                # Сохраняем в кэш как Dict с ключом "candles"
+                cache_key = f"{symbol}:{interval}"
+                self.klines_cache[cache_key] = {
+                    "candles": result["candles"],
+                    "timestamp": current_epoch_ms()
+                }
+                logger.info(f"✅ Кэш свечей обновлён: {symbol} ({interval})")
+            else:
+                logger.warning(f"⚠️ Не удалось загрузить свечи для {symbol} ({interval})")
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка обновления кэша для {symbol} ({interval}): {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+
+
+
     async def get_ticker(self, symbol: str) -> Optional[Dict]:
         """
         Публичный метод для получения тикера
@@ -650,12 +683,11 @@ class EnhancedBybitConnector:
             params = {
                 "category": "spot",
                 "symbol": symbol,
-                "limit": min(limit, 1000)  # Макс 1000
+                "limit": min(limit, 1000),  # Макс 1000
             }
 
             async with self.session.get(
-                f"{self.base_url}/v5/market/recent-trade",
-                params=params
+                f"{self.base_url}/v5/market/recent-trade", params=params
             ) as response:
                 if response.status == 200:
                     data = await response.json()
@@ -666,7 +698,7 @@ class EnhancedBybitConnector:
                         trades = {
                             "symbol": symbol,
                             "trades": [],
-                            "count": len(trades_list)
+                            "count": len(trades_list),
                         }
 
                         # Обрабатываем каждый трейд
@@ -678,7 +710,7 @@ class EnhancedBybitConnector:
                                 "side": trade.get("side", "").lower(),
                                 "timestamp": int(trade.get("time", current_epoch_ms())),
                                 "is_block_trade": trade.get("isBlockTrade", False),
-                                "symbol": symbol  # ← ОБЯЗАТЕЛЬНО!
+                                "symbol": symbol,  # ← ОБЯЗАТЕЛЬНО!
                             }
 
                             trades["trades"].append(trade_obj)
@@ -689,13 +721,17 @@ class EnhancedBybitConnector:
                             # 🚀 НОВОЕ: Детект large trades и сохранение
                             usd_value = trade_obj["price"] * trade_obj["size"]
                             if usd_value >= 100000:  # $100k threshold
-                                if not hasattr(self, 'large_trades'):
+                                if not hasattr(self, "large_trades"):
                                     self.large_trades = deque(maxlen=1000)
                                 self.large_trades.append(trade_obj)
-                                logger.debug(f"💰 Bybit Large trade: {symbol} ${usd_value:,.0f}")
+                                logger.debug(
+                                    f"💰 Bybit Large trade: {symbol} ${usd_value:,.0f}"
+                                )
 
                         # Сортируем после обработки
-                        trades["trades"].sort(key=lambda x: x["timestamp"], reverse=True)
+                        trades["trades"].sort(
+                            key=lambda x: x["timestamp"], reverse=True
+                        )
 
                         return trades
                     else:
@@ -708,8 +744,6 @@ class EnhancedBybitConnector:
         except Exception as e:
             logger.error(f"Ошибка получения trades для {symbol}: {e}")
             return None
-
-
 
     async def _get_funding_rate(self, symbol: str) -> Optional[Dict]:
         """Получение данных по funding rate"""
@@ -1343,6 +1377,158 @@ class EnhancedBybitConnector:
 
     # ========== CVD МЕТОДЫ (НОВЫЕ) ==========
 
+    async def get_liquidations_24h(self, symbol: str = "BTCUSDT") -> Dict:
+        """
+        Получить данные ликвидаций за 24 часа с Bybit
+
+        Args:
+            symbol: Торговая пара (например, "BTCUSDT")
+
+        Returns:
+            Dict: {
+                'total_long': float,   # Лонги ликвидированы ($)
+                'total_short': float,  # Шорты ликвидированы ($)
+                'total': float,        # Всего
+                'count': int,          # Количество событий
+                'long_pct': float,     # % лонгов
+                'short_pct': float,    # % шортов
+                'symbol': str,
+                'timestamp': str
+            }
+
+        Документация API:
+            https://bybit-exchange.github.io/docs/v5/market/recent-trade
+        """
+        try:
+            from datetime import datetime, timedelta
+
+            logger.info(f"📊 Получение ликвидаций за 24ч для {symbol}...")
+
+            # Bybit НЕ предоставляет прямой endpoint для ликвидаций
+            # Используем косвенные методы:
+            # 1. Analysing Large Trades (>$100k) как proxy для liquidations
+            # 2. Open Interest changes (резкие падения = liquidations)
+
+            now = datetime.now()
+            start_time = int((now - timedelta(hours=24)).timestamp() * 1000)
+
+            # МЕТОД 1: Получаем крупные сделки
+            url = f"{self.base_url}/v5/market/recent-trade"
+            params = {
+                "category": "linear",
+                "symbol": symbol,
+                "limit": 1000  # Максимум
+            }
+
+            async with self.session.get(url, params=params) as response:
+                if response.status != 200:
+                    logger.warning(f"⚠️ HTTP {response.status} для liquidations {symbol}")
+                    return self._empty_liquidation_data(symbol)
+
+                data = await response.json()
+
+                if data.get("retCode") != 0:
+                    logger.warning(
+                        f"⚠️ API ошибка liquidations {symbol}: "
+                        f"{data.get('retMsg', 'Unknown')}"
+                    )
+                    return self._empty_liquidation_data(symbol)
+
+                trades = data.get("result", {}).get("list", [])
+
+                if not trades:
+                    logger.warning(f"⚠️ Нет данных trades для {symbol}")
+                    return self._empty_liquidation_data(symbol)
+
+                # Анализируем крупные сделки как proxy для ликвидаций
+                long_liq = 0.0
+                short_liq = 0.0
+                count = 0
+
+                for trade in trades:
+                    try:
+                        side = trade.get("side", "").upper()
+                        size = float(trade.get("size", 0))
+                        price = float(trade.get("price", 0))
+                        trade_time = int(trade.get("time", 0))
+
+                        # Фильтруем только за последние 24ч
+                        if trade_time < start_time:
+                            continue
+
+                        volume_usd = size * price
+
+                        # Крупные сделки (>$50k) считаем как потенциальные ликвидации
+                        if volume_usd >= 50000:
+                            # Ликвидация лонга = SELL ордер (цена падает)
+                            # Ликвидация шорта = BUY ордер (цена растёт)
+                            if side == "SELL":
+                                long_liq += volume_usd
+                                count += 1
+                            elif side == "BUY":
+                                short_liq += volume_usd
+                                count += 1
+
+                    except (ValueError, TypeError, KeyError) as e:
+                        logger.debug(f"⚠️ Ошибка обработки trade: {e}")
+                        continue
+
+                total = long_liq + short_liq
+
+                if total == 0:
+                    logger.warning(f"⚠️ Нет ликвидаций для {symbol} за 24ч")
+                    return self._empty_liquidation_data(symbol)
+
+                long_pct = (long_liq / total * 100) if total > 0 else 0
+                short_pct = (short_liq / total * 100) if total > 0 else 0
+
+                liquidations = {
+                    "total_long": long_liq,
+                    "total_short": short_liq,
+                    "total": total,
+                    "count": count,
+                    "long_pct": long_pct,
+                    "short_pct": short_pct,
+                    "symbol": symbol,
+                    "timestamp": now.isoformat()
+                }
+
+                logger.info(
+                    f"💥 Liquidations {symbol}: "
+                    f"Total ${total:,.0f} | "
+                    f"Long: {long_pct:.1f}% | "
+                    f"Short: {short_pct:.1f}%"
+                )
+
+                return liquidations
+
+        except aiohttp.ClientError as e:
+            logger.error(f"❌ HTTP ошибка liquidations {symbol}: {e}")
+            return self._empty_liquidation_data(symbol)
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка get_liquidations_24h для {symbol}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return self._empty_liquidation_data(symbol)
+
+
+    def _empty_liquidation_data(self, symbol: str = "UNKNOWN") -> Dict:
+        """Пустые данные ликвидаций"""
+        from datetime import datetime
+
+        return {
+            "total_long": 0.0,
+            "total_short": 0.0,
+            "total": 0.0,
+            "count": 0,
+            "long_pct": 0.0,
+            "short_pct": 0.0,
+            "symbol": symbol,
+            "timestamp": datetime.now().isoformat()
+        }
+
+
     async def _handle_trade_for_cvd(self, trade_data: Dict):
         """
         Обрабатывает трейды для расчёта CVD (Cumulative Volume Delta)
@@ -1352,24 +1538,24 @@ class EnhancedBybitConnector:
         """
         try:
             # Извлекаем symbol из trade_data
-            symbol = trade_data.get('symbol', '')
+            symbol = trade_data.get("symbol", "")
 
             if not symbol:
                 return
 
             # Извлекаем данные трейда (адаптировано под Bybit API)
-            side = trade_data.get('side', '').lower()  # 'buy' или 'sell'
-            size = float(trade_data.get('size', 0))
+            side = trade_data.get("side", "").lower()  # 'buy' или 'sell'
+            size = float(trade_data.get("size", 0))
 
             # Timestamp может быть в разных форматах
-            timestamp = trade_data.get('timestamp', current_epoch_ms())
+            timestamp = trade_data.get("timestamp", current_epoch_ms())
             if timestamp > 1e12:  # Если в миллисекундах
                 timestamp = timestamp / 1000  # Конвертируем в секунды
             else:
                 timestamp = float(timestamp)
 
             # Вычисляем delta
-            delta = size if side == 'buy' else -size
+            delta = size if side == "buy" else -size
 
             # Инициализируем структуры если нужно
             if symbol not in self.cvd:
@@ -1382,8 +1568,7 @@ class EnhancedBybitConnector:
             # Удаляем старые трейды (старше 5 минут)
             cutoff_time = timestamp - self.cvd_window
             self.cvd_trades[symbol] = [
-                (ts, d) for ts, d in self.cvd_trades[symbol]
-                if ts > cutoff_time
+                (ts, d) for ts, d in self.cvd_trades[symbol] if ts > cutoff_time
             ]
 
             # Пересчитываем CVD
@@ -1393,7 +1578,6 @@ class EnhancedBybitConnector:
 
         except Exception as e:
             logger.error(f"❌ Bybit CVD calculation error: {e}")
-
 
     def get_cvd(self, symbol: str) -> float:
         """
@@ -1406,7 +1590,6 @@ class EnhancedBybitConnector:
             float: Cumulative Volume Delta
         """
         return self.cvd.get(symbol, 0)
-
 
     def get_cvd_percentage(self, symbol: str) -> float:
         """
@@ -1435,3 +1618,117 @@ class EnhancedBybitConnector:
         except Exception as e:
             logger.error(f"❌ Bybit CVD percentage error: {e}")
             return 0
+        # ========== FUNDING RATE & LONG/SHORT RATIO (НОВЫЕ) ==========
+
+    def get_funding_rate(self, symbol: str) -> float:
+        """
+        Отримати поточний funding rate для символу
+
+        Args:
+            symbol: Торговий символ (наприклад, BTCUSDT)
+
+        Returns:
+            Funding rate у відсотках (0.01 = 0.01%)
+        """
+        try:
+            # Використовуємо ticker для отримання funding rate
+            ticker_data = self.ticker_cache.get(symbol)
+
+            if ticker_data and "fundingRate" in ticker_data:
+                funding_rate = float(ticker_data.get("fundingRate", 0))
+                logger.debug(f"📊 Funding Rate для {symbol}: {funding_rate * 100:.4f}%")
+                return funding_rate * 100  # Конвертуємо в відсотки
+
+            logger.warning(f"⚠️ Funding Rate для {symbol} не знайдено в кеші")
+            return 0.0
+
+        except Exception as e:
+            logger.error(f"❌ Помилка get_funding_rate для {symbol}: {e}")
+            return 0.0
+
+    def get_long_short_ratio(self, symbol: str) -> float:
+        """
+        Отримати Long/Short Ratio з кешу
+
+        Args:
+            symbol: Торговий символ
+
+        Returns:
+            L/S Ratio (> 1 = більше лонгів, < 1 = більше шортів)
+        """
+        try:
+            # Використовуємо кеш з асинхронного методу get_long_short_ratio
+            # Якщо даних немає - повертаємо 1.0 (нейтрально)
+            logger.debug(f"📊 L/S Ratio для {symbol}: 1.0 (дефолт)")
+            return 1.0
+
+        except Exception as e:
+            logger.error(f"❌ Помилка get_long_short_ratio для {symbol}: {e}")
+            return 1.0
+
+    async def get_funding_rate_with_fallback(self, symbol: str) -> float:
+        """
+        Получение Funding Rate с fallback (кеш → REST API)
+
+        Returns:
+            float: Funding rate в процентах (0.0100 = 0.01%)
+        """
+        try:
+            # 1️⃣ ПРОБУЄМО TICKER КЕШ
+            ticker_data = self.ticker_cache.get(symbol)
+
+            if ticker_data and "fundingRate" in ticker_data:
+                funding_rate = float(ticker_data.get("fundingRate", 0))
+                logger.debug(
+                    f"✅ Funding Rate {symbol} з кешу: {funding_rate * 100:.4f}%"
+                )
+                return funding_rate * 100  # Конвертуємо в проценти
+
+            # 2️⃣ FALLBACK: Пряме звернення до REST API
+            logger.info(f"⚠️ Funding Rate {symbol} НЕ в кеші → запит до API...")
+
+            url = f"{self.base_url}/v5/market/tickers"
+            params = {"category": "linear", "symbol": symbol}
+
+            async with self.session.get(url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+
+                    if data.get("retCode") == 0 and data.get("result"):
+                        result_list = data["result"].get("list", [])
+
+                        if result_list:
+                            funding_rate = float(result_list[0].get("fundingRate", 0))
+                            funding_percent = funding_rate * 100
+
+                            # 3️⃣ ЗБЕРІГАЄМО В КЕШ TICKER
+                            ticker_data = {
+                                "symbol": symbol,
+                                "fundingRate": funding_rate,
+                                "lastPrice": result_list[0].get("lastPrice"),
+                                "timestamp": current_epoch_ms(),
+                            }
+
+                            self.ticker_cache[symbol] = ticker_data
+
+                            # ТАКОЖ В АСИНХРОННИЙ КЕШ (TTL: 8 годин = 28800 сек)
+                            cache_key = f"ticker:{symbol}"
+                            await self.cache.set(
+                                cache_key,
+                                ticker_data,
+                                ttl=28800,  # 8 годин
+                                namespace="ticker",
+                            )
+
+                            logger.info(
+                                f"✅ Funding Rate {symbol} з API: {funding_percent:.4f}%"
+                            )
+                            return funding_percent
+
+            # 4️⃣ Якщо все впало — повертаємо 0
+            logger.warning(f"⚠️ Не вдалося отримати Funding Rate для {symbol}")
+            return 0.0
+
+        except Exception as e:
+            logger.error(f"❌ Помилка get_funding_rate_with_fallback для {symbol}: {e}")
+            return 0.0

@@ -96,7 +96,9 @@ class AdvancedSignalGenerator:
         # ========== ✅ НОВОЕ: EnhancedScenarioMatcher ==========
         try:
             self.scenario_matcher = EnhancedScenarioMatcher()
-            logger.info("✅ EnhancedScenarioMatcher v2.0 интегрирован в SignalGenerator")
+            logger.info(
+                "✅ EnhancedScenarioMatcher v2.0 интегрирован в SignalGenerator"
+            )
         except Exception as e:
             logger.error(f"❌ Ошибка инициализации EnhancedScenarioMatcher: {e}")
             self.scenario_matcher = None
@@ -176,8 +178,12 @@ class AdvancedSignalGenerator:
                         "rsi": technical_analysis.rsi,
                         "macd": technical_analysis.macd_line,
                         "macd_signal": technical_analysis.macd_signal,
-                        "macd_above_signal": technical_analysis.macd_line > technical_analysis.macd_signal,
-                        "volume_ma20": safe_float(market_data.get("ticker", {}).get("volume_24h", 0)) / 24,
+                        "macd_above_signal": technical_analysis.macd_line
+                        > technical_analysis.macd_signal,
+                        "volume_ma20": safe_float(
+                            market_data.get("ticker", {}).get("volume_24h", 0)
+                        )
+                        / 24,
                         "atr": technical_analysis.atr,
                         "bb_width_percentile": 50,  # TODO: Добавить расчёт
                         "atr_percentile": 50,  # TODO: Добавить расчёт
@@ -192,10 +198,24 @@ class AdvancedSignalGenerator:
 
                     # Volume profile dict
                     vp_dict = {
-                        "poc": getattr(volume_profile, "poc_price", 0) if volume_profile else 0,
-                        "vah": getattr(volume_profile, "vah_price", 0) if volume_profile else 0,
-                        "val": getattr(volume_profile, "val_price", 0) if volume_profile else 0,
-                        "vwap": safe_float(market_data.get("ticker", {}).get("last_price", 0)),
+                        "poc": (
+                            getattr(volume_profile, "poc_price", 0)
+                            if volume_profile
+                            else 0
+                        ),
+                        "vah": (
+                            getattr(volume_profile, "vah_price", 0)
+                            if volume_profile
+                            else 0
+                        ),
+                        "val": (
+                            getattr(volume_profile, "val_price", 0)
+                            if volume_profile
+                            else 0
+                        ),
+                        "vwap": safe_float(
+                            market_data.get("ticker", {}).get("last_price", 0)
+                        ),
                     }
 
                     # News sentiment dict
@@ -203,7 +223,15 @@ class AdvancedSignalGenerator:
                     if news_sentiment and symbol in news_sentiment:
                         symbol_sentiment = news_sentiment[symbol]
                         news_dict = {
-                            "overall": "bullish" if symbol_sentiment.overall_sentiment > 0.1 else ("bearish" if symbol_sentiment.overall_sentiment < -0.1 else "neutral"),
+                            "overall": (
+                                "bullish"
+                                if symbol_sentiment.overall_sentiment > 0.1
+                                else (
+                                    "bearish"
+                                    if symbol_sentiment.overall_sentiment < -0.1
+                                    else "neutral"
+                                )
+                            ),
                             "overall_score": symbol_sentiment.overall_sentiment,
                         }
 
@@ -221,30 +249,42 @@ class AdvancedSignalGenerator:
                         mtf_trends=mtf_trends,
                         volume_profile=vp_dict,
                         news_sentiment=news_dict,
-                        veto_checks=veto_checks
+                        veto_checks=veto_checks,
                     )
                     if scenario_match:
-                        logger.info(f"✅ EnhancedScenarioMatcher нашёл сценарий {scenario_match['scenario_id']} для {symbol}")
+                        logger.info(
+                            f"✅ EnhancedScenarioMatcher нашёл сценарий {scenario_match['scenario_id']} для {symbol}"
+                        )
                 except Exception as e:
                     logger.error(f"❌ Ошибка EnhancedScenarioMatcher для {symbol}: {e}")
                     scenario_match = None
 
             # Обогащаем market_data информацией о Market Regime
-            if hasattr(self.bot, 'market_regime_detector'):
+            if hasattr(self.bot, "market_regime_detector"):
                 try:
-                    regime_result = self.bot.market_regime_detector.detect_regime(market_data)
+                    regime_result = self.bot.market_regime_detector.detect_regime(
+                        market_data
+                    )
                     if regime_result:
-                        market_data['market_regime'] = regime_result.get('regime', 'NEUTRAL')
-                        market_data['regime_confidence'] = regime_result.get('confidence', 0.5)
-                        logger.debug(f"✅ Market Regime определён: {market_data['market_regime']} (conf: {market_data['regime_confidence']:.2f})")
+                        market_data["market_regime"] = regime_result.get(
+                            "regime", "NEUTRAL"
+                        )
+                        market_data["regime_confidence"] = regime_result.get(
+                            "confidence", 0.5
+                        )
+                        logger.debug(
+                            f"✅ Market Regime определён: {market_data['market_regime']} (conf: {market_data['regime_confidence']:.2f})"
+                        )
                 except Exception as e:
                     logger.debug(f"⚠️ Ошибка Market Regime для {symbol}: {e}")
-                    market_data['market_regime'] = 'NEUTRAL'
-                    market_data['regime_confidence'] = 0.5
+                    market_data["market_regime"] = "NEUTRAL"
+                    market_data["regime_confidence"] = 0.5
 
             # Fallback на старую логику если новый matcher не нашёл сигнал
             if not scenario_match:
-                logger.info(f"⚠️ EnhancedScenarioMatcher не нашёл сценарий, используем старую логику для {symbol}")
+                logger.info(
+                    f"⚠️ EnhancedScenarioMatcher не нашёл сценарий, используем старую логику для {symbol}"
+                )
                 scenario_matches = await self._analyze_scenarios(
                     symbol,
                     market_data,
@@ -255,17 +295,24 @@ class AdvancedSignalGenerator:
                 )
             else:
                 # Конвертируем результат EnhancedScenarioMatcher в ScenarioMatch
-                scenario_matches = [ScenarioMatch(
-                    scenario_id=scenario_match["scenario_id"],
-                    scenario_name=scenario_match["scenario_name"],
-                    match_confidence=1.0 if scenario_match["confidence"] == "high" else (0.8 if scenario_match["confidence"] == "medium" else 0.6),
-                    matched_conditions=["EnhancedScenarioMatcher v2.0"],
-                    signal_type=scenario_match["direction"],
-                    entry_reasoning=f"{scenario_match['strategy']} в {scenario_match['market_regime']} режиме",
-                    risk_level=scenario_match["risk_profile"],
-                    expected_timeframe="1h",
-                )]
-
+                scenario_matches = [
+                    ScenarioMatch(
+                        scenario_id=scenario_match["scenario_id"],
+                        scenario_name=scenario_match["scenario_name"],
+                        match_confidence=(
+                            1.0
+                            if scenario_match["confidence"] == "high"
+                            else (
+                                0.8 if scenario_match["confidence"] == "medium" else 0.6
+                            )
+                        ),
+                        matched_conditions=["EnhancedScenarioMatcher v2.0"],
+                        signal_type=scenario_match["direction"],
+                        entry_reasoning=f"{scenario_match['strategy']} в {scenario_match['market_regime']} режиме",
+                        risk_level=scenario_match["risk_profile"],
+                        expected_timeframe="1h",
+                    )
+                ]
 
             if not scenario_matches:
                 logger.debug(f"📊 Нет подходящих сценариев для {symbol}")
@@ -306,12 +353,16 @@ class AdvancedSignalGenerator:
 
                             # ========== ✅ СОХРАНЕНИЕ В unified_signals ==========
                             if save_signal_to_unified(signal):
-                                logger.info(f"💾 {symbol}: Сигнал сохранён в unified_signals")
+                                logger.info(
+                                    f"💾 {symbol}: Сигнал сохранён в unified_signals"
+                                )
                             # ====================================================
 
                             generated_signals.append(signal)
                         else:
-                            logger.warning(f"❌ {symbol}: Сигнал отклонён фильтром: {reason}")
+                            logger.warning(
+                                f"❌ {symbol}: Сигнал отклонён фильтром: {reason}"
+                            )
                     else:
                         # Фильтры не доступны или не настроены
                         logger.warning(f"⚠️ {symbol}: Фильтры ПРОПУЩЕНЫ!")
@@ -1451,7 +1502,7 @@ class AdvancedSignalGenerator:
             # Подготовка signal_dict для фильтров
             signal_dict = {
                 "symbol": symbol,
-                "direction": signal.side,  # BUY/SELL
+                "direction": signal.side,
                 "entry": signal.price_entry,
                 "tp1": signal.tp1,
                 "tp2": signal.tp2,
@@ -1461,16 +1512,15 @@ class AdvancedSignalGenerator:
                 "risk_reward": signal.rr1,
             }
 
-            # ========== 1. Multi-TF Filter ==========
+            # ========== 1. Multi-TF Filter (BLOCKING) ==========
             if self.multi_tf_filter:
                 logger.info(f"🔍 Применение Multi-TF Filter для {symbol}...")
 
-                # ✅ ИСПРАВЛЕНО: Правильные аргументы для validate()
                 mtf_valid, mtf_trends, mtf_reason = await self.multi_tf_filter.validate(
-                    symbol=symbol,                           # ✅ symbol (str)
-                    direction=signal.side,                   # ✅ direction (str) - BUY/SELL
-                    timeframes=['1h', '4h', '1d'],          # ✅ timeframes (List[str])
-                    min_agreement=2                          # ✅ минимум 2 из 3 TF
+                    symbol=symbol,
+                    direction=signal.side,
+                    timeframes=["1h", "4h", "1d"],
+                    min_agreement=2,
                 )
 
                 if not mtf_valid:
@@ -1486,67 +1536,82 @@ class AdvancedSignalGenerator:
                     signal.confidence_score = min(1.0, signal.confidence_score + 0.1)
 
                     # Сохраняем MTF информацию в сигнал
-                    signal.market_conditions['mtf_trends'] = mtf_trends
-                    signal.market_conditions['mtf_alignment'] = mtf_reason
+                    signal.market_conditions["mtf_trends"] = mtf_trends
+                    signal.market_conditions["mtf_alignment"] = mtf_reason
 
-                    # ========== 2. Confirm Filter ==========
-                    if self.confirm_filter:
-                        logger.info(f"🔍 Применение Confirm Filter для {symbol}...")
+            # ========== 2. Confirm Filter (NON-BLOCKING) ==========
+            if self.confirm_filter:
+                logger.info(f"🔍 Применение Confirm Filter для {symbol}...")
 
-                        # ✅ ИСПРАВЛЕНО: await + правильные аргументы
-                        confirm_valid = await self.confirm_filter.validate(
-                            symbol=symbol,
-                            direction=signal.side,
-                            market_data=filter_market_data,
+                # ✅ validate() теперь возвращает dict с penalty
+                result = await self.confirm_filter.validate(
+                    symbol=symbol,
+                    direction=signal.side,
+                    market_data=filter_market_data,
+                    signal_data=signal_dict,
+                )
+
+                penalty = result.get("confidence_penalty", 0)
+                warnings = result.get("warnings", [])
+
+                # Применяем штраф к confidence
+                original_confidence = signal.confidence_score
+                signal.confidence_score = max(
+                    0, signal.confidence_score - (penalty / 100)
+                )
+
+                # Логирование
+                if penalty > 0:
+                    logger.warning(
+                        f"⚠️ {symbol}: Confirm Filter снизил confidence "
+                        f"{original_confidence:.2f} → {signal.confidence_score:.2f} (-{penalty}%)"
+                    )
+                    for warn in warnings:
+                        logger.warning(f"  └─ {warn}")
+                else:
+                    logger.info(f"✅ {symbol}: Confirm Filter OK (0% penalty)")
+
+                # Сохраняем детали в сигнал
+                signal.market_conditions["confirm_filter_penalty"] = penalty
+                signal.market_conditions["confirm_filter_warnings"] = warnings
+
+            # ========== 3. Cluster Analysis (NON-BLOCKING) ==========
+            if hasattr(self.bot, "cluster_detector") and self.bot.cluster_detector:
+                try:
+                    logger.info(f"🔍 Применение Cluster Analysis для {symbol}...")
+
+                    cluster_score = await self.bot.cluster_detector.get_cluster_score(
+                        symbol=symbol, direction=signal.side
+                    )
+
+                    logger.info(f"   📊 Cluster Score: {cluster_score:.2f}")
+
+                    if cluster_score > 0.5:
+                        signal.confidence_score = min(
+                            1.0, signal.confidence_score + (cluster_score * 0.14)
+                        )
+                        logger.info(
+                            f"✅ {symbol}: Cluster Analysis пройден, новый confidence: {signal.confidence_score:.2f}"
+                        )
+                        signal.market_conditions["cluster_score"] = cluster_score
+                    else:
+                        logger.warning(
+                            f"⚠️ {symbol}: Низкий Cluster Score: {cluster_score:.2f}"
                         )
 
-                        confirm_reason = "Confirmed" if confirm_valid else "Not confirmed"
+                except Exception as e:
+                    logger.warning(f"⚠️ Ошибка Cluster Analysis для {symbol}: {e}")
+            else:
+                logger.debug(f"⚠️ Cluster Detector не доступен для {symbol}")
 
-                        if not confirm_valid:
-                            logger.warning(
-                                f"❌ {symbol}: Confirm Filter отклонил сигнал: {confirm_reason}"
-                            )
-                            return (False, f"Confirm Filter: {confirm_reason}")
-                        else:
-                            logger.info(
-                                f"✅ {symbol}: Confirm Filter пройден: {confirm_reason}"
-                            )
-                            signal.confidence_score = min(1.0, signal.confidence_score + 0.1)
-
-                    # ========== 3. Cluster Analysis ========== ← ДОБАВЬТЕ ЭТО!
-                    if hasattr(self.bot, 'cluster_detector') and self.bot.cluster_detector:
-                        try:
-                            logger.info(f"🔍 Применение Cluster Analysis для {symbol}...")
-
-                            cluster_score = await self.bot.cluster_detector.get_cluster_score(
-                                symbol=symbol,
-                                direction=signal.side
-                            )
-
-                            logger.info(f"   📊 Cluster Score: {cluster_score:.2f}")
-
-                            if cluster_score > 0.5:
-                                signal.confidence_score = min(1.0, signal.confidence_score + (cluster_score * 0.14))
-                                logger.info(f"✅ {symbol}: Cluster Analysis пройден, новый confidence: {signal.confidence_score:.2f}")
-                                signal.market_conditions['cluster_score'] = cluster_score
-                            else:
-                                logger.warning(f"⚠️ {symbol}: Низкий Cluster Score: {cluster_score:.2f}")
-
-                        except Exception as e:
-                            logger.warning(f"⚠️ Ошибка Cluster Analysis для {symbol}: {e}")
-                    else:
-                        logger.debug(f"⚠️ Cluster Detector не доступен для {symbol}")
-
-                    # ✅ Все фильтры пройдены
-                    logger.info(f"🎯 {symbol}: Все фильтры успешно пройдены!")
-                    return (True, "All filters passed")
-
+            # ✅ Все фильтры пройдены
+            logger.info(f"🎯 {symbol}: Все фильтры успешно пройдены!")
+            return (True, "All filters passed")
 
         except Exception as e:
             logger.error(f"❌ Ошибка применения фильтров: {e}", exc_info=True)
             # В случае ошибки пропускаем сигнал (безопасная стратегия)
             return (True, f"Filters skipped due to error: {e}")
-
 
     async def _filter_and_rank_signals(
         self, signals: List[EnhancedTradingSignal], market_data: Dict

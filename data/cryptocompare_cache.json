@@ -1,0 +1,985 @@
+{
+  "cryptocompare_cache": {
+    "cryptocompare_all": {
+      "data": [
+        {
+          "id": "53553069",
+          "title": "BNB and Trump-Linked Tokens Gain After CZ’s Reported Pardon",
+          "body": "President Trump pardoned Binance founder Changpeng Zhao on Thursday, sparking a surge in related cryptocurrencies like BNB, which climbed 4.7% to $1,115, WLFI up 15.2% to over $0.14, and the",
+          "published_at": 1761255309,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/bnb-and-trump-linked-tokens-gain-after-czs-reported-pardon/",
+          "categories": [
+            "EXCHANGE",
+            "REGULATION",
+            "BNB",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News",
+            "BNB"
+          ]
+        },
+        {
+          "id": "53553022",
+          "title": "Intel Beats Q3 Revenue Forecast Amid PC Demand Recovery and Nvidia Partnership Prospects",
+          "body": "Intel’s Q3 revenue reached $13.65 billion, exceeding analyst expectations of $13.14 billion, driven by renewed demand for x86 PC processors. Net income stood at $4.1 billion, a turnaround from last",
+          "published_at": 1761255187,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/intel-beats-q3-revenue-forecast-amid-pc-demand-recovery-and-nvidia-partnership-prospects/",
+          "categories": [
+            "BUSINESS"
+          ],
+          "tags": [
+            "News",
+            "Core"
+          ]
+        },
+        {
+          "id": "53552940",
+          "title": "Schiff Doubles Down on Bitcoin Criticism, Pushes Tokenized Gold as Blockchain’s True Asset",
+          "body": "Peter Schiff argues that tokenized gold can fulfill the roles of a medium of exchange, unit of account and store of value—functions he claims bitcoin fails to deliver. The Safe Haven Debate Reignites Amid Market Volatility Outspoken bitcoin critic and gold advocate Peter Schiff has reiterated his belief that gold—not cryptocurrency—is the only asset that",
+          "published_at": 1761255034,
+          "source": "CryptoCompare",
+          "url": "https://news.bitcoin.com/schiff-doubles-down-on-bitcoin-criticism-pushes-tokenized-gold-as-blockchains-true-asset/",
+          "categories": [
+            "BLOCKCHAIN",
+            "BTC",
+            "EXCHANGE",
+            "FIAT",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Crypto News",
+            "Bitcoin (BTC)",
+            "gold",
+            "Peter Schiff"
+          ]
+        },
+        {
+          "id": "53552981",
+          "title": "Ethereum ETF Buzz Builds Across Asia — SOL and LINK Named the Best Altcoins to Buy for 50x Growth This Month",
+          "body": "The Asia cryptocurrency ETF currently offers suggested prices and products. With the launch of a microBit Ethereum Spot ETF, which will provide staking rewards for institutional holders, imminent, more than $1.48B has flowed into crypto assets since early October 2023. As such, certain altcoins like Solana and Chainlink could be set for major gains, as well as fast rising project, MAGACOIN FINANCE , likely now the most undervalued pick of this cycle. Ethereum ETFs Spark Institutional Demand Acro",
+          "published_at": 1761255012,
+          "source": "CryptoCompare",
+          "url": "https://en.bitcoinsistemi.com/ethereum-etf-buzz-builds-across-asia-sol-and-link-named-the-best-altcoins-to-buy-for-50x-growth-this-month/",
+          "categories": [
+            "ASIA",
+            "LINK",
+            "SOL",
+            "ZRX",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Sponsored"
+          ]
+        },
+        {
+          "id": "53552992",
+          "title": "Chainlink Heats Up: 53 Million LINK Scooped Up in Big Accumulation Spree",
+          "body": "Chainlink (LINK) maintained stability above $21 and occasionally tested the $22 level during early October. Midway through the month, LINK’s price dropped sharply amidst the devastating market downturn last week, and broke below $18, briefly dipping to about $16. Although there were a few recovery attempts, the asset could not regain its earlier momentum. However, as it currently hovers near $17.5, top investors keep adding the token to their stacks. LINK Whale Wallets Are Swelling Chainlink wha",
+          "published_at": 1761254993,
+          "source": "CryptoCompare",
+          "url": "https://cryptopotato.com/chainlink-heats-up-53-million-link-scooped-up-in-big-accumulation-spree/",
+          "categories": [
+            "LINK",
+            "MARKET",
+            "TRADING",
+            "APT",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "AA News",
+            "Crypto News",
+            "Chainlink (LINK) Price"
+          ]
+        },
+        {
+          "id": "53552914",
+          "title": "BNB, World Liberty, Meme Coins Jump After Trump Pardons Binance Founder",
+          "body": "Coins and tokens linked to crypto mogul Changpeng Zhao and President Trump jumped in price following news of the latest pardon.",
+          "published_at": 1761254926,
+          "source": "CryptoCompare",
+          "url": "https://decrypt.co/345747/bnb-world-liberty-jump-trump-binance-founder",
+          "categories": [
+            "EXCHANGE",
+            "MARKET",
+            "REGULATION",
+            "BNB",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Markets"
+          ]
+        },
+        {
+          "id": "53552684",
+          "title": "OpenAI’s ChatGPT Atlas Browser Faces Potential Prompt Injection Risks for Crypto Users",
+          "body": "OpenAI’s ChatGPT Atlas browser, launched in 2025, exposes crypto users to prompt injection attacks, where malicious webpage text tricks the AI into revealing sensitive wallet details or session data. Security",
+          "published_at": 1761254471,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/openais-chatgpt-atlas-browser-faces-potential-prompt-injection-risks-for-crypto-users/",
+          "categories": [
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News"
+          ]
+        },
+        {
+          "id": "53552723",
+          "title": "OpenAI's ChatGPT Atlas Browser Has a Big Problem—How Crypto Users Can Protect Themselves",
+          "body": "OpenAI's AI web browser faces prompt injection attacks that security experts call an unsolved problem—but there are some things you can do to be safe.",
+          "published_at": 1761254427,
+          "source": "CryptoCompare",
+          "url": "https://decrypt.co/345733/openai-chatgpt-atlas-browser-big-problem-how-crypto-users-protect-themselves",
+          "categories": [
+            "OTHER"
+          ],
+          "tags": [
+            "Artificial Intelligence"
+          ]
+        },
+        {
+          "id": "53552592",
+          "title": "Google Faces Potential $2.36 Billion Disgorgement in Privacy Lawsuit After $425 Million Verdict",
+          "body": "Google faces a push for an additional $2.36 billion in a privacy lawsuit after a $425 million verdict, as 98 million users seek disgorgement of profits from unlawful data collection",
+          "published_at": 1761254283,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/google-faces-potential-2-36-billion-disgorgement-in-privacy-lawsuit-after-425-million-verdict/",
+          "categories": [
+            "OTHER"
+          ],
+          "tags": [
+            "News",
+            "AMP",
+            "FRONT"
+          ]
+        },
+        {
+          "id": "53552525",
+          "title": "CZ Reveals Real Reason Tokenized Gold Has Not Taken Off",
+          "body": "Binance Founder Changpeng Zhao believes tokenized gold relies too much on trust, a move that is against modern finance innovation.",
+          "published_at": 1761254100,
+          "source": "CryptoCompare",
+          "url": "https://u.today/cz-reveals-real-reason-tokenized-gold-has-not-taken-off",
+          "categories": [
+            "EXCHANGE",
+            "FIAT",
+            "BNB",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Changpeng Zhao"
+          ]
+        },
+        {
+          "id": "53552474",
+          "title": "Coinbase CEO Optimistic on Crypto Legislation Progress by Thanksgiving, Eyes Stablecoin Protections",
+          "body": "US crypto market structure legislation is advancing rapidly, with Coinbase CEO Brian Armstrong noting 90% agreement among senators, focusing remaining issues on DeFi while protecting innovation. Lawmakers aim to regulate",
+          "published_at": 1761253948,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/coinbase-ceo-optimistic-on-crypto-legislation-progress-by-thanksgiving-eyes-stablecoin-protections/",
+          "categories": [
+            "EXCHANGE",
+            "MARKET",
+            "REGULATION",
+            "APT",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Analysis",
+            "News",
+            "APT"
+          ]
+        },
+        {
+          "id": "53552416",
+          "title": "Fidelity, Which Manages Billions of Dollars, Launches Support for the Anticipated Altcoin Following Bitcoin and Ethereum",
+          "body": "Fidelity Digital Assets announced today that it has launched trading and transaction support for Solana (SOL), expanding its asset offering on its cryptocurrency platforms beyond Bitcoin, Ethereum, and Litecoin. This support includes Fidelity Crypto for individual investors, Fidelity Crypto for IRAs for retirement accounts, Fidelity Crypto for Wealth Managers for asset managers, and the institutional trading platform. Fidelity Crypto quietly launched in March 2023, providing millions of US users",
+          "published_at": 1761253808,
+          "source": "CryptoCompare",
+          "url": "https://en.bitcoinsistemi.com/fidelity-which-manages-billions-of-dollars-launches-support-for-the-anticipated-altcoin-following-bitcoin-and-ethereum/",
+          "categories": [
+            "ALTCOIN",
+            "BTC",
+            "ETH",
+            "LTC",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Altcoin",
+            "News"
+          ]
+        },
+        {
+          "id": "53552517",
+          "title": "Despite gov’t shutdown, crypto market structure bill ‘90% there’ — Coinbase CEO",
+          "body": "The remaining “10%” of issues center mainly on DeFi, which Brian Armstrong says lawmakers are addressing carefully to preserve innovation.",
+          "published_at": 1761253808,
+          "source": "CryptoCompare",
+          "url": "https://cointelegraph.com/news/brian-armstrong-senate-crypto-legislation-genius-act-stablecoin?utm_source=rss_feed&utm_medium=rss%3F_t%3D1761254050335%26_dc%3D1761254050335&utm_campaign=rss_partner_inbound",
+          "categories": [
+            "EXCHANGE",
+            "MARKET",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            ""
+          ]
+        },
+        {
+          "id": "53553030",
+          "title": "U.S. Google users who won a $425M privacy verdict now want the company to forfeit $2.36B in profits",
+          "body": "Google is pushing back against a class action lawsuit that already resulted in a $425 million privacy verdict and is now aiming for an additional $2.36 billion in compensation. About 98 million of Google’s consumers are seeking $2.36 billion in additional compensation, asking the company to forfeit profits gotten from the mishandling of user data. Consumers seeking billions from Google following $425 million verdict U.S. Google users who secured a $425 million jury verdict last month in a long-r",
+          "published_at": 1761253803,
+          "source": "CryptoCompare",
+          "url": "https://www.cryptopolitan.com/google-users-compensation-class-action/",
+          "categories": [
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Tech",
+            "GOOGL"
+          ]
+        },
+        {
+          "id": "53552266",
+          "title": "They Want You to Sell Your XRP. Here’s Why",
+          "body": "When the headlines scream that crypto is collapsing, regulators are closing in, or the bull market is over , most of us take notice. But according to Ripple Bull Winkle, a frequent voice in the XRP community, that very narrative may be part of the bigger game: designed fear meant to shake out you and me so that larger players can quietly accumulate. In Bull Winkle’s words, “Fear Is The Tool.” The narrative of fear: when “they” want you to panic Bull Winkle argues that retail investors are being ",
+          "published_at": 1761253554,
+          "source": "CryptoCompare",
+          "url": "https://timestabloid.com/they-want-you-to-sell-your-xrp-heres-why/",
+          "categories": [
+            "BUSINESS",
+            "MARKET",
+            "TRADING",
+            "XRP",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Cryptocurrency",
+            "News",
+            "XRP",
+            "XRP Price"
+          ]
+        },
+        {
+          "id": "53552281",
+          "title": "SNX Shows Short-Term Weakness After Rally: Can Bulls Defend Key $1.2 Support?",
+          "body": "Synthetix (SNX) experienced a 9.3% price drop in the last 24 hours, underperforming the broader crypto market’s 0.94% gain, amid profit-taking after a rally to $2.58 and an AWS outage",
+          "published_at": 1761253500,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/snx-shows-short-term-weakness-after-rally-can-bulls-defend-key-1-2-support/",
+          "categories": [
+            "BTC",
+            "SNX",
+            "TRADING",
+            "FLOW",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News",
+            "AUCTION",
+            "BTC",
+            "FLOW"
+          ]
+        },
+        {
+          "id": "53552748",
+          "title": "Intel beat Q3 revenue expectations with $13.65 billion, driven by stronger PC x86 processor demand",
+          "body": "Intel outperformed Wall Street’s Q3 revenue forecast as demand for its x86 PC processors finally picked back up, according to the earnings report released by the company on Thursday. Intel said it generated $13.65 billion in revenue for the quarter, beating the $13.14 billion that analysts expected. The numbers were released after markets closed, and investors immediately reacted; the stock climbed 6% in after-hours trading. For the quarter, Intel reported a net income of $4.1 billion, or 90 cen",
+          "published_at": 1761253458,
+          "source": "CryptoCompare",
+          "url": "https://www.cryptopolitan.com/intel-beats-q3-sales-expectations/",
+          "categories": [
+            "BUSINESS",
+            "EXCHANGE",
+            "MARKET",
+            "REGULATION",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Business",
+            "INTC"
+          ]
+        },
+        {
+          "id": "53552179",
+          "title": "Putin Warns of Overwhelming Retaliation to US Sanctions on Russian Oil Firms",
+          "body": "Russian President Vladimir Putin has firmly stated that Russia will not yield to U.S. sanctions on its major oil companies, warning of an overwhelming military response to any deep strikes",
+          "published_at": 1761253392,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/putin-warns-of-overwhelming-retaliation-to-us-sanctions-on-russian-oil-firms/",
+          "categories": [
+            "COMMODITY",
+            "REGULATION",
+            "MACROECONOMICS"
+          ],
+          "tags": [
+            "News"
+          ]
+        },
+        {
+          "id": "53552101",
+          "title": "Pundit Says You’re Still Not Bullish Enough On XRP, Here’s Why",
+          "body": "Crypto market watcher Stedas has said that many investors are still not bullish enough on XRP, even with all the developments happening around the token. In a new post on X, the popular pundit pointed to a project that could push the altcoin further into the spotlight. He explained that the project, which involves leading names connected to Ripple, shows how strong the long-term belief in XRP has become. The post has also started new conversations in the community about what this means for the f",
+          "published_at": 1761253223,
+          "source": "CryptoCompare",
+          "url": "https://bitcoinist.com/youre-not-bullish-enough-xrp/",
+          "categories": [
+            "BUSINESS",
+            "MARKET",
+            "TRADING",
+            "XRP",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "XRP",
+            "ripple",
+            "ripple news",
+            "XRP news",
+            "XRP price",
+            "XRPUSD",
+            "XRPUSDT"
+          ]
+        },
+        {
+          "id": "53552142",
+          "title": "Metaplanet Is Being Served Market Justice While CZ Wins Clemency",
+          "body": "Suvashree Ghosh takes a look at one of the key participants in what’ had been one of the hottest corners in the crypto and stock markets.",
+          "published_at": 1761253208,
+          "source": "CryptoCompare",
+          "url": "https://www.bloomberg.com/news/newsletters/2025-10-23/metaplanet-is-being-served-market-justice-while-cz-wins-clemency",
+          "categories": [
+            "BUSINESS",
+            "MARKET",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            ""
+          ]
+        },
+        {
+          "id": "53552127",
+          "title": "Why is SNX’s price down today? Profit-taking, weak bulls to blame",
+          "body": "The 1-day chart showed a bearish internal structure as SNX broke down beneath the previous week's swing low at $1.32.",
+          "published_at": 1761253206,
+          "source": "CryptoCompare",
+          "url": "https://ambcrypto.com/why-is-snxs-price-down-today-profit-taking-weak-bulls-to-blame/",
+          "categories": [
+            "ALTCOIN",
+            "MARKET",
+            "SNX",
+            "TRADING"
+          ],
+          "tags": [
+            "Altcoin",
+            "Analysis",
+            "HideCryptopanic",
+            "News",
+            "News 1",
+            "No Homepage",
+            "Social",
+            "Trading View"
+          ]
+        },
+        {
+          "id": "53552095",
+          "title": "Bitcoin STH-SOPR Falls Below 1.0 for the First Time Since April – What This Means",
+          "body": "Bitcoin is showing signs of renewed weakness as short-term investors begin to fold under selling pressure. According to the latest data from CryptoQuant, the Short-Term Holder Spent Output Profit Ratio (STH-SOPR) has fallen to 0.992, its lowest level since late April. This key on-chain metric tracks the average profit or loss realized by Bitcoin holders who have owned their coins for less than 155 days — a group often associated with speculative or reactive behavior. Related Reading: Kadena Shut",
+          "published_at": 1761253206,
+          "source": "CryptoCompare",
+          "url": "https://www.newsbtc.com/bitcoin-news/bitcoin-sth-sopr-falls-below-1-0-for-the-first-time-since-april-what-this-means/",
+          "categories": [
+            "BTC",
+            "BUSINESS",
+            "MARKET",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Bitcoin News",
+            "bitcoin",
+            "bitcoin analysis",
+            "Bitcoin news",
+            "bitcoin price",
+            "Bitcoin Short-Term Holder",
+            "Bitcoin Short-Term Holder SOPR",
+            "Bitcoin STH",
+            "btc",
+            "BTCUSDT"
+          ]
+        },
+        {
+          "id": "53552041",
+          "title": "VanEck Mid-October 2025 Bitcoin ChainCheck",
+          "body": "Summary Global M2 growth continues to explain more than half of Bitcoin’s price variance, reaffirming Bitcoin’s role as an anti-money printing asset. Futures open interest peaked at $52B before cascading liquidations drove Bitcoin’s ~18% drawdown in early October. Bitcoin’s price made new all-time highs above $125K on October 6th before dropping to a low around $105K by the 10th, with its 30-day moving average up 2% on the month. As of early October 2025, futures leverage sat near its 95th perce",
+          "published_at": 1761253020,
+          "source": "CryptoCompare",
+          "url": "https://seekingalpha.com/article/4832753-vaneck-mid-october-2025-bitcoin-chaincheck?utm_source=cryptocompare.com&utm_medium=referral&feed_item_type=article",
+          "categories": [
+            "BTC",
+            "BUSINESS",
+            "MARKET",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "BTC-USD",
+            "BITQ",
+            "ETH-USD",
+            "COIN",
+            "GBTC",
+            "XRP-USD",
+            "BCH-USD",
+            "USDT-USD",
+            "LINK-USD",
+            "ADA-USD",
+            "USDC-USD",
+            "XTZ-USD",
+            "EOS-USD",
+            "LTC-USD",
+            "TRX-USD",
+            "XLM-USD",
+            "BNB-USD",
+            "ETC-USD",
+            "XMR-USD",
+            "NEO-USD",
+            "BTG-USD",
+            "DOGE-USD",
+            "SOL-USD",
+            "ETCG",
+            "ETHE",
+            "OBTC",
+            "BLOK",
+            "DAPP",
+            "BITO",
+            "SATO",
+            "FDIG",
+            "WGMI",
+            "BITS"
+          ]
+        },
+        {
+          "id": "53552475",
+          "title": "Putin said Russia will never bow to Trump’s pressure after new U.S. sanctions on its top oil firms",
+          "body": "President Vladimir Putin said on Thursday in Moscow that Russia will not bend under pressure from the United States or any other foreign power. He warned that any military strikes deep inside Russia would face an “overwhelming” response. The remarks came a day after Donald Trump’s administration slapped sanctions on Russia’s two biggest oil companies, escalating tensions over the ongoing war in Ukraine, as was reported by Cryptopolitan. The sanctions, announced on Wednesday, hit at the heart of ",
+          "published_at": 1761252919,
+          "source": "CryptoCompare",
+          "url": "https://www.cryptopolitan.com/putin-says-wont-bow-down-to-trumps-demands/",
+          "categories": [
+            "COMMODITY",
+            "MARKET",
+            "REGULATION",
+            "TRADING",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Economy",
+            "RUB",
+            "USD"
+          ]
+        },
+        {
+          "id": "53551811",
+          "title": "Fed Balance Sheet Runoff May Pause This Month Amid Market Frictions and Data Blackout",
+          "body": "The Federal Reserve is expected to halt its balance sheet runoff this month, ending a liquidity-draining process amid surging borrowing costs and a government shutdown data blackout, with significant implications",
+          "published_at": 1761252492,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/fed-balance-sheet-runoff-may-pause-this-month-amid-market-frictions-and-data-blackout/",
+          "categories": [
+            "BTC",
+            "ETH",
+            "MARKET",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Analysis",
+            "News",
+            "BTC",
+            "ETH",
+            "SOL"
+          ]
+        },
+        {
+          "id": "36802044",
+          "title": "SPX6900 price prediction 2025-2031: Will SPX6900 soar 10x or crash?",
+          "body": "Key takeaways : SPX6900 price prediction suggests that the coin’s price can reach $2.88 by the end of 2025. By 2028, SPX may achieve a peak price of $7.67 and an average trading price of $7.19. In 2031, the target price for SPX is between $11.50 and $12.46, with an average price of $11.98. SPX6900 (SPX) functions primarily on the Ethereum network. The token was created as a meme to entertain wider audiences. It has no real connection with stock market, equities, or securities. The meme coin gene",
+          "published_at": 1761252351,
+          "source": "CryptoCompare",
+          "url": "https://www.cryptopolitan.com/spx6900-price-prediction/",
+          "categories": [
+            "ALTCOIN",
+            "BUSINESS",
+            "ETH",
+            "EXCHANGE",
+            "MARKET",
+            "SNX",
+            "TRADING",
+            "ZRX",
+            "PYUSD",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Crypto Price Predictions",
+            "SPX"
+          ]
+        },
+        {
+          "id": "53551731",
+          "title": "Ledger Nano Gen5 feels like Flex for less",
+          "body": "Companion “Wallet” software now includes an “Enterprise Multisig” built on Safe, but adds on-device clear signing",
+          "published_at": 1761252300,
+          "source": "CryptoCompare",
+          "url": "https://blockworks.co/news/ledger-nano-gen5-feels-like-flex-for-less",
+          "categories": [
+            "BUSINESS",
+            "TECHNOLOGY",
+            "WALLET"
+          ],
+          "tags": [
+            "Uncategorized"
+          ]
+        },
+        {
+          "id": "53552181",
+          "title": "Bank of America and JPMorgan now expect the Fed to end quantitative tightening next week, earlier than planned",
+          "body": "Strategists at JPMorgan and Bank of America expect the Federal Reserve to stop shrinking its roughly $6.6 trillion balance sheet this month, bringing an end process designed to remove liquidity from financial markets. According to Bloomberg, both banks had previously expected the Fed to pause in December or even early 2026, but things changed fast as borrowing costs in dollar funding markets surged too sharply. The Fed’s unwind of its Treasuries and mortgage-backed securities is meant to drain e",
+          "published_at": 1761252045,
+          "source": "CryptoCompare",
+          "url": "https://www.cryptopolitan.com/bank-of-america-jpmorgan-fed-to-end-at/",
+          "categories": [
+            "BUSINESS",
+            "FIAT",
+            "MARKET",
+            "TRADING",
+            "DIGITAL ASSET TREASURY",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Economy",
+            "USD"
+          ]
+        },
+        {
+          "id": "53551574",
+          "title": "U.S. In ‘Excellent Position’ To Pass Crypto Market Structure Legislation This Year, David Sacks Says",
+          "body": "White House AI and Crypto Czar David Sacks says he believes the U.S. is in an “excellent position” to pass market structure legislation ahead of the end of the year. David Sacks Expresses Optimism Over Key Crypto Bill In an October 23 X post, Sacks said he believes that the U.S. may be set to pass the long-awaited crypto legislation “with bipartisan support” before the end of 2025. I spent today on Capitol Hill meeting with the members of the Senate @BankingGOP and @SenateAgGOP Committees; thank",
+          "published_at": 1761252026,
+          "source": "CryptoCompare",
+          "url": "https://cryptonews.com/news/u-s-in-excellent-position-to-pass-crypto-market-structure-legislation-this-year-david-sacks-says/",
+          "categories": [
+            "BLOCKCHAIN",
+            "EXCHANGE",
+            "MARKET",
+            "REGULATION",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Blockchain News",
+            "News",
+            "Crypto Policy",
+            "Senate Bill",
+            "White House"
+          ]
+        },
+        {
+          "id": "53551588",
+          "title": "Surprise CZ Pardon: BNB Jumps 6%, Earning One Polymarket Bettor $1 Million",
+          "body": "On Oct. 23, BNB saw a nearly 6% price surge after U.S. President Donald Trump pardoned Binance founder Changpeng Zhao, raising its market capitalization over $157 billion. The Pardon and CZ’s Reaction BNB experienced a rapid price surge of nearly 6% on Oct. 23, immediately following the news that U.S. President Donald Trump had granted",
+          "published_at": 1761252016,
+          "source": "CryptoCompare",
+          "url": "https://news.bitcoin.com/surprise-cz-pardon-bnb-jumps-6-earning-one-polymarket-bettor-1-million/",
+          "categories": [
+            "EXCHANGE",
+            "REGULATION",
+            "TRADING",
+            "BNB",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Markets and Prices",
+            "bnb",
+            "Changpeng Zhao (CZ)"
+          ]
+        },
+        {
+          "id": "53551487",
+          "title": "Watch Out: A Cryptocurrency Wallet is Ceasing Operations, Funds Must Be Withdrawn – Previously Made Headlines with XRP",
+          "body": "Cryptocurrency wallet manufacturer Ellipal announced that it will discontinue its hot wallet services and focus entirely on cold wallet technology. This decision comes after the recent alleged XRP theft. Ellipal stated in a statement that it will focus solely on cold wallet innovation and services to maximize user security. The company maintains that cold wallet technology is a key priority for crypto security and announced that it will discontinue all hot wallet services as of October 31st. Ell",
+          "published_at": 1761251828,
+          "source": "CryptoCompare",
+          "url": "https://en.bitcoinsistemi.com/watch-out-a-cryptocurrency-wallet-is-ceasing-operations-funds-must-be-withdrawn-previously-made-headlines-with-xrp/",
+          "categories": [
+            "BLOCKCHAIN",
+            "BTC",
+            "TECHNOLOGY",
+            "XRP",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News"
+          ]
+        },
+        {
+          "id": "53551436",
+          "title": "WazirX Poised to Relaunch Trading with Zero Fees Amid Mixed Community Reactions",
+          "body": "WazirX, India’s largest home-grown crypto exchange, is set to relaunch trading on October 24, 2025, after over a year of suspension due to regulatory freezes and a $230 million hack.",
+          "published_at": 1761251692,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/wazirx-poised-to-relaunch-trading-with-zero-fees-amid-mixed-community-reactions/",
+          "categories": [
+            "EXCHANGE",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News"
+          ]
+        },
+        {
+          "id": "53551383",
+          "title": "Amazon Launches Help Me Decide AI Tool to Guide Indecisive Shoppers",
+          "body": "Amazon’s Help Me Decide is a new AI tool that recommends a single product when shoppers hesitate after browsing similar items, using browsing history and large language models to explain",
+          "published_at": 1761251592,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/amazon-launches-help-me-decide-ai-tool-to-guide-indecisive-shoppers/",
+          "categories": [
+            "OTHER"
+          ],
+          "tags": [
+            "Guides",
+            "News"
+          ]
+        },
+        {
+          "id": "53551337",
+          "title": "Turkey Leads MENA with $200B in Crypto Volume – but Chainalysis Warns It’s ‘All Speculation’",
+          "body": "Turkey has emerged as the Middle East and North Africa’s largest cryptocurrency market, recording nearly $200 billion in annual transactions, according to new data from Chainalysis. The country’s volume surpasses all others in the region, accounting for nearly four times that of the United Arab Emirates (UAE), which ranks second with $53 billion. Source: Chainalysis Despite the surge, analysts caution that much of Turkey’s crypto activity appears to be driven by speculative trading rather than s",
+          "published_at": 1761251460,
+          "source": "CryptoCompare",
+          "url": "https://cryptonews.com/news/turkey-leads-mena-with-200b-in-crypto-volume-but-chainalysis-warns-its-all-speculation/",
+          "categories": [
+            "EXCHANGE",
+            "MARKET",
+            "REGULATION",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Blockchain News",
+            "News",
+            "Chainalysis",
+            "Stablecoin",
+            "Turkey"
+          ]
+        },
+        {
+          "id": "53551632",
+          "title": "Amazon launches new AI tool to assist hesitant shoppers",
+          "body": "Amazon has introduced a new artificial intelligence tool designed to guide hesitant shoppers toward making purchases. The move comes as more e-commerce companies continue to add more AI solutions on their platforms to assist buyers and drive sales, driving up the competition between rivals in the industry. Amazon’s new feature is called Help Me Decide The feature, called Help Me Decide, appears at the top of a product detail page when Amazon’s system detects that a shopper has browsed multiple s",
+          "published_at": 1761251105,
+          "source": "CryptoCompare",
+          "url": "https://www.cryptopolitan.com/amazon-ai-to-push-indecisive-shoppers/",
+          "categories": [
+            "BUSINESS",
+            "TRADING",
+            "RESEARCH",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Business",
+            "Amazon"
+          ]
+        },
+        {
+          "id": "53551115",
+          "title": "Fidelity Crypto Adds Solana as Analysts Target $500 Breakout",
+          "body": "Fidelity Digital Assets has expanded its cryptocurrency lineup by adding Solana (SOL) trading and custody services across its platforms. The expansion includes retail, institutional, and wealth management channels, positioning Fidelity among the few major financial institutions offering multi-asset crypto exposure. The new addition extends accessibility for millions of users who already trade Bitcoin, Ethereum, and Litecoin through Fidelity Crypto and its institutional platform. Solana Trading N",
+          "published_at": 1761251041,
+          "source": "CryptoCompare",
+          "url": "https://coinpaper.com/11858/fidelity-crypto-adds-solana-as-analysts-target-500-breakout",
+          "categories": [
+            "BTC",
+            "BUSINESS",
+            "SOL",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News",
+            "Crypto"
+          ]
+        },
+        {
+          "id": "53551244",
+          "title": "WazirX set to resume operations on 24 October — but trust remains fractured",
+          "body": "India’s largest crypto exchange, WazirX, is making a comeback with a 24 October relaunch. Lingering skepticism over past security breaches and unresolved investigations persists.",
+          "published_at": 1761250847,
+          "source": "CryptoCompare",
+          "url": "https://ambcrypto.com/wazirx-set-to-resume-operations-on-24-october-but-trust-remains-fractured/",
+          "categories": [
+            "EXCHANGE",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News",
+            "News 1",
+            "Social",
+            "Trading View"
+          ]
+        },
+        {
+          "id": "53551207",
+          "title": "1.54 Million Shiba Inu Holders Signal Quiet Accumulation Before the Next Big SHIB Move",
+          "body": "According to Etherscan data, Shiba Inu (SHIB) now boasts 1,547,558 on-chain holders, a testament to its enduring appeal in a volatile crypto landscape.",
+          "published_at": 1761250818,
+          "source": "CryptoCompare",
+          "url": "https://zycrypto.com/1-54-million-shiba-inu-holders-signal-quiet-accumulation-before-the-next-big-shib-move/",
+          "categories": [
+            "SHIB",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Cryptocurrency",
+            "News",
+            "Cryptocurrency News",
+            "SHIB",
+            "SHIBA INU",
+            "SHIBUSD"
+          ]
+        },
+        {
+          "id": "53551015",
+          "title": "Bitcoin Whale Allegedly Tied to Trump Family Closes $200M Short Ahead of BTC Rally",
+          "body": "A Bitcoin whale wallet, alleged to connect to President Trump’s family, closed a $227 million short position on Bitcoin, securing $6.4 million in profits just before a 2% price surge",
+          "published_at": 1761250810,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/bitcoin-whale-allegedly-tied-to-trump-family-closes-200m-short-ahead-of-btc-rally/",
+          "categories": [
+            "BTC",
+            "REGULATION",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Bitcoin",
+            "News",
+            "BTC"
+          ]
+        },
+        {
+          "id": "906244",
+          "title": "VVS Crypto Price Prediction 2025 – 2031: Is VVS Finance a Good Investment?",
+          "body": "Key takeaway: The VVS finance price prediction indicates a high of $0.00000552 in 2025. In 2028, it will range between $0.00001289 and $0.00001473, with an average price of $0.00001381. In 2031, it will range between $0.00002209 and $0.00002393, with an average VVS finance price of $0.00002301. VVS Finance stands for ‘Very Very Simple Finance.’ It is a Decentralized Finance (DeFi) platform that began in 2021 on the Cronos blockchain. To make DeFi less complicated for users, it has an interface p",
+          "published_at": 1761250800,
+          "source": "CryptoCompare",
+          "url": "https://www.cryptopolitan.com/vvs-crypto-price-prediction/",
+          "categories": [
+            "BLOCKCHAIN",
+            "BUSINESS",
+            "MARKET",
+            "TRADING",
+            "CRO",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Crypto Price Predictions"
+          ]
+        },
+        {
+          "id": "53550957",
+          "title": "European Aerospace Firms Airbus, Leonardo, Thales Plan Satellite Merger to Rival SpaceX",
+          "body": "Three leading European aerospace firms—Leonardo, Airbus, and Thales—have agreed to merge their satellite businesses, creating a €6.5 billion entity to challenge SpaceX’s dominance in the global space sector. This strategic",
+          "published_at": 1761250688,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/european-aerospace-firms-airbus-leonardo-thales-plan-satellite-merger-to-rival-spacex/",
+          "categories": [
+            "OTHER"
+          ],
+          "tags": [
+            "News"
+          ]
+        },
+        {
+          "id": "53550916",
+          "title": "Qualigen partners with BitGo for $30 million crypto treasury allocation",
+          "body": "",
+          "published_at": 1761250632,
+          "source": "CryptoCompare",
+          "url": "https://www.investing.com/news/cryptocurrency-news/qualigen-partners-with-bitgo-for-30-million-crypto-treasury-allocation-432SI-4305926",
+          "categories": [
+            "REGULATION",
+            "DIGITAL ASSET TREASURY",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            ""
+          ]
+        },
+        {
+          "id": "53550829",
+          "title": "Singapore’s Pave Bank Raises $39M to Potentially Expand Crypto Offerings for Institutions",
+          "body": "Pave Bank, a Singapore-based digital bank, secured $39 million in Series A funding led by Accel to expand its programmable crypto and fiat services for institutional clients. This funding addresses",
+          "published_at": 1761250348,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/singapores-pave-bank-raises-39m-to-potentially-expand-crypto-offerings-for-institutions/",
+          "categories": [
+            "ASIA",
+            "FIAT",
+            "USDT",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News",
+            "USDT"
+          ]
+        },
+        {
+          "id": "53551345",
+          "title": "Leonardo, Airbus, and Thales agree to merge satellite operations worth €6.5 billion ($7.5 billion)",
+          "body": "Three major European aerospace companies have reached an agreement to combine their satellite businesses in a bid to take on Elon Musk’s SpaceX in the global space market. Leonardo, Airbus, and Thales announced the preliminary deal after months of negotiations between the defense contractors. The merger will form a new company expected to bring in roughly €6.5 billion, or $7.5 billion, in yearly sales. Under the ownership structure, Airbus will hold a 35 percent share while Leonardo and Thales w",
+          "published_at": 1761250222,
+          "source": "CryptoCompare",
+          "url": "https://www.cryptopolitan.com/eu-companies-reach-agreement/",
+          "categories": [
+            "BUSINESS",
+            "EXCHANGE",
+            "MARKET",
+            "TRADING",
+            "RESEARCH",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Business",
+            "Airbus",
+            "Leonardo",
+            "SpaceX",
+            "Thales"
+          ]
+        },
+        {
+          "id": "53550726",
+          "title": "Cryptocurrencies Gain Momentum Despite Turbulent Markets",
+          "body": "Bitcoin follows a 1064-day cycle pattern to reach bull peaks. U.S.-China trade standoff results in plummeting export figures. Continue Reading: Cryptocurrencies Gain Momentum Despite Turbulent Markets The post Cryptocurrencies Gain Momentum Despite Turbulent Markets appeared first on COINTURK NEWS .",
+          "published_at": 1761250173,
+          "source": "CryptoCompare",
+          "url": "https://en.coin-turk.com/cryptocurrencies-gain-momentum-despite-turbulent-markets/",
+          "categories": [
+            "BTC",
+            "MARKET",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Bitcoin (BTC)",
+            "Technical Analysis"
+          ]
+        },
+        {
+          "id": "53550722",
+          "title": "Alleged 'Trump Insider Whale' Closes $200 Million Bitcoin Short",
+          "body": "A wallet alleged to have connections to President Trump's family closed a major Bitcoin short ahead of Thursday's price jump.",
+          "published_at": 1761250031,
+          "source": "CryptoCompare",
+          "url": "https://decrypt.co/345734/alleged-trump-insider-whale-closes-200-million-bitcoin-short",
+          "categories": [
+            "BTC",
+            "MARKET",
+            "REGULATION",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "",
+            "Markets"
+          ]
+        },
+        {
+          "id": "53550730",
+          "title": "Pave Bank raises $39M led by Accel, Tether to expand programmable banking",
+          "body": "The Singapore-based digital bank plans to broaden its crypto and fiat offerings for institutional clients, citing growing demand for programmable finance.",
+          "published_at": 1761249981,
+          "source": "CryptoCompare",
+          "url": "https://cointelegraph.com/news/pave-bank-39m-accel-tether-programmable-banking?utm_source=rss_feed&utm_medium=rss%3F_refresh%3D968cmn%26r%3D968cmn%26sid%3De07f3dab3513d8cb&utm_campaign=rss_partner_inbound",
+          "categories": [
+            "FIAT",
+            "USDT",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            ""
+          ]
+        },
+        {
+          "id": "53550854",
+          "title": "The Surge of Prediction Markets in Digital Trading",
+          "body": "The landscape of digital trading has witnessed a remarkable milestone this week as the daily volumes on prediction markets reached over $2 billion. This surge is highlighted in a recent analysis by Dune Analytics, reflecting a growing enthusiasm in sectors like cryptocurrency and web3 betting. Professor Alex Tabarrok, an economist at George Mason University, elaborated on the efficiency of prediction markets on the a16z crypto podcast . He emphasized that prediction markets often provide more ac",
+          "published_at": 1761249969,
+          "source": "CryptoCompare",
+          "url": "https://bitzo.com/2025/10/the-surge-of-prediction-markets-in-digital-trading",
+          "categories": [
+            "ALTCOIN",
+            "MARKET",
+            "REGULATION",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "More News",
+            "Altcoins"
+          ]
+        },
+        {
+          "id": "53550639",
+          "title": "Is Ripple Hinting at an XRP Price Rally? Here’s What Happened",
+          "body": "When a major blockchain firm begins to beef up its treasury operations, raise funds, and link its ecosystem to institutional finance, the question naturally arises: Are they preparing for the asset to move higher? Recent corporate maneuvers by Ripple Labs alongside commentary from influencer Mickle are stirring fresh speculation that XRP could be positioned for a price rally. The debate now centers on whether such actions amount to nothing more than operational expansion, or whether they represe",
+          "published_at": 1761249951,
+          "source": "CryptoCompare",
+          "url": "https://timestabloid.com/is-ripple-hinting-at-an-xrp-price-rally-heres-what-happened/",
+          "categories": [
+            "TRADING",
+            "XRP",
+            "DIGITAL ASSET TREASURY",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Cryptocurrency",
+            "News",
+            "Ripple",
+            "XRP",
+            "XRP Price"
+          ]
+        },
+        {
+          "id": "53550631",
+          "title": "Prediction Markets Hit All-Time Highs",
+          "body": "Prediction markets are setting fresh records. This week, daily trading volumes on major prediction‑market platforms surpassed $2 billion, according to Dune Analytics. Both trading volumes and user numbers are rising, reflecting accelerating interest in crypto betting, web3 sports betting, and bitcoin betting on smart contract-based prediction platforms. Prediction markets and betting platforms aggregate collective knowledge, being often more accurate than traditional polls or expert forecasts. A",
+          "published_at": 1761249941,
+          "source": "CryptoCompare",
+          "url": "https://cryptodaily.co.uk/2025/10/prediction-markets-hit-all-time-highs",
+          "categories": [
+            "BTC",
+            "MARKET",
+            "REGULATION",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "More News"
+          ]
+        }
+      ],
+      "timestamp": 1761255691218,
+      "ttl": 900
+    }
+  },
+  "saved_at": 1761255691218
+}

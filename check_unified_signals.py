@@ -2,7 +2,7 @@ import sqlite3
 import os
 from config.settings import DATA_DIR
 
-db_path = os.path.join(DATA_DIR, "gio_bot.db")
+db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
 
 print(f"📊 Проверка базы данных: {db_path}\n")
 

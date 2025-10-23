@@ -18,7 +18,7 @@ async def diagnose_and_fix_tp_levels():
     """Диагностика и исправление TP levels"""
 
     root_path = Path(__file__).parent.parent
-    db_path = root_path / "data" / "gio_bot.db"
+    db_path = root_path / "data" / "gio_crypto_bot.db"
 
     if not db_path.exists():
         print(f"❌ База данных не найдена: {db_path}")

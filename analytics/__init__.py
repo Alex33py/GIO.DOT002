@@ -6,3 +6,4 @@ from .veto_system import *
 from .advanced_volume_profile import ExoChartsVolumeProfile
 
 from .cross_exchange_analyzer import CrossExchangeAnalyzer
+from .orderbook_analyzer import OrderbookAnalyzer

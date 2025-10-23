@@ -247,6 +247,32 @@ class UnifiedScenarioMatcher:
         try:
             logger.debug(f"🔍 Поиск подходящего сценария для {symbol}...")
 
+            if isinstance(mtf_trends, str):
+                # Якщо прийшла строка замість словника
+                logger.warning(f"⚠️ MTF trends для {symbol} прийшли як строка: {mtf_trends}")
+                normalized_mtf = {
+                    "1H": mtf_trends,
+                    "4H": mtf_trends,
+                    "1D": mtf_trends,
+                    "dominant": mtf_trends,
+                    "agreement": 100,
+                    "strength": 0.5
+                }
+            elif isinstance(mtf_trends, dict):
+                # Якщо словник — використовуємо як є
+                normalized_mtf = mtf_trends
+            else:
+                # Якщо невідомий тип — створюємо дефолтний
+                logger.error(f"❌ Неизвестный формат MTF данных: {type(mtf_trends)}")
+                normalized_mtf = {
+                    "1H": "neutral",
+                    "4H": "neutral",
+                    "1D": "neutral",
+                    "dominant": "neutral",
+                    "agreement": 0,
+                    "strength": 0.0
+                }
+
             # Проверяем VETO - если есть жёсткий запрет, сразу выходим
             if veto_checks.get("has_veto", False):
                 logger.warning(
@@ -266,7 +292,7 @@ class UnifiedScenarioMatcher:
                     scenario=scenario,
                     market_data=market_data,
                     indicators=indicators,
-                    mtf_trends=mtf_trends,
+                    mtf_trends=normalized_mtf,
                     volume_profile=volume_profile,
                     news_sentiment=news_sentiment,
                     cvd_data=cvd_data,

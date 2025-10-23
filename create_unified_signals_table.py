@@ -8,7 +8,7 @@ import sqlite3
 import os
 from config.settings import DATA_DIR, logger
 
-db_path = os.path.join(DATA_DIR, "gio_bot.db")
+db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
 
 print(f"📊 Создание таблицы unified_signals в: {db_path}\n")
 

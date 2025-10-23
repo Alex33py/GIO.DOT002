@@ -15,7 +15,7 @@ from pathlib import Path
 # Автоматически определяем путь к БД
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
-DATABASE_PATH = DATA_DIR / "gio_bot.db"
+DATABASE_PATH = DATA_DIR / "gio_crypto_bot.db"
 
 # Создаём папку data если её нет
 DATA_DIR.mkdir(exist_ok=True)

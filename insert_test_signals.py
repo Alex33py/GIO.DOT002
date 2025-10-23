@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 from config.settings import DATA_DIR
 
-db_path = os.path.join(DATA_DIR, "gio_bot.db")
+db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
 
 print(f"📊 Добавление тестовых сигналов в: {db_path}\n")
 
