@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Настройки и конфигурация GIO Crypto Bot
-Загрузка переменных окружения и инициализация логирования
+Оптимизировано для Railway deployment
 """
 
 import os
@@ -12,14 +12,17 @@ from pathlib import Path
 from typing import List
 from dotenv import load_dotenv
 
-# Загрузка переменных окружения из .env
+# Загрузка переменных окружения из .env (только для локальной разработки)
 load_dotenv()
 
 # Определение корневой директории проекта
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Режим работы
-PRODUCTION_MODE = os.getenv("PRODUCTION_MODE", "False").lower() in ("true", "1", "yes")
+# ============================================================================
+# ОПРЕДЕЛЕНИЕ ОКРУЖЕНИЯ
+# ============================================================================
+ENVIRONMENT = os.getenv("ENVIRONMENT", "DEVELOPMENT").upper()
+PRODUCTION_MODE = ENVIRONMENT == "PRODUCTION"
 DEVELOPMENT_MODE = not PRODUCTION_MODE
 
 # Директории данных
@@ -55,14 +58,17 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# 🔍 DEBUG: Проверка переменных
-print("=" * 70)
-print("🔍 DEBUG TELEGRAM CONFIG:")
-print(
-    f"   TELEGRAM_BOT_TOKEN = {TELEGRAM_BOT_TOKEN[:20] + '...' if TELEGRAM_BOT_TOKEN else '❌ ПУСТО'}"
-)
-print(f"   TELEGRAM_CHAT_ID = {TELEGRAM_CHAT_ID if TELEGRAM_CHAT_ID else '❌ ПУСТО'}")
-print("=" * 70)
+# 🔍 DEBUG: Проверка переменных (только в режиме разработки)
+if DEVELOPMENT_MODE:
+    print("=" * 70)
+    print("🔍 DEBUG TELEGRAM CONFIG:")
+    print(
+        f"   TELEGRAM_BOT_TOKEN = {TELEGRAM_BOT_TOKEN[:20] + '...' if TELEGRAM_BOT_TOKEN else '❌ ПУСТО'}"
+    )
+    print(
+        f"   TELEGRAM_CHAT_ID = {TELEGRAM_CHAT_ID if TELEGRAM_CHAT_ID else '❌ ПУСТО'}"
+    )
+    print("=" * 70)
 
 TELEGRAM_CONFIG = {
     "enabled": bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID),
@@ -74,42 +80,58 @@ TELEGRAM_CONFIG = {
 }
 
 # ============================================================================
-# 📉 НАСТРОЙКИ ЛОГИРОВАНИЯ (ОПТИМИЗИРОВАНО)
+# НАСТРОЙКИ ЛОГИРОВАНИЯ (ОПТИМИЗИРОВАНО ДЛЯ RAILWAY)
 # ============================================================================
-LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING").upper()  # ✅ ИЗМЕНЕНО: INFO -> WARNING
+if PRODUCTION_MODE:
+    LOG_LEVEL = logging.WARNING  # Меньше логов в продакшене
+    LOG_TO_FILE = False  # Не писать в файл (Railway хранит логи)
+    LOG_TO_CONSOLE = True
+else:
+    LOG_LEVEL = logging.INFO  # Больше логов в режиме разработки
+    LOG_TO_FILE = True
+    LOG_TO_CONSOLE = True
+
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 # Настройка базового логгера
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.WARNING),  # ✅ ИЗМЕНЕНО: INFO -> WARNING
-    format=LOG_FORMAT,
-    datefmt=LOG_DATE_FORMAT,
-    handlers=[
-        logging.StreamHandler(sys.stdout),
+handlers = [logging.StreamHandler(sys.stdout)] if LOG_TO_CONSOLE else []
+
+if LOG_TO_FILE and DEVELOPMENT_MODE:
+    handlers.append(
         logging.FileHandler(
             LOGS_DIR / f"gio_bot_{'production' if PRODUCTION_MODE else 'dev'}.log",
             encoding="utf-8",
-        ),
-    ],
+        )
+    )
+
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format=LOG_FORMAT,
+    datefmt=LOG_DATE_FORMAT,
+    handlers=handlers,
 )
 
-# ✅ НОВОЕ: Отключаем логи сторонних библиотек
+# Отключаем логи сторонних библиотек
 logging.getLogger("httpx").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
 logging.getLogger("websockets").setLevel(logging.ERROR)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
 
-# ✅ НОВОЕ: Настройка уровней для модулей бота
-logging.getLogger("gio_bot").setLevel(logging.INFO)  # Основной бот - INFO
-logging.getLogger("trading").setLevel(logging.WARNING)  # Торговля - WARNING
-logging.getLogger("connectors").setLevel(logging.WARNING)  # Коннекторы - WARNING
-logging.getLogger("filters").setLevel(logging.INFO)  # Фильтры - INFO
-logging.getLogger("database").setLevel(logging.ERROR)  # БД - ERROR
+# Настройка уровней для модулей бота
+logging.getLogger("gio_bot").setLevel(LOG_LEVEL)
+logging.getLogger("trading").setLevel(logging.WARNING)
+logging.getLogger("connectors").setLevel(logging.WARNING)
+logging.getLogger("filters").setLevel(
+    logging.INFO if DEVELOPMENT_MODE else logging.WARNING
+)
+logging.getLogger("database").setLevel(logging.ERROR)
 
 # Создание основного логгера
 logger = logging.getLogger("gio_bot")
 
 # Вывод информации о режиме работы
+logger.info(f"🚀 ENVIRONMENT: {ENVIRONMENT}")
 if PRODUCTION_MODE:
     logger.info("🚀 PRODUCTION MODE: Запуск с реальными API ключами")
 else:
@@ -120,24 +142,25 @@ logger.info(
     f"📱 Telegram bot: {'✅ Enabled' if TELEGRAM_CONFIG['enabled'] else '❌ Disabled'}"
 )
 
-# Проверка наличия критичных API ключей в продакшене
+# ============================================================================
+# ПРОВЕРКА ОБЯЗАТЕЛЬНЫХ ПЕРЕМЕННЫХ В ПРОДАКШЕНЕ
+# ============================================================================
 if PRODUCTION_MODE:
-    missing_keys = []
+    required_vars = {
+        "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
+        "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
+        "BYBIT_API_KEY": BYBIT_API_KEY,
+        "BYBIT_SECRET_KEY": BYBIT_SECRET_KEY,
+    }
 
-    if not BYBIT_API_KEY:
-        missing_keys.append("BYBIT_API_KEY")
-    if not BYBIT_SECRET_KEY:
-        missing_keys.append("BYBIT_SECRET_KEY")
+    missing_vars = [name for name, value in required_vars.items() if not value]
 
-    if missing_keys:
-        logger.warning(f"⚠️ Отсутствуют API ключи: {', '.join(missing_keys)}")
-        logger.warning("💡 Некоторые функции могут быть недоступны")
+    if missing_vars:
+        error_msg = f"❌ Отсутствуют обязательные переменные окружения: {', '.join(missing_vars)}"
+        logger.error(error_msg)
+        raise ValueError(error_msg)
 
-    # ✅ ИЗМЕНЕНО: Убрали лишние INFO логи
-    # if not CRYPTOPANIC_API_KEY:
-    #     logger.info("ℹ️ CryptoPanic API ключ не найден (опционально)")
-    # if not CRYPTOCOMPARE_API_KEY:
-    #     logger.info("ℹ️ CryptoCompare API ключ не найден (опционально)")
+    logger.info("✅ Все обязательные API ключи загружены")
 
 # ============================================================================
 # НАСТРОЙКИ ТОРГОВЛИ
@@ -150,11 +173,15 @@ TRADING_CONFIG = {
 }
 
 # ============================================================================
-# НАСТРОЙКИ ПАМЯТИ
+# НАСТРОЙКИ ПАМЯТИ (ОПТИМИЗИРОВАНО ДЛЯ RAILWAY 512MB RAM)
 # ============================================================================
 MEMORY_CONFIG = {
-    "max_memory_mb": int(os.getenv("MAX_MEMORY_MB", "1024")),
-    "cleanup_interval": int(os.getenv("CLEANUP_INTERVAL", "300")),
+    "max_memory_mb": int(
+        os.getenv("MAX_MEMORY_MB", "400" if PRODUCTION_MODE else "1024")
+    ),
+    "cleanup_interval": int(
+        os.getenv("CLEANUP_INTERVAL", "180" if PRODUCTION_MODE else "300")
+    ),
 }
 
 # ============================================================================
@@ -197,7 +224,6 @@ TRIGGER_CONFIG = {
 }
 
 # MULTI-TIMEFRAME FILTER CONFIGURATION
-# ============================================================================
 MULTI_TF_FILTER_CONFIG = {
     "enabled": True,
     "require_all_aligned": False,
@@ -209,8 +235,8 @@ MULTI_TF_FILTER_CONFIG = {
 # PERFORMANCE OPTIMIZATION
 # ============================================================================
 PERFORMANCE_CONFIG = {
-    "process_pool_workers": 4,
-    "thread_pool_workers": 10,
+    "process_pool_workers": 2 if PRODUCTION_MODE else 4,  # Меньше workers в продакшене
+    "thread_pool_workers": 5 if PRODUCTION_MODE else 10,
     "batch_size": 100,
     "batch_flush_interval": 5.0,
 }
@@ -218,12 +244,15 @@ PERFORMANCE_CONFIG = {
 # ============================================================================
 # TESTING CONFIGURATION
 # ============================================================================
-TESTING_CONFIG = {"enable_tests": True, "test_mode": False, "mock_api_responses": False}
+TESTING_CONFIG = {
+    "enable_tests": DEVELOPMENT_MODE,
+    "test_mode": False,
+    "mock_api_responses": False,
+}
 
 # КОНСТАНТЫ ДЛЯ СОВМЕСТИМОСТИ
 MAX_MEMORY_MB = MEMORY_CONFIG["max_memory_mb"]
 DB_FILE = str(DATA_DIR / "gio_crypto_bot.db")
-
 
 # Настройки Volume Profile
 VOLUME_PROFILE_LEVELS_COUNT = 50
@@ -299,16 +328,9 @@ def load_trading_pairs() -> List[str]:
     try:
         TRADING_PAIRS_CONFIG = Path(__file__).parent / "trading_pairs.json"
 
-        # ✅ ИЗМЕНЕНО: Убрали DEBUG логи
-        # print(f"🔍 DEBUG: Путь к файлу: {TRADING_PAIRS_CONFIG}")
-        # print(f"🔍 DEBUG: Файл существует: {TRADING_PAIRS_CONFIG.exists()}")
-
         if TRADING_PAIRS_CONFIG.exists():
             with open(TRADING_PAIRS_CONFIG, "r", encoding="utf-8") as f:
                 config = json.load(f)
-
-            # ✅ ИЗМЕНЕНО: Убрали DEBUG логи
-            # print(f"🔍 DEBUG: Содержимое: {len(config.get('tracked_symbols', []))} пар")
 
             active_pairs = [
                 pair["symbol"]
@@ -316,22 +338,19 @@ def load_trading_pairs() -> List[str]:
                 if pair.get("enabled", False)
             ]
 
-            # ✅ ИЗМЕНЕНО: Убрали DEBUG логи
-            # print(f"🔍 DEBUG: Активные пары: {active_pairs}")
-
             logger.info(f"📋 Загружено {len(active_pairs)} активных пар из JSON")
             return active_pairs
         else:
-            logger.warning("⚠️ Файл trading_pairs.json не найден")
+            logger.warning("⚠️ Файл trading_pairs.json не найден, используем fallback")
     except Exception as e:
-        logger.error(f"❌ Ошибка загрузки: {e}")  # ✅ ИЗМЕНЕНО: Убрали exc_info
+        logger.error(f"❌ Ошибка загрузки trading_pairs.json: {e}")
 
-    default_pairs = ["BTCUSDT"]
+    # Fallback: минимальный набор для продакшена
+    default_pairs = ["BTCUSDT"] if PRODUCTION_MODE else ["BTCUSDT", "ETHUSDT"]
     logger.info(f"📋 Fallback: {default_pairs}")
     return default_pairs
 
 
 # Загрузка торговых пар
 TRACKED_SYMBOLS = load_trading_pairs()
-# ✅ ИЗМЕНЕНО: Убрали print
-# print(f"🎯 ИТОГО TRACKED_SYMBOLS: {TRACKED_SYMBOLS}")
+logger.info(f"🎯 TRACKED_SYMBOLS: {len(TRACKED_SYMBOLS)} пар")
