@@ -55,6 +55,15 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
+# 🔍 DEBUG: Проверка переменных
+print("=" * 70)
+print("🔍 DEBUG TELEGRAM CONFIG:")
+print(
+    f"   TELEGRAM_BOT_TOKEN = {TELEGRAM_BOT_TOKEN[:20] + '...' if TELEGRAM_BOT_TOKEN else '❌ ПУСТО'}"
+)
+print(f"   TELEGRAM_CHAT_ID = {TELEGRAM_CHAT_ID if TELEGRAM_CHAT_ID else '❌ ПУСТО'}")
+print("=" * 70)
+
 TELEGRAM_CONFIG = {
     "enabled": bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID),
     "token": TELEGRAM_BOT_TOKEN,
