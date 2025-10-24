@@ -2297,6 +2297,55 @@ class TelegramBotHandler:
             logger.error(f"Error in cmd_overview: {e}")
             await update.message.reply_text(f"❌ Ошибка получения обзора: {str(e)}")
 
+    # ==================== WEBHOOK SUPPORT ====================
+
+    async def set_webhook(self, webhook_url: str):
+        """Установка webhook для Telegram"""
+        try:
+            if not self.application or not self.application.bot:
+                logger.error("❌ Application or bot not initialized!")
+                return False
+
+            await self.application.bot.set_webhook(webhook_url)
+            logger.info(f"✅ Webhook set: {webhook_url}")
+            return True
+        except Exception as e:
+            logger.error(f"❌ Webhook setup error: {e}", exc_info=True)
+            return False
+
+    async def delete_webhook(self):
+        """Удаление webhook"""
+        try:
+            if not self.application or not self.application.bot:
+                logger.error("❌ Application or bot not initialized!")
+                return False
+
+            await self.application.bot.delete_webhook()
+            logger.info("✅ Webhook deleted")
+            return True
+        except Exception as e:
+            logger.error(f"❌ Delete webhook error: {e}", exc_info=True)
+            return False
+
+    async def process_webhook_update(self, update_data: dict):
+        """Обработка webhook update от Telegram"""
+        try:
+            from telegram import Update
+
+            if not self.application:
+                logger.error("❌ Application not initialized!")
+                return
+
+            # Конвертируем dict в Telegram Update object
+            update = Update.de_json(update_data, self.application.bot)
+
+            # Обрабатываем update через application
+            await self.application.process_update(update)
+
+            logger.debug(f"✅ Webhook update processed: {update.update_id}")
+        except Exception as e:
+            logger.error(f"❌ Process webhook update error: {e}", exc_info=True)
+
     def _format_full_market_analysis(
         self, symbol: str, data: Dict, scenarios: List[Dict], sr_levels: Dict = None
     ) -> str:

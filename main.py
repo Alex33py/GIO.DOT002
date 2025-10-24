@@ -200,6 +200,27 @@ async def main():
         logger.info("🔧 Инициализация бота...")
         await bot.initialize()
 
+        # Проверяем webhook mode
+        webhook_enabled = os.getenv('TELEGRAM_WEBHOOK_ENABLED', 'false').lower() == 'true'
+
+        if webhook_enabled:
+            logger.info("🌐 WEBHOOK MODE DETECTED: Starting webhook server...")
+            try:
+                from webhook_server import run_webhook_server
+                logger.info("   ├─ Импорт webhook_server.py успешен")
+
+                # Запускаем webhook сервер и выходим
+                await run_webhook_server(bot)
+                return  # Webhook сервер работает бесконечно
+
+            except ImportError as e:
+                logger.error(f"❌ Не удалось импортировать webhook_server.py: {e}")
+                logger.error("   Переключение на polling mode...")
+                webhook_enabled = False
+
+        if not webhook_enabled:
+            logger.info("🔄 POLLING MODE: Starting...")
+
         # Получить tracked_symbols
         if hasattr(bot, "tracked_symbols"):
             tracked_symbols = bot.tracked_symbols
