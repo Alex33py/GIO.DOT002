@@ -10,12 +10,12 @@ import logging
 import sys
 from telegram.ext import Application
 from config.settings import TELEGRAM_BOT_TOKEN
-from bot import GIOBot
+from core.bot import GIOBot
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
-    stream=sys.stdout
+    stream=sys.stdout,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,8 +58,7 @@ async def main():
         webhook_info = await application.bot.get_webhook_info()
         if webhook_info.url != webhook_url:
             await application.bot.set_webhook(
-                url=webhook_url,
-                drop_pending_updates=True
+                url=webhook_url, drop_pending_updates=True
             )
             logger.info("✅ Webhook set successfully")
         else:
@@ -74,7 +73,7 @@ async def main():
             port=port,
             url_path="/telegram",
             webhook_url=webhook_url,
-            drop_pending_updates=True
+            drop_pending_updates=True,
         )
 
     except Exception as e:
