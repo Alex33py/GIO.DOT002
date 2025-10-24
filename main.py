@@ -60,8 +60,15 @@ try:
     # Основной класс бота
     from core.bot import GIOCryptoBot
 
-    # ========== ПОПЫТКА ИМПОРТА НОВЫХ КОМПОНЕНТОВ ==========
-    # Если модули не найдены, бот будет работать без них
+    try:
+        from utils.health_server import start_health_server, stop_health_server
+        HEALTH_CHECK_AVAILABLE = True
+        logger.info("✅ Health Check Server импортирован")
+    except ImportError as e:
+        HEALTH_CHECK_AVAILABLE = False
+        logger.warning(f"⚠️ Health Check Server не найден: {e}")
+        logger.warning("   Бот будет работать БЕЗ health check (не рекомендуется для Railway)")
+
 
     ROITracker = None
     EnhancedAlertsSystem = None
@@ -130,6 +137,11 @@ def print_banner():
     components.append("✅ Binance + Bybit WebSocket Streams")
     components.append("✅ Auto Scanner (каждые 5 мин)")
 
+    if HEALTH_CHECK_AVAILABLE:
+        components.append("✅ Health Check Server (Railway compatible)")
+    else:
+        components.append("⚠️  Health Check Server (не установлен)")
+
     if ROITracker:
         components.append("✅ Auto ROI Tracker (TP1/TP2/TP3 + Trailing Stop)")
     else:
@@ -189,9 +201,16 @@ async def main():
     alerts_system = None
     whale_tracker = None
     trade_accumulator = None
+    health_server = None
 
     try:
         print_banner()
+
+        # ========== ЗАПУСК HEALTH CHECK SERVER (для Railway) ==========
+        if HEALTH_CHECK_AVAILABLE:
+            logger.info("🏥 Запуск Health Check Server на порту 8080...")
+            health_server = await start_health_server(port=8080)
+            logger.info("=" * 70)
 
         # ========== СОЗДАНИЕ И ИНИЦИАЛИЗАЦИЯ БОТА ==========
         logger.info("🚀 Создание экземпляра бота...")
@@ -314,6 +333,13 @@ async def main():
         logger.info("🛑 Остановка бота...")
 
         shutdown_tasks = []
+
+        if health_server and HEALTH_CHECK_AVAILABLE:
+            logger.info("   ├─ Остановка Health Check Server...")
+            try:
+                shutdown_tasks.append(asyncio.create_task(stop_health_server()))
+            except Exception as e:
+                logger.error(f"   │  ❌ Ошибка: {e}")
 
         if roi_tracker:
             logger.info("   ├─ Остановка ROI Tracker...")

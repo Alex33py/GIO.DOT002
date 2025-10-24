@@ -3,6 +3,257 @@
     "cryptocompare_all": {
       "data": [
         {
+          "id": "53596613",
+          "title": "Custodia, Vantage Launch Platform for Interoperable Tokenized Deposits on Ethereum",
+          "body": "Custodia Bank and Vantage Bank Texas have launched a live platform enabling U.S. banks to issue interoperable tokenized deposits compliant with the GENIUS Act. This innovation allows traditional bank deposits",
+          "published_at": 1761343883,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/custodia-vantage-launch-platform-for-interoperable-tokenized-deposits-on-ethereum/",
+          "categories": [
+            "ETH",
+            "FIAT",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News",
+            "ETH"
+          ]
+        },
+        {
+          "id": "53596568",
+          "title": "Bitcoin miners build on gains after Jane Street discloses stakes",
+          "body": "Shares of leading Bitcoin mining companies rose after Jane Street disclosed new holdings on Thursday, extending a months-long rally across publicly traded mining stocks.",
+          "published_at": 1761343576,
+          "source": "CryptoCompare",
+          "url": "https://cointelegraph.com/news/bitcoin-miners-rally-jane-street-bitfarms-cipher-hut-8?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+          "categories": [
+            "BTC",
+            "MINING",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            ""
+          ]
+        },
+        {
+          "id": "53596432",
+          "title": "JPMorgan: Gold Might Double in Three Years as Equity Hedge Use Case Explodes",
+          "body": "While gold prices fell sharply recently, JPMorgan analysts believe that the fundamentals behind the recent bull market are still intact. If commodity trend sellers fueled the recent selloff, it’s possible that gold might rise 110% by 2028, substituting bonds in some portfolios. Double or Nothing: JPMorgan Expects Gold Prices to Shoot up as It Takes",
+          "published_at": 1761343503,
+          "source": "CryptoCompare",
+          "url": "https://news.bitcoin.com/jpmorgan-gold-might-double-in-three-years-as-equity-hedge-use-case-explodes/",
+          "categories": [
+            "FIAT",
+            "MARKET",
+            "TRADING"
+          ],
+          "tags": [
+            "Economics",
+            "gold",
+            "price predictions"
+          ]
+        },
+        {
+          "id": "53596379",
+          "title": "Trump to nominate SEC's 'pro-crypto' Michael Selig as CFTC chair: Report",
+          "body": "The rumored nomination of Michael Selig follows the CFTC nomination process hitting a snag in September when Brian Quintenz was withdrawn.",
+          "published_at": 1761343399,
+          "source": "CryptoCompare",
+          "url": "https://cointelegraph.com/news/trump-nominate-sec-michael-selig-cftc-chair?utm_source=rss_feed&utm_medium=rss%3F_nocache%3D1761343429084%26_dc%3D1761343429084%26ttt%3D1761343429084&utm_campaign=rss_partner_inbound",
+          "categories": [
+            "REGULATION"
+          ],
+          "tags": [
+            ""
+          ]
+        },
+        {
+          "id": "53596318",
+          "title": "Federal Reserve Revises Bank Stress Tests for Greater Transparency After Industry Lawsuit",
+          "body": "The Federal Reserve has overhauled its annual bank stress tests following legal challenges from industry groups, aiming to boost transparency while maintaining rigorous evaluation of banks’ resilience to economic downturns.",
+          "published_at": 1761343268,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/federal-reserve-revises-bank-stress-tests-for-greater-transparency-after-industry-lawsuit/",
+          "categories": [
+            "FIAT",
+            "MARKET",
+            "REGULATION",
+            "MACROECONOMICS"
+          ],
+          "tags": [
+            "Analysis",
+            "News"
+          ]
+        },
+        {
+          "id": "53596283",
+          "title": "CZ’s Full Pardon Marks New Era For Binance: Asian Expansion And Stablecoin Supremacy",
+          "body": "In a stunning turn of events, US President Donald Trump has issued a full pardon for Changpeng “CZ” Zhao, the founder of Binance, the world’s largest cryptocurrency exchange. Zhao had pleaded guilty in late 2023 to a single count of failing to maintain an adequate anti-money laundering program and subsequently stepped down as CEO. Binance paid a record $4.3 billion settlement to US authorities, and Zhao served four months in prison as part of the plea agreement. Despite these legal and regulator",
+          "published_at": 1761343250,
+          "source": "CryptoCompare",
+          "url": "https://bitcoinist.com/czs-pardon-marks-new-era-binance-asian-expansion/",
+          "categories": [
+            "ASIA",
+            "EXCHANGE",
+            "TRADING",
+            "BNB",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Binance",
+            "binance",
+            "Binance news",
+            "Binance stablecoin",
+            "Binance.US",
+            "BNB",
+            "bnbusdt",
+            "Changpeng Zao",
+            "CZ Binance"
+          ]
+        },
+        {
+          "id": "53596261",
+          "title": "SUI hits record $885M TVL – 23% rally possible, but ONLY IF…",
+          "body": "Sui Network’s TVL has reached an all-time high of $885.59 million, indicating strong trust and confidence among users.",
+          "published_at": 1761343209,
+          "source": "CryptoCompare",
+          "url": "https://ambcrypto.com/sui-hits-record-885m-tvl-23-rally-possible-but-only-if/",
+          "categories": [
+            "ALTCOIN",
+            "TRADING",
+            "SUI",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Altcoin",
+            "News",
+            "News 1",
+            "Social",
+            "Trading View",
+            "ambcrypto"
+          ]
+        },
+        {
+          "id": "53596609",
+          "title": "Dogecoin (DOGE) Slides 5% Below $0.20 as Traders Bet Big on This $0.035 Crypto",
+          "body": "Dogecoin (DOGE) has slipped 5% below the $0.20 mark, signaling fading bullish momentum as traders take profits and shift capital into higher-upside opportunities. DOGE’s lack of strong catalysts has prompted many investors to diversify into promising new cryptocurrencies showing real growth potential. One standout is Mutuum Finance (MUTM) , a DeFi-focused altcoin currently in Phase 6 of its presale, at just $0.035. The project has raised over $17.8 million and attracted more than 17,380 unique h",
+          "published_at": 1761343200,
+          "source": "CryptoCompare",
+          "url": "https://www.cryptopolitan.com/dogecoin-doge-slides-5-below-0-20-as-traders-bet-big-on-this-0-035-crypto/",
+          "categories": [
+            "BUSINESS",
+            "DOGE",
+            "MARKET",
+            "SHIB",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Press Release"
+          ]
+        },
+        {
+          "id": "53596116",
+          "title": "Trump Nominates SEC Crypto Counsel Michael Selig to Lead CFTC, Hinting at Pro-Crypto Alignment",
+          "body": "President Donald Trump has nominated Michael Selig, chief counsel for the SEC’s pro-crypto task force, to lead the CFTC, signaling a unified pro-crypto regulatory approach between the two agencies in",
+          "published_at": 1761342918,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/trump-nominates-sec-crypto-counsel-michael-selig-to-lead-cftc-hinting-at-pro-crypto-alignment/",
+          "categories": [
+            "REGULATION"
+          ],
+          "tags": [
+            "News"
+          ]
+        },
+        {
+          "id": "53596315",
+          "title": "Fed revamps its stress test rules after a lawsuit from major banking and business groups",
+          "body": "The Federal Reserve announced a major overhaul of its annual bank stress tests after a legal challenge from multiple industry groups, according to a press release from the central bank on Friday. The changes respond to complaints that the process used to determine how much capital large banks must hold was opaque, unpredictable, and costly for lenders. The Fed said the new approach is intended to increase transparency while keeping the test useful for evaluating how firms would handle severe eco",
+          "published_at": 1761342635,
+          "source": "CryptoCompare",
+          "url": "https://www.cryptopolitan.com/fed-rolls-back-bank-stress-tests/",
+          "categories": [
+            "BUSINESS",
+            "FIAT",
+            "MARKET",
+            "SPONSORED",
+            "MACROECONOMICS"
+          ],
+          "tags": [
+            "Economy",
+            "Federal Reserve",
+            "USD"
+          ]
+        },
+        {
+          "id": "53595914",
+          "title": "Trump Picks SEC Crypto Task Force’s Mike Selig to Run CFTC: Report",
+          "body": "Selig, chief counsel for the SEC’s pro-crypto task force, is the president’s latest choice to run the CFTC, according to a Bloomberg report.",
+          "published_at": 1761342432,
+          "source": "CryptoCompare",
+          "url": "https://decrypt.co/345957/trump-sec-crypto-task-forces-mike-selig-cftc-report",
+          "categories": [
+            "REGULATION"
+          ],
+          "tags": [
+            "Law and Order"
+          ]
+        },
+        {
+          "id": "53595723",
+          "title": "DraftKings Enters Prediction Markets as Bitcoin Miner Canaan Rebounds, Zelle Eyes Stablecoins",
+          "body": "DraftKings’ acquisition of Railbird marks its entry into prediction markets, while Canaan rebounds from delisting risks and Zelle integrates stablecoins for cross-border payments, highlighting key shifts in publicly traded crypto",
+          "published_at": 1761342093,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/draftkings-enters-prediction-markets-as-bitcoin-miner-canaan-rebounds-zelle-eyes-stablecoins/",
+          "categories": [
+            "BTC",
+            "MARKET",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News",
+            "BTC"
+          ]
+        },
+        {
+          "id": "53595817",
+          "title": "Bitcoin price compression will spark expansion: Will BTC explode toward $120K?",
+          "body": "Bitcoin sellers put a cap on $112,000, but technical, onchain data and the end of October US macroeconomic calendar suggest that the price compression will trigger a violent expansion.",
+          "published_at": 1761342066,
+          "source": "CryptoCompare",
+          "url": "https://cointelegraph.com/news/bitcoin-price-compression-will-spark-expansion-will-btc-explode-to-120k?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+          "categories": [
+            "BTC",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            ""
+          ]
+        },
+        {
+          "id": "53595794",
+          "title": "Ethereum Nears Critical Price Zone: Relief Rally Ahead?",
+          "body": "Ethereum is trading just below a key resistance level after holding support at $3,800. Market focus is now on whether buyers can push through the overhead pressure or if the price will face another rejection. ETH Holds at $3,800, Approaches Resistance Band ETH has recovered from recent lows and is currently trading around $4,000. The asset found support in the $3,790 to $3,815 area, which has consistently acted as a base in recent sessions. Below this level, another support zone sits between $3,",
+          "published_at": 1761342012,
+          "source": "CryptoCompare",
+          "url": "https://cryptopotato.com/ethereum-nears-critical-price-zone-relief-rally-ahead/",
+          "categories": [
+            "ETH",
+            "MARKET",
+            "TRADING",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Crypto Bits",
+            "Crypto News",
+            "Ethereum (ETH) Price"
+          ]
+        },
+        {
           "id": "53595487",
           "title": "JPMorgan Sees Potential Billions for Coinbase from Base Network and USDC Overhaul",
           "body": "JPMorgan has upgraded Coinbase stock to Overweight with a $404 price target, citing billions in potential value from the Base layer-2 network and USDC rewards changes, driving a 9% share",
@@ -354,6 +605,50 @@
           ]
         },
         {
+          "id": "53596088",
+          "title": "Dogecoin Treasury Company Looking To Use Strategy’s Bitcoin Playbook For DOGE, Here’s How",
+          "body": "Dogecoin treasury company Bit Origin has highlighted how Michael Saylor’s Strategy has set the tone for their plans to accumulate DOGE. This came as the company is the first DOGE treasury company to be listed on the Nasdaq. Dogecoin Treasury Looks To Replicate Strategy’s Playbook In an X post , the Dogecoin treasury company revealed its plans to replicate Strategy’s playbook for its DOGE accumulation. Bit Origin stated that it will conduct a DOGE-denominated private placement, enabling it to acc",
+          "published_at": 1761339659,
+          "source": "CryptoCompare",
+          "url": "https://bitcoinist.com/strategys-btc-playbook-for-dogecoin/",
+          "categories": [
+            "DOGE",
+            "REGULATION",
+            "DIGITAL ASSET TREASURY",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Dogecoin",
+            "Alex Spiro",
+            "Bit Origin",
+            "Brag House Holdings",
+            "CleanCore",
+            "CleanCore’s Dogecoin Treasury",
+            "CoinGecko",
+            "Coinmarketcap",
+            "Doge",
+            "DOGE news",
+            "doge price",
+            "dogecoin",
+            "Dogecoin Foundation",
+            "Dogecoin news",
+            "dogecoin price",
+            "dogeusd",
+            "dogeusdt",
+            "Elon Musk",
+            "House of Doge",
+            "michael saylor",
+            "Nasdaq-Listed Dogecoin Treasury Company",
+            "New York Stock Exchange",
+            "nyse",
+            "Strategy",
+            "TBH",
+            "Year-To-Date",
+            "YTD"
+          ]
+        },
+        {
           "id": "53594482",
           "title": "Tether Sets $15 Billion Profit Target as Margin Hits 99%",
           "body": "Tether puts stock market on race with unimaginable price target set for 2025.",
@@ -672,291 +967,11 @@
             "CZ",
             "Trump"
           ]
-        },
-        {
-          "id": "53593567",
-          "title": "Ledger’s new multisig feature sparks backlash over fees",
-          "body": "Ledger, the cryptocurrency hardware wallet maker, has released a new multisig feature. However, the update has received backlash from many crypto users and developers. That’s because Ledger introduced per-transaction fees for the first time. The feature was released on Thursday, alongside the new Nano Gen5 device and an upgraded Ledger Wallet app, which replaces the old Ledger Live application. Ledger is acting like a corporation The multisig feature is Ledger’s first integrated system, allowing",
-          "published_at": 1761337217,
-          "source": "CryptoCompare",
-          "url": "https://www.cryptopolitan.com/ledgers-multisig-feature-fees-backlash/",
-          "categories": [
-            "BUSINESS",
-            "TRADING",
-            "WALLET",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "News",
-            "Ledger"
-          ]
-        },
-        {
-          "id": "53593294",
-          "title": "Ripple CEO Stresses XRP’s Central Role in Prime Brokerage and Treasury Initiatives",
-          "body": "XRP plays a central role in Ripple’s ecosystem, powering cross-border payments and integrating into new initiatives like Ripple Prime. As emphasized by Ripple CEO Brad Garlinghouse, XRP sits at the",
-          "published_at": 1761337091,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/ripple-ceo-stresses-xrps-central-role-in-prime-brokerage-and-treasury-initiatives/",
-          "categories": [
-            "REGULATION",
-            "XRP",
-            "DIGITAL ASSET TREASURY",
-            "MACROECONOMICS",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "News",
-            "Ripple",
-            "Core",
-            "XRP"
-          ]
-        },
-        {
-          "id": "53593368",
-          "title": "Sygnum Bank bets on Bitcoin lending with multisign custody model",
-          "body": "The new product is expected to launch in the first half of 2026 and will let clients borrow fiat against Bitcoin held in multisignature wallets.",
-          "published_at": 1761337052,
-          "source": "CryptoCompare",
-          "url": "https://cointelegraph.com/news/sygnum-bank-debifi-bitcoin-multisig-loan?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-          "categories": [
-            "BTC",
-            "FIAT",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            ""
-          ]
-        },
-        {
-          "id": "53593254",
-          "title": "Trump Nominates Michael Selig for CFTC Chair Amid Crypto Regulation Delays and Shutdown",
-          "body": "Michael Selig, a seasoned SEC counsel with deep crypto regulatory experience, has been nominated by President Donald Trump to lead the CFTC, replacing Brian Quintenz amid opposition from Gemini co-founders",
-          "published_at": 1761336968,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/trump-nominates-michael-selig-for-cftc-chair-amid-crypto-regulation-delays-and-shutdown/",
-          "categories": [
-            "REGULATION",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "News"
-          ]
-        },
-        {
-          "id": "53593046",
-          "title": "PolyMarket Airdrop Confirmed – Here’s What You Need to Know Ahead",
-          "body": "Polymarket has confirmed plans to launch its long-awaited POLY token alongside an airdrop, marking a key step for the fast-growing prediction market platform. The confirmation came from Chief Marketing Officer Matthew Modabber, who said during an interview on the Degenz Live podcast Thursday that the project would “definitely” include both a token and an airdrop. Source: X “There will be a token, there will be an airdrop,” Modabber said. “We could have launched a token whenever we wanted, but we",
-          "published_at": 1761336575,
-          "source": "CryptoCompare",
-          "url": "https://cryptonews.com/news/polymarket-airdrop-confirmed-heres-what-you-need-to-know-ahead/",
-          "categories": [
-            "EXCHANGE",
-            "MARKET",
-            "TRADING",
-            "AIRDROP",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Blockchain News",
-            "News",
-            "Airdrop",
-            "Polymarket"
-          ]
-        },
-        {
-          "id": "53593053",
-          "title": "Bitcoin Rally Potential Grows with China Liquidity and ETF Inflows, Faces Options Resistance",
-          "body": "Bitcoin’s recent bullish momentum is driven by expanding liquidity in China and strong inflows into U.S. spot ETFs, pushing the price above $110,000 for the first time in weeks. However,",
-          "published_at": 1761336564,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/bitcoin-rally-potential-grows-with-china-liquidity-and-etf-inflows-faces-options-resistance/",
-          "categories": [
-            "ASIA",
-            "BTC",
-            "SOL",
-            "TRADING",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Bitcoin",
-            "News",
-            "BTC",
-            "SOL"
-          ]
-        },
-        {
-          "id": "53587608",
-          "title": "Crypto.com applies for US bank charter to expand custody services",
-          "body": "",
-          "published_at": 1761336491,
-          "source": "CryptoCompare",
-          "url": "https://www.investing.com/news/cryptocurrency-news/cryptocom-applies-for-us-bank-charter-to-expand-custody-services-93CH-4308381",
-          "categories": [
-            "FIAT"
-          ],
-          "tags": [
-            ""
-          ]
-        },
-        {
-          "id": "53592941",
-          "title": "EOS Climbs 14% As Investors Gain Confidence",
-          "body": "",
-          "published_at": 1761336391,
-          "source": "CryptoCompare",
-          "url": "https://www.investing.com/news/cryptocurrency-news/eos-climbs-14-as-investors-gain-confidence-4308605",
-          "categories": [
-            "BUSINESS"
-          ],
-          "tags": [
-            ""
-          ]
-        },
-        {
-          "id": "53592934",
-          "title": "Technical Analyst: The Next Wave Higher for XRP Will Be Epic. Here’s Why",
-          "body": "A charged sense of anticipation now hangs over the XRP market. The sentiment isn’t just fueled by speculative optimism but by the mounting evidence that a powerful technical setup is forming . Traders and analysts are reading the charts with renewed intensity, suggesting that XRP could be gearing up for a structural shift that might redefine its trajectory. What’s coming next, if confirmed, could mark the start of an extraordinary new phase for the digital asset. Steph Is Crypto’s Bullish Projec",
-          "published_at": 1761336306,
-          "source": "CryptoCompare",
-          "url": "https://timestabloid.com/technical-analyst-the-next-wave-higher-for-xrp-will-be-epic-heres-why/",
-          "categories": [
-            "BTC",
-            "MARKET",
-            "TRADING",
-            "XRP",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Cryptocurrency",
-            "News",
-            "XRP",
-            "XRP Price",
-            "XRP Price Analysis"
-          ]
-        },
-        {
-          "id": "53592952",
-          "title": "Trump replaced Brian Quintenz with Michael Selig as the nominee for CFTC chair",
-          "body": "President Donald Trump has chosen Michael Selig to head the CFTC, replacing his earlier pick Brian Quintenz, whose nomination collapsed under pressure from Tyler and Cameron Winklevoss, owners of crypto platform Gemini. Selig, who currently serves as chief counsel for the SEC’s crypto task force, has spent recent years working alongside SEC Chairman Paul Atkins, helping the SEC and CFTC stay on the same page when it comes to crypto rules and overlapping financial oversight. Before landing that j",
-          "published_at": 1761336221,
-          "source": "CryptoCompare",
-          "url": "https://www.cryptopolitan.com/trump-picks-michael-selig-for-cftc-chair/",
-          "categories": [
-            "BLOCKCHAIN",
-            "EXCHANGE",
-            "MARKET",
-            "REGULATION",
-            "TRADING",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Regulation",
-            "CFTC"
-          ]
-        },
-        {
-          "id": "53593016",
-          "title": "'XRP Sets at the Center of Everything Ripple Does,' Garlinghouse Says",
-          "body": "Ripple CEO Garlinghouse has made it clear that the company remains laser-focused on XRP following major acquisitions",
-          "published_at": 1761336210,
-          "source": "CryptoCompare",
-          "url": "https://u.today/xrp-sits-at-the-center-of-everything-ripple-does-garlinghouse-says",
-          "categories": [
-            "XRP",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Ripple News",
-            "XRP"
-          ]
-        },
-        {
-          "id": "53592838",
-          "title": "Bitcoin Whales May Embrace ETFs as Self-Custody Uptrend Falters",
-          "body": "Bitcoin whales are increasingly shifting from self-custody to ETFs for traditional finance benefits, with BlackRock reporting over $3 billion in conversions as the 15-year self-custody uptrend breaks amid rising ETF",
-          "published_at": 1761336157,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/bitcoin-whales-may-embrace-etfs-as-self-custody-uptrend-falters/",
-          "categories": [
-            "BTC",
-            "MARKET",
-            "XRP",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Analysis",
-            "Bitcoin",
-            "News",
-            "Ripple",
-            "BTC",
-            "XRP"
-          ]
-        },
-        {
-          "id": "53592826",
-          "title": "Why Are Altcoins Failing to Deliver? Experts Reveal the Real Reason",
-          "body": "In this cycle of the cryptocurrency market, altcoins have a market capitalization that is $800 billion lower than in past cycles. According to a new report by 10x Research, the main reason for this is that individual investors, especially those in South Korea, are withdrawing their capital from altcoins and directing it towards cryptocurrency-related stocks. “The altcoin market capitalization could have been approximately $800 billion higher if retail investors, particularly in South Korea, had ",
-          "published_at": 1761336070,
-          "source": "CryptoCompare",
-          "url": "https://en.bitcoinsistemi.com/why-are-altcoins-failing-to-deliver-experts-reveal-the-real-reason/",
-          "categories": [
-            "ALTCOIN",
-            "BUSINESS",
-            "MARKET",
-            "ZRX",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Altcoin",
-            "Analysis",
-            "News"
-          ]
-        },
-        {
-          "id": "53592837",
-          "title": "Former Fed Chairs Bernanke and Yellen Urge Supreme Court to Invalidate Trump’s Tariffs",
-          "body": "Former Federal Reserve chairs Ben Bernanke and Janet Yellen have urged the Supreme Court to invalidate most of Donald Trump’s global tariffs, describing them as economically damaging and legally invalid.",
-          "published_at": 1761336070,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/former-fed-chairs-bernanke-and-yellen-urge-supreme-court-to-invalidate-trumps-tariffs/",
-          "categories": [
-            "FIAT",
-            "MARKET",
-            "MACROECONOMICS"
-          ],
-          "tags": [
-            "Analysis",
-            "News"
-          ]
-        },
-        {
-          "id": "53592782",
-          "title": "Why is Bitcoin’s price up today? $20M ETF inflows, China’s M2 supply & more…",
-          "body": "Bitcoin’s bullish momentum faces test from retail investors.",
-          "published_at": 1761336059,
-          "source": "CryptoCompare",
-          "url": "https://ambcrypto.com/why-is-bitcoins-price-up-today-20m-etf-inflows-chinas-m2-supply-more/",
-          "categories": [
-            "ASIA",
-            "BTC",
-            "BUSINESS",
-            "TRADING",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Bitcoin",
-            "News",
-            "News 1",
-            "Social",
-            "Trading View",
-            "ambcrypto"
-          ]
         }
       ],
-      "timestamp": 1761341644501,
+      "timestamp": 1761344169625,
       "ttl": 900
     }
   },
-  "saved_at": 1761341644501
+  "saved_at": 1761344169625
 }

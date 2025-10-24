@@ -6,7 +6,7 @@
 # ============================================================================
 # HEALTH CHECK SERVER (для Railway)
 # ============================================================================
-from .health_server import HealthCheckServer, start_health_server, stop_health_server
+from .health_server import start_health_server, stop_health_server
 
 # ============================================================================
 # VALIDATORS (импортируем только DataValidator)
