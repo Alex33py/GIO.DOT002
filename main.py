@@ -13,8 +13,26 @@ from pathlib import Path
 from datetime import datetime
 from db_migration import migrate_database
 
+
+# === ФУНКЦИЯ ДЛЯ УДАЛЕНИЯ КАВЫЧЕК ИЗ ПЕРЕМЕННЫХ ===
+def get_env(key, default=None):
+    """Получить переменную окружения, удаляя кавычки если есть"""
+    value = os.getenv(key, default)
+    if value and isinstance(value, str):
+        # Удаляем кавычки с начала и конца
+        value = value.strip().strip('"').strip("'")
+    return value
+
+
 # === НАСТРОЙКА ОКРУЖЕНИЯ ===
-os.environ["ENVIRONMENT"] = os.getenv("ENVIRONMENT", "development")
+os.environ["ENVIRONMENT"] = get_env("ENVIRONMENT", "development")
+
+# Принудительно включаем PRODUCTION на Railway
+if get_env(
+    "RAILWAY_ENVIRONMENT_ID"
+):  # Railway автоматически устанавливает эту переменную
+    os.environ["ENVIRONMENT"] = "PRODUCTION"
+    print("🚀 Detected Railway environment - forcing PRODUCTION mode")
 
 # Добавить корневую директорию в путь
 sys.path.insert(0, str(Path(__file__).parent))
@@ -62,13 +80,15 @@ try:
 
     try:
         from utils.health_server import start_health_server, stop_health_server
+
         HEALTH_CHECK_AVAILABLE = True
         logger.info("✅ Health Check Server импортирован")
     except ImportError as e:
         HEALTH_CHECK_AVAILABLE = False
         logger.warning(f"⚠️ Health Check Server не найден: {e}")
-        logger.warning("   Бот будет работать БЕЗ health check (не рекомендуется для Railway)")
-
+        logger.warning(
+            "   Бот будет работать БЕЗ health check (не рекомендуется для Railway)"
+        )
 
     ROITracker = None
     EnhancedAlertsSystem = None
@@ -220,12 +240,15 @@ async def main():
         await bot.initialize()
 
         # Проверяем webhook mode
-        webhook_enabled = os.getenv('TELEGRAM_WEBHOOK_ENABLED', 'false').lower() == 'true'
+        webhook_enabled = (
+            os.getenv("TELEGRAM_WEBHOOK_ENABLED", "false").lower() == "true"
+        )
 
         if webhook_enabled:
             logger.info("🌐 WEBHOOK MODE DETECTED: Starting webhook server...")
             try:
                 from webhook_server import run_webhook_server
+
                 logger.info("   ├─ Импорт webhook_server.py успешен")
 
                 # Запускаем webhook сервер и выходим

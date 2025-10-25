@@ -11,8 +11,17 @@ class LogConfig:
     Централізована конфігурація логування з підтримкою dev/prod режимів
     """
 
+    # ДОБАВИТЬ ФУНКЦИЮ ПЕРЕД ENV:
+    @staticmethod
+    def _get_env(key, default=None):
+        """Получить переменную без кавычек"""
+        value = os.getenv(key, default)
+        if value and isinstance(value, str):
+            value = value.strip().strip('"').strip("'")
+        return value
+
     # Визначити середовище з змінної оточення або за замовчуванням
-    ENV = os.getenv('ENVIRONMENT', 'development')  # 'development' або 'production'
+    ENV = _get_env.__func__('ENVIRONMENT', 'development')
 
     # Рівні логування для різних середовищ
     LOG_LEVELS = {
