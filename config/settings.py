@@ -41,8 +41,20 @@ LOGS_DIR = DATA_DIR / "logs"
 SCENARIOS_DIR = DATA_DIR / "scenarios"
 CACHE_DIR = DATA_DIR / "cache"
 
-# Путь к базе данных
+# === БАЗА ДАННЫХ ===
+# Автоматическое определение: PostgreSQL на Railway, SQLite локально
+DATABASE_URL = get_env(
+    "DATABASE_URL",
+    f"sqlite:///{str(DATA_DIR / 'gio_crypto_bot.db')}"
+)
+
+# Railway Postgres иногда использует postgres://, нужно postgresql://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Путь к базе данных (для совместимости со старым кодом)
 DATABASE_PATH = str(DATA_DIR / "gio_crypto_bot.db")
+
 
 # Создание необходимых директорий
 for directory in [DATA_DIR, LOGS_DIR, SCENARIOS_DIR, CACHE_DIR]:
@@ -139,6 +151,7 @@ logger = logging.getLogger("gio_bot")
 
 # Вывод информации о режиме работы
 logger.info(f"🚀 ENVIRONMENT: {ENVIRONMENT}")
+logger.info(f"🗄️ Database: {'PostgreSQL (Railway)' if DATABASE_URL.startswith('postgresql://') else 'SQLite (local)'}")
 if PRODUCTION_MODE:
     logger.info("🚀 PRODUCTION MODE: Запуск с реальными API ключами")
 else:
