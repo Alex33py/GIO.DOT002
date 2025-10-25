@@ -12,6 +12,16 @@ from pathlib import Path
 from typing import List
 from dotenv import load_dotenv
 
+
+# === ФУНКЦИЯ ДЛЯ УДАЛЕНИЯ КАВЫЧЕК ===
+def get_env(key, default=None):
+    """Получить переменную окружения, удаляя кавычки"""
+    value = os.getenv(key, default)
+    if value and isinstance(value, str):
+        value = value.strip().strip('"').strip("'")
+    return value
+
+
 # Загрузка переменных окружения из .env (только для локальной разработки)
 load_dotenv()
 
@@ -21,7 +31,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ============================================================================
 # ОПРЕДЕЛЕНИЕ ОКРУЖЕНИЯ
 # ============================================================================
-ENVIRONMENT = os.getenv("ENVIRONMENT", "DEVELOPMENT").upper()
+ENVIRONMENT = get_env("ENVIRONMENT", "DEVELOPMENT").upper()
 PRODUCTION_MODE = ENVIRONMENT == "PRODUCTION"
 DEVELOPMENT_MODE = not PRODUCTION_MODE
 
@@ -41,22 +51,19 @@ for directory in [DATA_DIR, LOGS_DIR, SCENARIOS_DIR, CACHE_DIR]:
 # ============================================================================
 # API КЛЮЧИ
 # ============================================================================
-BYBIT_API_KEY = os.getenv("BYBIT_API_KEY")
-BYBIT_SECRET_KEY = os.getenv("BYBIT_SECRET_KEY")
-
-CRYPTOPANIC_API_KEY = os.getenv("CRYPTOPANIC_API_KEY")
-CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY")
-
-BINANCE_API_KEY = os.getenv("BINANCE_API_KEY")
-BINANCE_API_SECRET = os.getenv("BINANCE_API_SECRET")
-
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+BYBIT_API_KEY = get_env("BYBIT_API_KEY")
+BYBIT_SECRET_KEY = get_env("BYBIT_SECRET_KEY")
+CRYPTOPANIC_API_KEY = get_env("CRYPTOPANIC_API_KEY")
+CRYPTOCOMPARE_API_KEY = get_env("CRYPTOCOMPARE_API_KEY")
+BINANCE_API_KEY = get_env("BINANCE_API_KEY")
+BINANCE_API_SECRET = get_env("BINANCE_API_SECRET")
+GEMINI_API_KEY = get_env("GEMINI_API_KEY")
 
 # ============================================================================
 # TELEGRAM BOT CONFIGURATION
 # ============================================================================
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_BOT_TOKEN = get_env("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = get_env("TELEGRAM_CHAT_ID")
 
 # 🔍 DEBUG: Проверка переменных (только в режиме разработки)
 if DEVELOPMENT_MODE:
