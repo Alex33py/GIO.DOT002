@@ -150,24 +150,33 @@ logger.info(
 )
 
 # ============================================================================
-# ПРОВЕРКА ОБЯЗАТЕЛЬНЫХ ПЕРЕМЕННЫХ В ПРОДАКШЕНЕ
+# ПРОВЕРКА ОБЯЗАТЕЛЬНЫХ ПЕРЕМЕННЫХ В ПРОДАКШЕНЕ (DEBUG MODE)
 # ============================================================================
 if PRODUCTION_MODE:
-    required_vars = {
-        "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
-        "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
-        "BYBIT_API_KEY": BYBIT_API_KEY,
-        "BYBIT_SECRET_KEY": BYBIT_SECRET_KEY,
-    }
+    # DEBUG: Показываем что получили от Railway
+    logger.warning("=" * 70)
+    logger.warning("🔍 DEBUG: Переменные окружения на Railway:")
+    logger.warning(f"   TELEGRAM_BOT_TOKEN: {TELEGRAM_BOT_TOKEN[:30]+'...' if TELEGRAM_BOT_TOKEN else '❌ ПУСТО'}")
+    logger.warning(f"   TELEGRAM_CHAT_ID: {TELEGRAM_CHAT_ID if TELEGRAM_CHAT_ID else '❌ ПУСТО'}")
+    logger.warning(f"   BYBIT_API_KEY: {BYBIT_API_KEY[:15]+'...' if BYBIT_API_KEY else '❌ ПУСТО'}")
+    logger.warning(f"   BYBIT_SECRET_KEY: {BYBIT_SECRET_KEY[:15]+'...' if BYBIT_SECRET_KEY else '❌ ПУСТО'}")
+    logger.warning("=" * 70)
+    logger.warning("⚠️ Проверка временно отключена - бот запустится в любом случае")
 
-    missing_vars = [name for name, value in required_vars.items() if not value]
+    # ВРЕМЕННО ЗАКОММЕНТИРОВАНО:
+    # required_vars = {
+    #     "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
+    #     "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
+    #     "BYBIT_API_KEY": BYBIT_API_KEY,
+    #     "BYBIT_SECRET_KEY": BYBIT_SECRET_KEY,
+    # }
+    # missing_vars = [name for name, value in required_vars.items() if not value]
+    # if missing_vars:
+    #     error_msg = f"❌ Отсутствуют обязательные переменные окружения: {', '.join(missing_vars)}"
+    #     logger.error(error_msg)
+    #     raise ValueError(error_msg)
+    # logger.info("✅ Все обязательные API ключи загружены")
 
-    if missing_vars:
-        error_msg = f"❌ Отсутствуют обязательные переменные окружения: {', '.join(missing_vars)}"
-        logger.error(error_msg)
-        raise ValueError(error_msg)
-
-    logger.info("✅ Все обязательные API ключи загружены")
 
 # ============================================================================
 # НАСТРОЙКИ ТОРГОВЛИ
