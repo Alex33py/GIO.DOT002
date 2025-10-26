@@ -22,18 +22,34 @@ def get_env(key, default=None):
     return value
 
 
-# Загрузка переменных окружения из .env (только для локальной разработки)
-load_dotenv()
-
 # Определение корневой директории проекта
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
 # ============================================================================
-# ОПРЕДЕЛЕНИЕ ОКРУЖЕНИЯ
+# ОПРЕДЕЛЕНИЕ ОКРУЖЕНИЯ (ДО load_dotenv!)
 # ============================================================================
-ENVIRONMENT = get_env("ENVIRONMENT", "DEVELOPMENT").upper()
+IS_RAILWAY = os.environ.get('RAILWAY_ENVIRONMENT') is not None
+ENVIRONMENT = "PRODUCTION" if IS_RAILWAY else os.getenv("BOT_MODE", "development").upper()
 PRODUCTION_MODE = ENVIRONMENT == "PRODUCTION"
 DEVELOPMENT_MODE = not PRODUCTION_MODE
+
+
+# === БАЗА ДАННЫХ (СНАЧАЛА RAILWAY!) ===
+DATABASE_URL = os.environ.get("DATABASE_URL")  # Railway передаёт через environ
+
+
+
+# Загрузка переменных окружения из .env (только для локальной разработки)
+if not IS_RAILWAY:
+    load_dotenv()
+    # Fallback для локальной разработки
+    if not DATABASE_URL:
+        DATABASE_URL = f"sqlite:///{str(BASE_DIR / 'data' / 'gio_crypto_bot.db')}"
+
+# Railway Postgres иногда использует postgres://, нужно postgresql://
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # Директории данных
 DATA_DIR = BASE_DIR / "data"
@@ -41,19 +57,9 @@ LOGS_DIR = DATA_DIR / "logs"
 SCENARIOS_DIR = DATA_DIR / "scenarios"
 CACHE_DIR = DATA_DIR / "cache"
 
-# === БАЗА ДАННЫХ ===
-# Автоматическое определение: PostgreSQL на Railway, SQLite локально
-DATABASE_URL = get_env(
-    "DATABASE_URL",
-    f"sqlite:///{str(DATA_DIR / 'gio_crypto_bot.db')}"
-)
-
-# Railway Postgres иногда использует postgres://, нужно postgresql://
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
 # Путь к базе данных (для совместимости со старым кодом)
 DATABASE_PATH = str(DATA_DIR / "gio_crypto_bot.db")
+
 
 
 # Создание необходимых директорий
