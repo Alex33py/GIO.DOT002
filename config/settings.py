@@ -157,7 +157,7 @@ logger = logging.getLogger("gio_bot")
 
 # Вывод информации о режиме работы
 logger.info(f"🚀 ENVIRONMENT: {ENVIRONMENT}")
-logger.info(f"🗄️ Database: {'PostgreSQL (Railway)' if DATABASE_URL.startswith('postgresql://') else 'SQLite (local)'}")
+logger.info(f"🗄️ Database: {'PostgreSQL (Railway)' if DATABASE_URL and DATABASE_URL.startswith('postgresql://') else 'SQLite (local)'}")
 if PRODUCTION_MODE:
     logger.info("🚀 PRODUCTION MODE: Запуск с реальными API ключами")
 else:
