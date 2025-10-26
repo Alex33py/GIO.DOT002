@@ -81,6 +81,23 @@ class TelegramBotHandler:
         else:
             logger.info("✅ TelegramBotHandler инициализирован")
 
+    def _get_db_connection(self):
+        """Универсальное подключение к БД (SQLite или PostgreSQL)"""
+        try:
+            from config.settings import DATABASE_URL
+
+            if DATABASE_URL and DATABASE_URL.startswith("postgresql"):
+                import psycopg2
+                return psycopg2.connect(DATABASE_URL)
+            else:
+                db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
+                return sqlite3.connect(db_path)
+        except Exception as e:
+            logger.warning(f"⚠️ PostgreSQL недоступен: {e}, используем SQLite")
+            db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
+            return sqlite3.connect(db_path)
+
+
     async def initialize(self):
         """Инициализация Telegram Application"""
         if not self.enabled:
@@ -528,7 +545,7 @@ class TelegramBotHandler:
                 limit = min(int(context.args[0]), 50)  # Максимум 50
 
             db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
-            conn = sqlite3.connect(db_path)
+            conn = self._get_db_connection()
             cursor = conn.cursor()
 
             # Получаем последние сигналы
@@ -582,7 +599,7 @@ class TelegramBotHandler:
 
             # ========== SIGNALS FROM DB ==========
             db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
-            conn = sqlite3.connect(db_path)
+            conn = self._get_db_connection()
             cursor = conn.cursor()
 
             cursor.execute("SELECT COUNT(*) FROM signals")
@@ -997,7 +1014,7 @@ class TelegramBotHandler:
             days = int(context.args[0]) if context.args else 7
 
             db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
-            conn = sqlite3.connect(db_path)
+            conn = self._get_db_connection()
 
             query = f"""
                 SELECT
@@ -1040,7 +1057,7 @@ class TelegramBotHandler:
             days = int(context.args[0]) if context.args else 30
 
             db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
-            conn = sqlite3.connect(db_path)
+            conn = self._get_db_connection()
 
             query = f"""
                 SELECT
@@ -1099,7 +1116,7 @@ class TelegramBotHandler:
             limit = int(context.args[0]) if context.args else 5
 
             db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
-            conn = sqlite3.connect(db_path)
+            conn = self._get_db_connection()
 
             query = f"""
                 SELECT
@@ -1225,7 +1242,7 @@ class TelegramBotHandler:
 
             # Получаем данные из БД
             db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
-            conn = sqlite3.connect(db_path)
+            conn = self._get_db_connection()
 
             # Формируем SQL запрос (ЭКСПОРТИРУЕМ ВСЕ КОЛОНКИ - SELECT *)
             if symbol:
