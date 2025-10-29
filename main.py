@@ -122,7 +122,7 @@ try:
         logger.warning("   Whale tracking будет недоступен")
 
     try:
-        from modules.trade_data_accumulator import TradeDataAccumulator
+        from models.trade_data_accumulator import TradeDataAccumulator
 
         logger.info("✅ TradeDataAccumulator импортирован")
     except ImportError as e:

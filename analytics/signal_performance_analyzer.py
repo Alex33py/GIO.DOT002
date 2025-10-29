@@ -59,7 +59,7 @@ class SignalPerformanceAnalyzer:
             cutoff_date = datetime.now() - timedelta(days=days)
             cutoff_str = cutoff_date.strftime("%Y-%m-%d %H:%M:%S")
 
-            # Общая статистика
+            # ✅ ИСПРАВЛЕНО: timestamp вместо created_at
             cursor.execute(
                 """
                 SELECT
@@ -67,7 +67,7 @@ class SignalPerformanceAnalyzer:
                     SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed,
                     SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active
                 FROM signals
-                WHERE created_at >= ?
+                WHERE timestamp >= ?
             """,
                 (cutoff_str,),
             )
@@ -77,18 +77,18 @@ class SignalPerformanceAnalyzer:
             closed_signals = row[1] if row else 0
             active_signals = row[2] if row else 0
 
-            # Win Rate и ROI для закрытых сигналов
+            # ✅ ИСПРАВЛЕНО: timestamp вместо created_at, close_time вместо exit_time
             cursor.execute(
                 """
                 SELECT
                     symbol,
                     direction,
                     roi,
-                    entry_time,
-                    exit_time
+                    timestamp,
+                    close_time
                 FROM signals
                 WHERE status = 'closed'
-                  AND created_at >= ?
+                  AND timestamp >= ?
                   AND roi IS NOT NULL
             """,
                 (cutoff_str,),
@@ -123,7 +123,7 @@ class SignalPerformanceAnalyzer:
             # Среднее время удержания
             hold_times = []
             for trade in closed_trades:
-                if trade[3] and trade[4]:  # entry_time и exit_time
+                if trade[3] and trade[4]:  # timestamp и close_time
                     try:
                         entry = datetime.fromisoformat(trade[3])
                         exit_time = datetime.fromisoformat(trade[4])

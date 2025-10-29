@@ -29,15 +29,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ============================================================================
 # ОПРЕДЕЛЕНИЕ ОКРУЖЕНИЯ (ДО load_dotenv!)
 # ============================================================================
-IS_RAILWAY = os.environ.get('RAILWAY_ENVIRONMENT') is not None
-ENVIRONMENT = "PRODUCTION" if IS_RAILWAY else os.getenv("BOT_MODE", "development").upper()
+IS_RAILWAY = os.environ.get("RAILWAY_ENVIRONMENT") is not None
+ENVIRONMENT = (
+    "PRODUCTION" if IS_RAILWAY else os.getenv("BOT_MODE", "development").upper()
+)
 PRODUCTION_MODE = ENVIRONMENT == "PRODUCTION"
 DEVELOPMENT_MODE = not PRODUCTION_MODE
 
 
 # === БАЗА ДАННЫХ (СНАЧАЛА RAILWAY!) ===
 DATABASE_URL = os.environ.get("DATABASE_URL")  # Railway передаёт через environ
-
 
 
 # Загрузка переменных окружения из .env (только для локальной разработки)
@@ -59,7 +60,6 @@ CACHE_DIR = DATA_DIR / "cache"
 
 # Путь к базе данных (для совместимости со старым кодом)
 DATABASE_PATH = str(DATA_DIR / "gio_crypto_bot.db")
-
 
 
 # Создание необходимых директорий
@@ -157,7 +157,9 @@ logger = logging.getLogger("gio_bot")
 
 # Вывод информации о режиме работы
 logger.info(f"🚀 ENVIRONMENT: {ENVIRONMENT}")
-logger.info(f"🗄️ Database: {'PostgreSQL (Railway)' if DATABASE_URL and DATABASE_URL.startswith('postgresql://') else 'SQLite (local)'}")
+logger.info(
+    f"🗄️ Database: {'PostgreSQL (Railway)' if DATABASE_URL and DATABASE_URL.startswith('postgresql://') else 'SQLite (local)'}"
+)
 if PRODUCTION_MODE:
     logger.info("🚀 PRODUCTION MODE: Запуск с реальными API ключами")
 else:
@@ -169,37 +171,50 @@ logger.info(
 )
 
 # ============================================================================
-# ПРОВЕРКА ОБЯЗАТЕЛЬНЫХ ПЕРЕМЕННЫХ В ПРОДАКШЕНЕ (DEBUG MODE)
+# ПРОВЕРКА ОБЯЗАТЕЛЬНЫХ ПЕРЕМЕННЫХ (БЕЗОПАСНАЯ ВЕРСИЯ)
 # ============================================================================
+
+
+def validate_environment_variables():
+    """Безопасная проверка переменных окружения без вывода секретов"""
+    required_vars = {
+        "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
+        "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
+        "BYBIT_API_KEY": BYBIT_API_KEY,
+        "BYBIT_SECRET_KEY": BYBIT_SECRET_KEY,
+    }
+
+    logger.info("🔐 Проверка переменных окружения...")
+
+    missing = []
+    for var_name, var_value in required_vars.items():
+        if not var_value:
+            logger.error(f"❌ {var_name}: НЕ УСТАНОВЛЕН!")
+            missing.append(var_name)
+        else:
+            # Только длина, без значения!
+            logger.info(f"✅ {var_name}: установлен ({len(str(var_value))} символов)")
+
+    if missing and PRODUCTION_MODE:
+        logger.error(f"❌ Отсутствуют критические переменные: {', '.join(missing)}")
+        logger.error("❌ Бот не может запуститься без этих переменных!")
+        return False
+
+    logger.info("✅ Все переменные окружения проверены успешно")
+    return True
+
+
+# Вызвать проверку
 if PRODUCTION_MODE:
-    # DEBUG: Показываем что получили от Railway
-    logger.warning("=" * 70)
-    logger.warning("🔍 DEBUG: Переменные окружения на Railway:")
-    logger.warning(f"   TELEGRAM_BOT_TOKEN: {TELEGRAM_BOT_TOKEN[:30]+'...' if TELEGRAM_BOT_TOKEN else '❌ ПУСТО'}")
-    logger.warning(f"   TELEGRAM_CHAT_ID: {TELEGRAM_CHAT_ID if TELEGRAM_CHAT_ID else '❌ ПУСТО'}")
-    logger.warning(f"   BYBIT_API_KEY: {BYBIT_API_KEY[:15]+'...' if BYBIT_API_KEY else '❌ ПУСТО'}")
-    logger.warning(f"   BYBIT_SECRET_KEY: {BYBIT_SECRET_KEY[:15]+'...' if BYBIT_SECRET_KEY else '❌ ПУСТО'}")
-    logger.warning("=" * 70)
-    logger.warning("⚠️ Проверка временно отключена - бот запустится в любом случае")
+    if not validate_environment_variables():
+        import sys
 
-    # ВРЕМЕННО ЗАКОММЕНТИРОВАНО:
-    # required_vars = {
-    #     "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
-    #     "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
-    #     "BYBIT_API_KEY": BYBIT_API_KEY,
-    #     "BYBIT_SECRET_KEY": BYBIT_SECRET_KEY,
-    # }
-    # missing_vars = [name for name, value in required_vars.items() if not value]
-    # if missing_vars:
-    #     error_msg = f"❌ Отсутствуют обязательные переменные окружения: {', '.join(missing_vars)}"
-    #     logger.error(error_msg)
-    #     raise ValueError(error_msg)
-    # logger.info("✅ Все обязательные API ключи загружены")
+        sys.exit(1)
+else:
+    # В режиме разработки только информируем
+    validate_environment_variables()
 
 
-# ============================================================================
-# НАСТРОЙКИ ТОРГОВЛИ
-# ============================================================================
 TRADING_CONFIG = {
     "max_position_size": float(os.getenv("MAX_POSITION_SIZE", "1000")),
     "risk_per_trade": float(os.getenv("RISK_PER_TRADE", "2.0")),
@@ -389,3 +404,70 @@ def load_trading_pairs() -> List[str]:
 # Загрузка торговых пар
 TRACKED_SYMBOLS = load_trading_pairs()
 logger.info(f"🎯 TRACKED_SYMBOLS: {len(TRACKED_SYMBOLS)} пар")
+
+
+# ============================================================================
+# ANALYZER CONFIGURATIONS
+# ============================================================================
+
+# Advanced Support/Resistance Detector Config
+SR_DETECTOR_CONFIG = {
+    "atr_multiplier": float(
+        os.getenv("SR_ATR_MULTIPLIER", "0.5")
+    ),  # Множитель ATR для расчёта уровней
+    "volume_threshold": float(
+        os.getenv("SR_VOLUME_THRESHOLD", "1.5")
+    ),  # Порог volume для определения силы уровня
+}
+
+# News Sentiment Analyzer Config
+NEWS_SENTIMENT_CONFIG = {
+    "cache_duration": int(
+        os.getenv("NEWS_CACHE_DURATION", "600")
+    ),  # Кэш новостей (секунды)
+    "default_hours": int(
+        os.getenv("NEWS_DEFAULT_HOURS", "6")
+    ),  # Период новостей по умолчанию
+    "max_hours": int(os.getenv("NEWS_MAX_HOURS", "48")),  # Максимальный период
+    "default_limit": int(os.getenv("NEWS_DEFAULT_LIMIT", "10")),  # Количество новостей
+}
+
+# Correlation Analyzer Config
+CORRELATION_CONFIG = {
+    "cache_duration": int(
+        os.getenv("CORR_CACHE_DURATION", "300")
+    ),  # Кэш корреляций (секунды)
+    "default_period_hours": int(
+        os.getenv("CORR_PERIOD_HOURS", "24")
+    ),  # Период расчёта корреляций
+    "default_symbols": [  # Символы для анализа
+        "BTCUSDT",
+        "ETHUSDT",
+        "BNBUSDT",
+        "SOLUSDT",
+        "XRPUSDT",
+    ],
+}
+
+# Whale Activity Tracker Config
+WHALE_CONFIG = {
+    "btc_threshold": int(os.getenv("WHALE_BTC_THRESHOLD", "500000")),  # $500K для BTC
+    "eth_threshold": int(os.getenv("WHALE_ETH_THRESHOLD", "250000")),  # $250K для ETH
+    "default_threshold": int(
+        os.getenv("WHALE_DEFAULT_THRESHOLD", "100000")
+    ),  # $100K для остальных
+}
+
+logger.info("✅ Analyzer configurations loaded")
+logger.info(
+    f"   📊 S/R Detector: ATR={SR_DETECTOR_CONFIG['atr_multiplier']}, Volume={SR_DETECTOR_CONFIG['volume_threshold']}"
+)
+logger.info(
+    f"   📰 News Analyzer: Cache={NEWS_SENTIMENT_CONFIG['cache_duration']}s, Period={NEWS_SENTIMENT_CONFIG['default_hours']}h"
+)
+logger.info(
+    f"   🔗 Correlation: Cache={CORRELATION_CONFIG['cache_duration']}s, Period={CORRELATION_CONFIG['default_period_hours']}h"
+)
+logger.info(
+    f"   🐋 Whale Tracker: BTC=${WHALE_CONFIG['btc_threshold']:,}, ETH=${WHALE_CONFIG['eth_threshold']:,}"
+)

@@ -18,6 +18,7 @@ def migrate_database():
     """
     # Ищем файл базы данных (ОБНОВЛЁННЫЕ ПУТИ!)
     possible_db_paths = [
+        "data/gio_crypto_bot.db",  # ✅ ГЛАВНЫЙ ПУТЬ (ваша БД)
         "gio_crypto_bot.db",  # ✅ Корень
         "data/gio_bot.db",  # ✅ Папка data
         "data/gio_crypto.db",  # ✅ На случай если есть ещё одна БД

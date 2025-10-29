@@ -187,7 +187,7 @@ class MarketOverviewHandler:
                     oi_change = oi_data.get("openInterestDelta", 0) if oi_data else 0
 
                     # Получаем Funding
-                    funding_data = await self.bot.bybit_connector.get_funding_rate(
+                    funding_data = self.bot.bybit_connector.get_funding_rate(
                         symbol
                     )
                     funding_rate = (

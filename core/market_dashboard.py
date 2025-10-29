@@ -12,7 +12,8 @@ import pandas as pd
 from config.settings import logger
 from telegram_bot.dashboard_helpers import DashboardFormatter
 from ai.gemini_interpreter import GeminiInterpreter
-
+from handlers.support_resistance_detector import AdvancedSupportResistanceDetector
+import numpy as np
 
 
 class MarketDashboard:
@@ -36,16 +37,23 @@ class MarketDashboard:
         """
         self.bot = bot_instance
         self.formatter = DashboardFormatter()
+        self.sr_detector = AdvancedSupportResistanceDetector(
+            atr_multiplier=0.5, volume_threshold=1.5
+        )
+        logger.info("✅ Advanced S/R Detector инициализирован")
 
         # ✅ Инициализация Gemini 2.0 Flash
         import os
+
         gemini_key = os.getenv("GEMINI_API_KEY", "")
         self.gemini = GeminiInterpreter(gemini_key) if gemini_key else None
 
         if self.gemini:
             logger.info("✅ MarketDashboard инициализирован с Gemini 2.0 Flash")
         else:
-            logger.warning("⚠️ MarketDashboard инициализирован без AI (no GEMINI_API_KEY)")
+            logger.warning(
+                "⚠️ MarketDashboard инициализирован без AI (no GEMINI_API_KEY)"
+            )
 
     async def generate_dashboard(self, symbol: str) -> str:
         """
@@ -149,15 +157,21 @@ class MarketDashboard:
                 or ticker_raw.get("low")
                 or 0
             )
-            volume_24h = float(
+            # Получаем объём в BTC и конвертируем в USD
+            volume_24h_btc = float(
                 ticker_raw.get("volume24h")
                 or ticker_raw.get("volume_24h")
                 or ticker_raw.get("volume")
                 or 0
             )
 
+            # ✅ Конвертируем в USD
+            volume_24h_usd = volume_24h_btc * price
+
             logger.debug(
-                f"✅ Ticker {symbol}: Price=${price:,.2f}, Change={change_24h:+.2f}%"
+                f"✅ Ticker {symbol}: Price=${price:,.2f}, "
+                f"Change={change_24h:+.2f}%, "
+                f"Vol={volume_24h_btc:.2f} BTC (${volume_24h_usd/1e9:.2f}B USD)"
             )
 
             return {
@@ -165,7 +179,8 @@ class MarketDashboard:
                 "change_24h": change_24h,
                 "high_24h": high_24h,
                 "low_24h": low_24h,
-                "volume_24h": volume_24h,
+                "volume_24h": volume_24h_btc,  # Для обратной совместимости
+                "volume_24h_usd": volume_24h_usd,  # ✅ Объём в USD
             }
 
         except Exception as e:
@@ -485,7 +500,14 @@ class MarketDashboard:
     async def _get_volume_analysis(self, symbol: str, ticker: Dict) -> Dict:
         """Получить анализ объёмов"""
         try:
-            volume_24h = ticker["volume_24h"]
+            # ✅ ИСПРАВЛЕНИЕ: Используем USD объём
+            volume_24h_usd = ticker.get("volume_24h_usd", 0)
+
+            if volume_24h_usd == 0:
+                # Фоллбэк: конвертируем BTC в USD
+                volume_24h_btc = ticker.get("volume_24h", 0)
+                price = ticker.get("price", 0)
+                volume_24h_usd = volume_24h_btc * price
 
             # CVD - комбинированный подход (L2 imbalance + Binance orderbook)
             cvd_value = 0.0
@@ -569,12 +591,19 @@ class MarketDashboard:
                 vp_vah = current_price * 1.02
                 vp_val = current_price * 0.98
 
+            # ✅ ЕДИНСТВЕННЫЙ RETURN (внутри try)
             return {
-                "volume_24h": volume_24h,
+                "volume_24h": volume_24h_usd,  # ✅ Теперь в USD
                 "cvd": cvd_value,
                 "cvd_label": cvd_label,
-                "volume_profile": {"poc": vp_poc, "vah": vp_vah, "val": vp_val},
+                "volume_profile": {
+                    "poc": vp_poc,
+                    "vah": vp_vah,
+                    "val": vp_val,
+                },
             }
+
+        # ✅ EXCEPT на правильном уровне
         except Exception as e:
             logger.error(f"❌ Ошибка _get_volume_analysis: {e}")
             return {
@@ -620,7 +649,6 @@ class MarketDashboard:
                 "news_sentiment": "neutral",
                 "news_label": "⚪ Neutral",
             }
-
 
     async def _get_sentiment_pressure(self, symbol: str) -> Dict:
         """Получить sentiment и давление рынка"""
@@ -679,7 +707,72 @@ class MarketDashboard:
                     if data.get("retCode") == 0:
                         result = data.get("result", {}).get("list", [])
                         if result:
-                            open_interest = float(result[0].get("openInterest", 0))
+                            # ✅ Получаем OI в контрактах
+                            oi_contracts = float(result[0].get("openInterest", 0))
+
+                            # ✅ КОНВЕРТИРУЕМ В USD
+                            # Для линейных контрактов Bybit: notional value = contracts * price
+                            ticker = await self._get_ticker(symbol)
+                            current_price = ticker.get("price", 1)
+                            open_interest = oi_contracts * current_price
+
+                            # ✅ OI DELTA РАСЧЁТ
+                            try:
+                                if not hasattr(self, "oi_cache"):
+                                    self.oi_cache = {}
+                                    logger.info("✅ OI cache инициализирован")
+
+                                cache_key = f"oi_{symbol}"
+                                current_time = datetime.now()
+
+                                if cache_key in self.oi_cache:
+                                    prev_oi = self.oi_cache[cache_key]["value"]
+                                    prev_time = self.oi_cache[cache_key]["time"]
+                                    time_diff_seconds = (
+                                        current_time - prev_time
+                                    ).total_seconds()
+
+                                    if time_diff_seconds > 3000:  # 50 минут
+                                        if prev_oi > 0:
+                                            oi_delta_pct = (
+                                                (open_interest - prev_oi) / prev_oi
+                                            ) * 100
+
+                                            if oi_delta_pct > 5:
+                                                oi_trend_emoji = "📈"
+                                                oi_label = "🔥 Rising"
+                                            elif oi_delta_pct > 2:
+                                                oi_trend_emoji = "⬆️"
+                                                oi_label = "🟢 Growing"
+                                            elif oi_delta_pct < -5:
+                                                oi_trend_emoji = "📉"
+                                                oi_label = "❄️ Falling"
+                                            elif oi_delta_pct < -2:
+                                                oi_trend_emoji = "⬇️"
+                                                oi_label = "🔴 Declining"
+                                            else:
+                                                oi_trend_emoji = "➡️"
+                                                oi_label = "⚪ Stable"
+
+                                            logger.info(
+                                                f"📊 OI Delta {symbol}: {oi_delta_pct:+.2f}% "
+                                                f"(${prev_oi/1e9:.2f}B → ${open_interest/1e9:.2f}B USD)"
+                                            )
+
+                                # Обновляем кэш
+                                self.oi_cache[cache_key] = {
+                                    "value": open_interest,
+                                    "time": current_time,
+                                }
+
+                            except Exception as delta_e:
+                                logger.error(
+                                    f"❌ OI Delta calculation failed: {delta_e}"
+                                )
+
+                            logger.debug(
+                                f"✅ OI {symbol}: ${open_interest/1e9:.2f}B USD"
+                            )
 
                             # OI DELTA РАСЧЁТ
                             try:
@@ -752,9 +845,7 @@ class MarketDashboard:
             ls_label = "⚪ Neutral"
 
             try:
-                ls_ratio_data = await self.bot.bybit_connector.get_long_short_ratio(
-                    symbol
-                )
+                ls_ratio_data = self.bot.bybit_connector.get_long_short_ratio(symbol)
                 if ls_ratio_data and isinstance(ls_ratio_data, dict):
                     long_short_ratio = ls_ratio_data.get("ratio", 0.0)
 
@@ -1130,36 +1221,178 @@ class MarketDashboard:
             return {"1h": "⚪ NEUTRAL", "4h": "⚪ NEUTRAL", "1d": "⚪ NEUTRAL"}
 
     async def _get_key_levels(self, symbol: str, volume_data: Dict) -> Dict:
-        """Получить ключевые уровни поддержки/сопротивления"""
+        """Получить ключевые уровни с Advanced S/R Detector"""
+        try:
+            # Получаем ticker для current_price
+            ticker = await self._get_ticker(symbol)
+            current_price = ticker.get("price", 0)
+
+            if not current_price:
+                logger.warning(f"_get_key_levels: price = 0 для {symbol}")
+                return await self._fallback_key_levels(symbol, volume_data)
+
+            # ✅ Получаем ATR
+            atr = await self._calculate_atr(symbol)
+
+            # ✅ Получаем CVD данные
+            cvd_value = volume_data.get("cvd", 0)
+
+            # ✅ Получаем Order Book
+            orderbook = await self.bot.bybit_connector.get_orderbook(symbol, limit=50)
+
+            bids_volume = 0
+            asks_volume = 0
+
+            if orderbook and "bids" in orderbook and "asks" in orderbook:
+                bids_volume = sum(
+                    float(bid[1]) * float(bid[0]) for bid in orderbook["bids"][:20]
+                )
+                asks_volume = sum(
+                    float(ask[1]) * float(ask[0]) for ask in orderbook["asks"][:20]
+                )
+
+            # Volume Profile данные
+            vp = volume_data.get("volume_profile", {})
+            poc = vp.get("poc", current_price)
+            vah = vp.get("vah", current_price * 1.02)
+            val = vp.get("val", current_price * 0.98)
+
+            # Получаем high/low за последние 100 свечей
+            klines = await self.bot.bybit_connector.get_klines(symbol, "60", 100)
+
+            if klines is not None and len(klines) > 0:
+                import pandas as pd
+
+                df = pd.DataFrame(klines)
+                high = float(df["high"].max())
+                low = float(df["low"].min())
+            else:
+                high = current_price * 1.05
+                low = current_price * 0.95
+
+            # ✅ ФОРМИРУЕМ FEATURES ДЛЯ DETECTOR
+            features = {
+                "price": current_price,
+                "poc": poc,
+                "vah": vah,
+                "val": val,
+                "atr": atr,
+                "cvd_slope": cvd_value,
+                "cvd_value": cvd_value,
+                "order_book_bids": bids_volume,
+                "order_book_asks": asks_volume,
+                "high": high,
+                "low": low,
+                "volume_profile": vp,
+            }
+
+            # ✅ ЗАПУСКАЕМ ADVANCED DETECTOR
+            result = self.sr_detector.detect_support_resistance(features)
+
+            # Форматируем результат
+            support_levels = [level["price"] for level in result["support_levels"][:3]]
+            resistance_levels = [
+                level["price"] for level in result["resistance_levels"][:3]
+            ]
+
+            logger.info(
+                f"✅ Advanced S/R {symbol}: {len(support_levels)} supports, "
+                f"{len(resistance_levels)} resistances, CVD: {result['cvd_bias']}"
+            )
+
+            return {
+                "support": support_levels,
+                "resistance": resistance_levels,
+                "key_support": result.get("key_support", {}),
+                "key_resistance": result.get("key_resistance", {}),
+                "pivot": poc,
+                "invalidation": val * 0.95 if val else current_price * 0.95,
+                "cvd_bias": result["cvd_bias"],
+                "trading_zone": result.get("trading_zones", {}).get(
+                    "zone", "undefined"
+                ),
+                "summary": result.get("summary", ""),
+            }
+
+        except Exception as e:
+            logger.error(
+                f"❌ Advanced S/R Detector error for {symbol}: {e}", exc_info=True
+            )
+            return await self._fallback_key_levels(symbol, volume_data)
+
+    async def _calculate_atr(self, symbol: str, period: int = 14) -> float:
+        """Расчёт ATR (Average True Range)"""
+        try:
+            klines = await self.bot.bybit_connector.get_klines(symbol, "60", period + 1)
+
+            if klines is None or len(klines) < period:
+                logger.warning(f"ATR: недостаточно данных для {symbol}")
+                return 100.0  # Дефолтное значение для BTC
+
+            import pandas as pd
+
+            df = pd.DataFrame(klines)
+
+            high = df["high"].values
+            low = df["low"].values
+            close = df["close"].values
+
+            tr_list = []
+            for i in range(1, len(close)):
+                tr = max(
+                    high[i] - low[i],
+                    abs(high[i] - close[i - 1]),
+                    abs(low[i] - close[i - 1]),
+                )
+                tr_list.append(tr)
+
+            atr = float(np.mean(tr_list[-period:]))
+            logger.debug(f"✅ ATR {symbol}: {atr:.2f}")
+            return atr
+
+        except Exception as e:
+            logger.error(f"ATR calculation error for {symbol}: {e}")
+            return 100.0
+
+    async def _fallback_key_levels(self, symbol: str, volume_data: Dict) -> Dict:
+        """Fallback на базовый расчёт уровней при ошибке"""
         try:
             vp = volume_data.get("volume_profile", {})
             poc = vp.get("poc", 0)
             vah = vp.get("vah", 0)
             val = vp.get("val", 0)
 
-            # Используем VP для расчёта уровней
             if poc > 0:
                 return {
                     "resistance": [vah, vah * 1.02],
                     "support": [val, val * 0.98],
                     "invalidation": val * 0.95,
                     "pivot": poc,
+                    "cvd_bias": "neutral",
+                    "trading_zone": "undefined",
+                    "summary": "Базовый расчёт (VP)",
                 }
 
-            # Fallback
             return {
                 "resistance": [0, 0],
                 "support": [0, 0],
                 "invalidation": 0,
                 "pivot": 0,
+                "cvd_bias": "neutral",
+                "trading_zone": "undefined",
+                "summary": "Нет данных",
             }
+
         except Exception as e:
-            logger.error(f"❌ Ошибка _get_key_levels: {e}")
+            logger.error(f"Fallback key levels error: {e}")
             return {
-                "resistance": [0, 0],
-                "support": [0, 0],
+                "resistance": [],
+                "support": [],
                 "invalidation": 0,
                 "pivot": 0,
+                "cvd_bias": "neutral",
+                "trading_zone": "undefined",
+                "summary": "Ошибка",
             }
 
     async def _format_dashboard(
@@ -1242,7 +1475,7 @@ class MarketDashboard:
 
 ⏱️ Updated: {f.format_timestamp()}"""
 
-        # 🤖 AI INTERPRETATION (Gemini 2.0)
+        # 🤖 AI INTERPRETATION (Gemini 2.0) - ✅ ПЕРЕМЕЩЕНО СЮДА
         if self.gemini:
             try:
                 gemini_metrics = {
@@ -1251,14 +1484,15 @@ class MarketDashboard:
                     "funding_rate": sentiment_data.get("funding_rate", 0),
                     "open_interest": sentiment_data.get("open_interest", 0),
                     "ls_ratio": sentiment_data.get("long_short_ratio", 1.0),
-                    "orderbook_pressure": 0,  # Можно добавить если есть
-                    "whale_activity": [{"volume": whale_activity.get("net_volume", 0)}]
+                    "orderbook_pressure": 0,
+                    "whale_activity": [{"volume": whale_activity.get("net_volume", 0)}],
                 }
 
                 ai_interpretation = await self.gemini.interpret_metrics(gemini_metrics)
 
                 if ai_interpretation:
-                    text += f"\n\n AI INTERPRETATION \n{ai_interpretation}"
+                    text += f"\n\n🤖 **AI INTERPRETATION**\n{ai_interpretation}"
+                    logger.info(f"✅ AI interpretation добавлена для {symbol}")
 
             except Exception as e:
                 logger.error(f"❌ Gemini interpretation failed: {e}")

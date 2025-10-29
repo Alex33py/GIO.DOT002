@@ -74,9 +74,15 @@ class LiquidityHandler:
                 output = await self._fallback_analysis(symbol)
 
             else:
-                await loading.delete()
-                await update.message.reply_text("❌ Liquidity analyzer not available")
-                return
+                # Базовый анализ через orderbook
+                logger.warning(f"⚠️ Все анализаторы недоступны для {symbol}, используем базовый расчёт")
+                try:
+                    output = await self._basic_orderbook_analysis(symbol)
+                except Exception as basic_error:
+                    logger.error(f"❌ Basic orderbook analysis failed: {basic_error}")
+                    await loading.delete()
+                    await update.message.reply_text("❌ Unable to analyze liquidity - all methods failed")
+                    return
 
             # Send result
             await loading.delete()
@@ -90,6 +96,89 @@ class LiquidityHandler:
         """Fallback на старый анализатор"""
         result = await self.bot.liquidity_depth_analyzer.analyze_liquidity(symbol)
         return self.bot.liquidity_depth_analyzer.format_liquidity_analysis(result)
+
+    async def _basic_orderbook_analysis(self, symbol: str) -> str:
+        """Базовый анализ ликвидности через orderbook (финальный фоллбэк)"""
+        try:
+            # Проверяем наличие Bybit connector
+            if not hasattr(self.bot, 'bybit_connector'):
+                raise Exception("Bybit connector недоступен")
+
+            # Получаем orderbook (50 уровней)
+            orderbook = await self.bot.bybit_connector.get_orderbook(symbol, 50)
+
+            if not orderbook or 'bids' not in orderbook or 'asks' not in orderbook:
+                raise Exception("Orderbook данные недоступны")
+
+            bids = orderbook['bids']  # [(price, quantity), ...]
+            asks = orderbook['asks']
+
+            if not bids or not asks:
+                raise Exception("Пустой orderbook")
+
+            # Получаем текущую цену
+            ticker = await self.bot.bybit_connector.get_ticker(symbol)
+            current_price = float(ticker.get('lastPrice', 0))
+
+            # Базовые метрики
+            best_bid = float(bids[0][0])
+            best_ask = float(asks[0][0])
+            spread = best_ask - best_bid
+            spread_pct = (spread / current_price) * 100
+
+            # Суммарные объёмы (топ-20 уровней)
+            total_bid_vol = sum(float(bid[1]) * float(bid[0]) for bid in bids[:20])
+            total_ask_vol = sum(float(ask[1]) * float(ask[0]) for ask in asks[:20])
+
+            imbalance = total_bid_vol - total_ask_vol
+            bid_ask_ratio = total_bid_vol / total_ask_vol if total_ask_vol > 0 else 0
+
+            # Формирование вывода
+            message = f"💧 *BASIC LIQUIDITY ANALYSIS — {symbol.replace('USDT', '')}*\n"
+            message += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            message += f"💰 *Price:* ${current_price:,.2f}\n\n"
+
+            message += "📊 *ORDERBOOK (Top 20 levels)*\n"
+            message += f"├─ Total BID: ${total_bid_vol/1e6:.2f}M\n"
+            message += f"├─ Total ASK: ${total_ask_vol/1e6:.2f}M\n"
+
+            imbalance_emoji = "🟢" if imbalance > 0 else "🔴"
+            pressure = "BUY" if imbalance > 0 else "SELL"
+            message += f"└─ Imbalance: ${imbalance/1e6:+.2f}M ({pressure}) {imbalance_emoji}\n\n"
+
+            # Спред
+            spread_status = "🟢 TIGHT" if spread_pct < 0.05 else "🟡 NORMAL" if spread_pct < 0.15 else "🔴 WIDE"
+            message += "💱 *SPREAD*\n"
+            message += f"├─ BID: ${best_bid:,.2f}\n"
+            message += f"├─ ASK: ${best_ask:,.2f}\n"
+            message += f"└─ Spread: ${spread:.2f} ({spread_pct:.4f}%) {spread_status}\n\n"
+
+            # Sentiment
+            message += "⚖️ *SENTIMENT*\n"
+            message += f"├─ BID/ASK Ratio: {bid_ask_ratio:.2f}x\n"
+
+            if bid_ask_ratio > 1.5:
+                sentiment = "🟢 Bullish (Buyers dominate)"
+            elif bid_ask_ratio > 1.1:
+                sentiment = "🟡 Slightly Bullish"
+            elif bid_ask_ratio < 0.7:
+                sentiment = "🔴 Bearish (Sellers dominate)"
+            elif bid_ask_ratio < 0.9:
+                sentiment = "🟠 Slightly Bearish"
+            else:
+                sentiment = "⚪ Neutral"
+
+            message += f"└─ Market Sentiment: {sentiment}\n\n"
+
+            message += "⚠️ *NOTE:* Базовый анализ (упрощённая версия).\n"
+            message += "Для полного анализа используйте /liquidity после восстановления сервиса.\n"
+
+            return message
+
+        except Exception as e:
+            logger.error(f"Basic orderbook analysis error: {e}", exc_info=True)
+            raise
+
 
     def _format_enhanced_analysis(self, symbol: str, analysis) -> str:
         """Форматирование расширенного анализа ликвидности"""
@@ -196,7 +285,8 @@ class LiquidityHandler:
         message += "🎯 *TRADING SIGNALS*\n\n"
 
         # Long signal
-        if analysis.long_signal["recommended"]:
+        if analysis.long_signal["recommended"] and analysis.long_signal['confidence'] > 60:
+            # Высокая уверенность - полная рекомендация
             message += (
                 f"*LONG (Buy):* ✅ ({analysis.long_signal['confidence']}% confidence)\n"
             )
@@ -223,11 +313,25 @@ class LiquidityHandler:
                 message += f"Risk/Reward: 1:{analysis.long_signal['risk_reward']:.1f}\n"
 
             message += "\n"
+
+        elif analysis.long_signal["recommended"] and 40 <= analysis.long_signal['confidence'] <= 60:
+            # Средняя уверенность - показываем с предупреждением
+            message += (
+                f"*LONG (Buy):* 🟡 LOW CONFIDENCE ({analysis.long_signal['confidence']}%)\n"
+            )
+            message += "  ⚠️ Слабый сигнал - требуется подтверждение\n"
+            if analysis.long_signal.get("entry"):
+                message += f"  Entry: ${analysis.long_signal['entry']:,.2f}, SL: ${analysis.long_signal['stop_loss']:,.2f}\n"
+            message += "\n"
+
         else:
+            # Низкая уверенность или не рекомендуется
             message += f"*LONG (Buy):* ⚠️ Not recommended ({analysis.long_signal['confidence']}% confidence)\n\n"
 
+
         # Short signal
-        if analysis.short_signal["recommended"]:
+        if analysis.short_signal["recommended"] and analysis.short_signal['confidence'] > 60:
+            # Высокая уверенность
             message += f"*SHORT (Sell):* ✅ ({analysis.short_signal['confidence']}% confidence)\n"
             for reason in analysis.short_signal["reasons"]:
                 message += f"  • {reason}\n"
@@ -254,8 +358,20 @@ class LiquidityHandler:
                 )
 
             message += "\n"
+
+        elif analysis.short_signal["recommended"] and 40 <= analysis.short_signal['confidence'] <= 60:
+            # Средняя уверенность
+            message += (
+                f"*SHORT (Sell):* 🟡 LOW CONFIDENCE ({analysis.short_signal['confidence']}%)\n"
+            )
+            message += "  ⚠️ Слабый сигнал - требуется подтверждение\n"
+            if analysis.short_signal.get("entry"):
+                message += f"  Entry: ${analysis.short_signal['entry']:,.2f}, SL: ${analysis.short_signal['stop_loss']:,.2f}\n"
+            message += "\n"
+
         else:
             message += f"*SHORT (Sell):* ⚠️ Not recommended ({analysis.short_signal['confidence']}% confidence)\n\n"
+
 
         # 9. Historical Trends (если доступны)
         if hasattr(analysis, "avg_bid_6h") and analysis.avg_bid_6h:
@@ -285,37 +401,48 @@ class LiquidityHandler:
         return message
 
     async def _generate_ai_interpretation(self, analysis, symbol: str) -> str:
-        """Генерация AI интерпретации через Gemini"""
+        """Генерация AI интерпретации через Gemini с rule-based фоллбэком"""
         try:
-            if not hasattr(self.bot, "telegram_handler") or not hasattr(
+            # ✅ Попытка использовать Gemini AI
+            if hasattr(self.bot, "telegram_handler") and hasattr(
                 self.bot.telegram_handler, "gemini_interpreter"
             ):
-                return ""
+                gemini = self.bot.telegram_handler.gemini_interpreter
 
-            gemini = self.bot.telegram_handler.gemini_interpreter
-            if not gemini:
-                return ""
+                if gemini:
+                    try:
+                        prompt = f"""Проанализируй ликвидность для {symbol}:
+    Цена: ${analysis.current_price:.2f}
+    BID/ASK: {analysis.bid_ask_ratio:.2f}x
+    Дисбаланс: ${analysis.imbalance/1_000_000:.1f}M
+    Спред: {analysis.spread_pct:.4f}%
+    Оценка: {analysis.liquidity_score}/10
 
-            prompt = f"""Проанализируй ликвидность для {symbol}:
-Цена: ${analysis.current_price:.2f}
-BID/ASK: {analysis.bid_ask_ratio:.2f}x
-Дисбаланс: ${analysis.imbalance/1_000_000:.1f}M
-Спред: {analysis.spread_pct:.4f}%
-Оценка: {analysis.liquidity_score}/10
+    Long: {'✅' if analysis.long_signal['recommended'] else '⚠️'} ({analysis.long_signal['confidence']}%)
+    Short: {'✅' if analysis.short_signal['recommended'] else '⚠️'} ({analysis.short_signal['confidence']}%)
 
-Long: {'✅' if analysis.long_signal['recommended'] else '⚠️'} ({analysis.long_signal['confidence']}%)
-Short: {'✅' if analysis.short_signal['recommended'] else '⚠️'} ({analysis.short_signal['confidence']}%)
+    Предоставь 3-4 предложения на русском языке: 1) Настроение рынка, 2) Риски, 3) Рекомендация."""
 
-Предоставь 3-4 предложения на русском языке: 1) Настроение рынка, 2) Риски, 3) Рекомендация."""
+                        response = await gemini.generate_response(prompt)
 
-            response = await gemini.generate_response(prompt)
-            if response:
-                lines = response.strip().split("\n")
-                return "\n".join(f"{line}" for line in lines if line.strip())
-            return ""
+                        if response:
+                            lines = response.strip().split("\n")
+                            formatted = "\n".join(f"{line}" for line in lines if line.strip())
+                            logger.info(f"✅ Gemini AI interpretation получена для {symbol}")
+                            return formatted
+
+                    except Exception as gemini_error:
+                        logger.warning(f"⚠️ Gemini API error: {gemini_error}, переключаемся на rule-based")
+
+            # ✅ ФОЛЛБЭК: Используем rule-based интерпретацию
+            logger.info(f"📋 Используем rule-based interpretation для {symbol}")
+            return self._generate_rule_based_interpretation(analysis, symbol)
+
         except Exception as e:
-            logger.error(f"AI interpretation error: {e}")
-            return ""
+            logger.error(f"❌ AI interpretation критическая ошибка: {e}", exc_info=True)
+            # ✅ Критический фоллбэк - возвращаем базовые метрики
+            return f"⚠️ Liquidity Score: {analysis.liquidity_score:.1f}/10, BID/ASK: {analysis.bid_ask_ratio:.2f}x"
+
 
     def _generate_rule_based_interpretation(self, analysis, symbol: str) -> str:
         """Rule-based AI интерпретация (fallback) - на русском языке"""

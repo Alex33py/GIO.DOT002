@@ -185,10 +185,16 @@ class UnifiedDashboardHandler:
             # === 3. HOT Pairs ===
             hot_pairs_text = await self._get_hot_pairs()
 
-            # === 4. Active Signals ===
+            # === 4. News Summary === ✅ НОВОЕ!
+            news_text = await self._get_news_summary()
+
+            # === 5. Whale Activity === ✅ НОВОЕ!
+            whale_text = await self._get_whale_activity_summary()
+
+            # === 6. Active Signals ===
             signals_text = self._get_active_signals()
 
-            # === 5. Signal Performance ===
+            # === 7. Signal Performance ===
             performance_text = self._get_signal_performance()
 
             # === Собираем полное сообщение ===
@@ -199,6 +205,10 @@ class UnifiedDashboardHandler:
 
 {hot_pairs_text}
 
+{news_text}
+
+{whale_text}
+
 {signals_text}
 
 {performance_text}
@@ -208,6 +218,7 @@ class UnifiedDashboardHandler:
         except Exception as e:
             logger.error(f"Build dashboard error: {e}")
             return f"❌ Ошибка построения dashboard: {e}"
+
 
     async def _get_market_overview(self) -> str:
         """Получить Market Overview с реальными ценами"""
@@ -504,15 +515,17 @@ class UnifiedDashboardHandler:
     def _get_active_signals(self) -> str:
         """Получить активные сигналы из БД"""
         try:
-            conn = sqlite3.connect("gio.db")
+            # ✅ ИСПРАВЛЕНО: правильный путь к БД
+            conn = sqlite3.connect("data/gio_crypto_bot.db")
             cursor = conn.cursor()
 
+            # ✅ ИСПРАВЛЕНО: используем существующие колонки
             cursor.execute(
                 """
                 SELECT symbol, direction, entry_price, tp1
                 FROM signals
                 WHERE status = 'active'
-                ORDER BY created_at DESC
+                ORDER BY timestamp DESC
                 LIMIT 3
             """
             )
@@ -525,7 +538,7 @@ class UnifiedDashboardHandler:
 
             message = "📈 Active Signals\n"
             for symbol, direction, entry, tp in signals:
-                message += f"• {symbol} {direction.upper()} - Entry: {entry:.0f} | TP: {tp:.0f}\n"
+                message += f"• {symbol} {direction.upper() if direction else 'N/A'} - Entry: {entry:.0f} | TP: {tp:.0f}\n"
 
             return message.strip()
 
@@ -533,10 +546,131 @@ class UnifiedDashboardHandler:
             logger.error(f"Active Signals error: {e}")
             return "⚠️ Active Signals недоступны"
 
+    async def _get_news_summary(self) -> str:
+        """
+        Получить краткую сводку новостей (топ-3)
+
+        Returns:
+            Форматированная сводка новостей
+        """
+        try:
+            # Проверяем, есть ли у бота news_analyzer
+            if not hasattr(self.bot, 'news_analyzer') or not self.bot.news_analyzer:
+                return "📰 News Summary\n⚠️ Новости недоступны"
+
+            # Получаем последние 3 новости
+            news_list = await self.bot.news_analyzer.get_latest_news(hours=6, limit=3)
+
+            if not news_list:
+                return "📰 News Summary\n⚠️ Нет свежих новостей"
+
+            # Анализируем sentiment
+            news_list = await self.bot.news_analyzer.analyze_sentiment(news_list)
+
+            # Рассчитываем общий sentiment
+            overall = self.bot.news_analyzer.calculate_overall_sentiment(news_list)
+
+            # Определяем emoji для overall sentiment
+            overall_emoji = (
+                "🟢" if overall["overall"] == "BULLISH"
+                else "🔴" if overall["overall"] == "BEARISH"
+                else "🟡"
+            )
+
+            # Формируем сообщение
+            message_lines = [
+                "📰 News Summary",
+                f"Overall: {overall_emoji} {overall['overall']} (Score: {overall['score']:+.2f})",
+                ""
+            ]
+
+            # Добавляем топ-3 новости
+            for news in news_list[:3]:
+                emoji = news.get("sentiment_emoji", "🟡")
+                title = news["title"][:60]  # Обрезаем до 60 символов
+
+                message_lines.append(f"{emoji} {title}...")
+
+            return "\n".join(message_lines)
+
+        except Exception as e:
+            logger.error(f"❌ News Summary error: {e}")
+            return "📰 News Summary\n⚠️ Ошибка загрузки новостей"
+
+    async def _get_whale_activity_summary(self) -> str:
+        """
+        Получить сводку китовой активности (крупные сделки за 15 мин)
+
+        Returns:
+            Форматированная сводка whale activity
+        """
+        try:
+            # Проверяем, есть ли у бота market_dashboard
+            if not hasattr(self.bot, 'market_dashboard'):
+                return "🐋 Whale Activity\n⚠️ Данные недоступны"
+
+            # Получаем whale activity для BTC и ETH
+            symbols = ["BTCUSDT", "ETHUSDT"]
+            total_whales = 0
+            whale_trades = []
+
+            for symbol in symbols:
+                try:
+                    # Получаем крупные сделки
+                    whale_data = await self.bot.market_dashboard.get_whale_activity(symbol)
+
+                    if whale_data and 'large_trades' in whale_data:
+                        trades = whale_data['large_trades']
+                        total_whales += len(trades)
+
+                        # Берём топ-2 крупнейшие сделки
+                        sorted_trades = sorted(trades, key=lambda x: x.get('volume', 0), reverse=True)[:2]
+
+                        for trade in sorted_trades:
+                            whale_trades.append({
+                                'symbol': symbol,
+                                'side': trade.get('side', 'unknown'),
+                                'volume': trade.get('volume', 0),
+                                'price': trade.get('price', 0)
+                            })
+
+                except Exception as e:
+                    logger.debug(f"⚠️ Whale data for {symbol} unavailable: {e}")
+                    continue
+
+            # Формируем сообщение
+            if total_whales == 0:
+                return "🐋 Whale Activity\n⚪ Нет крупных сделок (15 мин)"
+
+            message_lines = [
+                "🐋 Whale Activity",
+                f"├─ Крупных сделок: {total_whales} (15 мин)",
+                ""
+            ]
+
+            # Добавляем топ крупнейшие сделки
+            for trade in whale_trades[:3]:
+                symbol_clean = trade['symbol'].replace('USDT', '')
+                side = trade['side'].upper()
+                emoji = "🟢" if side == "BUY" else "🔴"
+                volume_k = trade['volume'] / 1000
+
+                message_lines.append(
+                    f"{emoji} {symbol_clean} {side} ${volume_k:.0f}K @ ${trade['price']:,.0f}"
+                )
+
+            return "\n".join(message_lines).strip()
+
+        except Exception as e:
+            logger.error(f"❌ Whale Activity error: {e}")
+            return "🐋 Whale Activity\n⚠️ Ошибка загрузки данных"
+
+
     def _get_signal_performance(self) -> str:
         """Получить статистику сигналов"""
         try:
-            conn = sqlite3.connect("gio.db")
+            # ✅ ИСПРАВЛЕНО: правильный путь к БД
+            conn = sqlite3.connect("data/gio_crypto_bot.db")
             cursor = conn.cursor()
 
             # Win Rate
@@ -544,9 +678,9 @@ class UnifiedDashboardHandler:
                 """
                 SELECT
                     COUNT(*) as total,
-                    SUM(CASE WHEN status = 'closed_profit' THEN 1 ELSE 0 END) as wins
+                    SUM(CASE WHEN status = 'closed' AND roi > 0 THEN 1 ELSE 0 END) as wins
                 FROM signals
-                WHERE status IN ('closed_profit', 'closed_loss')
+                WHERE status = 'closed'
             """
             )
 
@@ -556,7 +690,7 @@ class UnifiedDashboardHandler:
             # Avg ROI
             cursor.execute(
                 """
-                SELECT AVG(roi) FROM signals WHERE status = 'closed_profit'
+                SELECT AVG(roi) FROM signals WHERE status = 'closed' AND roi > 0
             """
             )
 
@@ -564,9 +698,9 @@ class UnifiedDashboardHandler:
             conn.close()
 
             return f"""📉 Signal Performance
-    • Win Rate: {win_rate:.0f}%
-    • Total Signals: {total}
-    • Avg ROI: {avg_roi:+.1f}%"""
+        • Win Rate: {win_rate:.0f}%
+        • Total Signals: {total}
+        • Avg ROI: {avg_roi:+.1f}%"""
 
         except Exception as e:
             logger.error(f"Performance error: {e}")

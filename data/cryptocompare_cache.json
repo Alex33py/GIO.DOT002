@@ -3,120 +3,32 @@
     "cryptocompare_all": {
       "data": [
         {
-          "id": "53637415",
-          "title": "XRP Futures Boom Drives $26.9B Volume Surge at CME Amid Record Institutional Demand",
-          "body": "XRP’s explosive growth in regulated derivatives markets is igniting a powerful wave of institutional momentum, as record futures and options volumes at CME Group highlight accelerating demand, deepening liquidity, and expanding confidence across compliant crypto trading venues. XRP Futures Boom Spurs Institutional Confidence in Regulated Crypto Markets XRP’s growing traction in regulated markets is signaling",
-          "published_at": 1761433522,
+          "id": "53792314",
+          "title": "Fed Chair Signals Caution on December Rate Cut as Bitcoin Dips to $110,000",
+          "body": "The Federal Reserve cut rates by 25 basis points, but Chair Jerome Powell indicated a December rate cut is uncertain due to persistent inflation and delayed data, leading Bitcoin to",
+          "published_at": 1761764539,
           "source": "CryptoCompare",
-          "url": "https://news.bitcoin.com/xrp-futures-boom-drives-26-9b-volume-surge-at-cme-amid-record-institutional-demand/",
+          "url": "https://en.coinotag.com/fed-chair-signals-caution-on-december-rate-cut-as-bitcoin-dips-to-110000/",
           "categories": [
-            "MARKET",
-            "SPONSORED",
-            "TRADING",
-            "XRP",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Featured",
-            "CME",
-            "Futures",
-            "Ripple XRP"
-          ]
-        },
-        {
-          "id": "53637278",
-          "title": "Trump To Install New Pro-Crypto CFTC Chair? Here’s What We Know So Far",
-          "body": "New reports reveal that United States President Donald Trump has picked pro-crypto Michael Selig as the new chair nominee for the Commodity Futures Trading Commission. The CFTC’s role involves overseeing the futures, options, and crypto markets, ensuring these industries operate fairly and transparently while protecting participants from fraud and manipulation. With Selig being a widely recognized crypto supporter, this move by Trump could significantly impact the regulatory landscape of digital",
-          "published_at": 1761433242,
-          "source": "CryptoCompare",
-          "url": "https://www.newsbtc.com/news/trump-to-install-new-pro-crypto-cftc-chair-heres-what-we-know-so-far/",
-          "categories": [
-            "COMMODITY",
-            "MARKET",
-            "REGULATION",
-            "TRADING",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Cryptocurrency Market News",
-            "crypto",
-            "crypto news",
-            "cryptocurrency",
-            "Donald Trump",
-            "Michael Selig",
-            "US President"
-          ]
-        },
-        {
-          "id": "53637265",
-          "title": "Solana whale scoops 44K SOL worth $8.37M – Next stop $218?",
-          "body": "A crypto whale purchased 44,000 SOL worth $8.37 million, but it failed to lift the price.",
-          "published_at": 1761433225,
-          "source": "CryptoCompare",
-          "url": "https://ambcrypto.com/solana-whale-scoops-44k-sol-worth-8-37m-next-stop-218/",
-          "categories": [
-            "ALTCOIN",
-            "SOL",
-            "TRADING",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Altcoin",
-            "News",
-            "News 1",
-            "Social",
-            "Solana",
-            "Trading View",
-            "ambcrypto"
-          ]
-        },
-        {
-          "id": "53636134",
-          "title": "Kyrgyzstan Adds BNB to National Reserves, May Advance Blockchain Payments with New Currencies",
-          "body": "Kyrgyzstan has integrated Binance Coin (BNB) into its national cryptocurrency reserves while launching a stablecoin and central bank digital currency (CBDC) on the BNB Chain. This strategic move enhances financial",
-          "published_at": 1761430531,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/kyrgyzstan-adds-bnb-to-national-reserves-may-advance-blockchain-payments-with-new-currencies/",
-          "categories": [
-            "BLOCKCHAIN",
-            "EXCHANGE",
-            "BNB",
+            "BTC",
+            "FIAT",
             "MACROECONOMICS",
             "CRYPTOCURRENCY"
           ],
           "tags": [
-            "News",
-            "BNB"
+            "News"
           ]
         },
         {
-          "id": "53635871",
-          "title": "Coingecko Adds $178M x402 Token Category as AI Micropayments Heat Up",
-          "body": "Coinbase’s x402 protocol is turning the forgotten HTTP “Payment Required” code into a real-world micropayments engine—and now Coingecko has rolled out a full-blown category for the growing swarm of tokens built around it. What Is x402? x402 is an open-source, HTTP-native payment protocol developed by Coinbase that revives the long-unused HTTP 402 status code. In",
-          "published_at": 1761429953,
+          "id": "53792280",
+          "title": "Here’s Why Bitcoin Market Dynamics Are Evolving As New Developments Surface Overnight",
+          "body": "The Bitcoin market landscape continues to evolve rapidly, with new developments emerging overnight that are reshaping short-term sentiment and long-term investor positioning across spot and derivatives markets. Price action remains steady, while on-chain and institutional signals are shifting. What Happened With Bitcoin Over The Last 24 Hours? In an X post, a crypto analyst, Luca, has offered insights on Bitcoin’s recent market movement. Over the past 24 hours, several notable developments in th",
+          "published_at": 1761764450,
           "source": "CryptoCompare",
-          "url": "https://news.bitcoin.com/coingecko-adds-178m-x402-token-category-as-ai-micropayments-heat-up/",
-          "categories": [
-            "BLOCKCHAIN",
-            "EXCHANGE",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Crypto News",
-            "Artificial intelligence (AI)",
-            "Cryptocurrency",
-            "Payments"
-          ]
-        },
-        {
-          "id": "53635735",
-          "title": "Is Bitcoin Price Going To $30,000? Bearish Indicator Suggests Possible 70% Decline",
-          "body": "The Bitcoin price had another rollercoaster performance in the past week, surging to over $113,000 by mid-week before crashing back down to around $107,000. While the premier cryptocurrency’s price action has steadied in the past few days, market uncertainty still seems to be the order of the day. However, the Bitcoin price seems to be leaning more toward a bearish setup, as suggested by the negative shift of a relevant technical indicator on a longer timeframe. Below is what happened to the pri",
-          "published_at": 1761429648,
-          "source": "CryptoCompare",
-          "url": "https://bitcoinist.com/bitcoin-price-going-to-30000-bearish-macd-indicator/",
+          "url": "https://www.newsbtc.com/news/bitcoin/bitcoin-market-dynamics-evolving/",
           "categories": [
             "BTC",
+            "BUSINESS",
             "MARKET",
             "TRADING",
             "CRYPTOCURRENCY"
@@ -124,688 +36,134 @@
           "tags": [
             "Bitcoin",
             "bitcoin",
-            "btc",
-            "crypto"
-          ]
-        },
-        {
-          "id": "53635732",
-          "title": "‘Money Will Pour In’ – CEO Predicts Bitcoin Will Explode To $180K",
-          "body": "According to VanEck’s Mid-October 2025 ChainCheck, Bitcoin could climb much higher if several big pieces line up. The firm ties Bitcoin’s long-run gains to broad money growth and futures market flows, and it lays out a path that reaches as high as $180,000 before the current bull market ends. Related Reading: XRP Sparks Bullish Frenzy As Top Software Dev Says It Beats ETF Hype VanEck Links Bitcoin To Global Money Supply Reports have disclosed a roughly 0.5 correlation between Bitcoin and total g",
-          "published_at": 1761429624,
-          "source": "CryptoCompare",
-          "url": "https://www.newsbtc.com/news/money-will-pour-in-ceo-predicts-bitcoin-will-explode-to-180k/",
-          "categories": [
-            "BTC",
-            "MARKET",
-            "TRADING",
-            "ZRX",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Cryptocurrency Market News",
-            "bitcoin",
-            "btc",
-            "btcusd",
-            "crypto",
-            "open interest",
-            "VanEck"
-          ]
-        },
-        {
-          "id": "53636007",
-          "title": "SOL Price Prediction Hypes Up, But This Coin Leads Buyers",
-          "body": "With the market positioning itself for yet another possible bull run, Solana (SOL) has again stolen the limelight with fresh optimism building around its network strength and developer ecosystem. But even as investors analyze Solana’s price forecast, traders are quietly focusing on what may be the best cheap crypto to buy now, Mutuum Finance (MUTM) . Priced at only $0.035 and in Phase 6 of its presale, MUTM is fast becoming the next big crypto in decentralized finance (DeFi). Its novel dual-lend",
-          "published_at": 1761429600,
-          "source": "CryptoCompare",
-          "url": "https://www.cryptopolitan.com/sol-price-prediction-hypes-up-but-this-coin-leads-buyers/",
-          "categories": [
-            "BUSINESS",
-            "MARKET",
-            "SOL",
-            "TRADING",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Press Release"
-          ]
-        },
-        {
-          "id": "53635265",
-          "title": "SpaceX Moves $133.7M in Bitcoin, Suggesting Wallet Reorganization",
-          "body": "SpaceX transferred $133.7 million in Bitcoin to new wallets on October 24, 2025, marking its second major move in a week as part of ongoing wallet reorganization, according to blockchain",
-          "published_at": 1761428546,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/spacex-moves-133-7m-in-bitcoin-suggesting-wallet-reorganization/",
-          "categories": [
-            "BTC",
-            "LUNA",
-            "FTT",
-            "ARKM",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Analysis",
-            "Bitcoin",
-            "News",
-            "ARKM",
-            "BTC",
-            "FTT",
-            "LUNA"
-          ]
-        },
-        {
-          "id": "53635076",
-          "title": "Japan’s New PM Takaichi Signals Stronger US Alliance in First Trump Call",
-          "body": "Japan’s new Prime Minister Sanae Takaichi held her first official phone call with U.S. President Donald Trump on Saturday, emphasizing the strengthening of the Japan-U.S. alliance as her top foreign",
-          "published_at": 1761428109,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/japans-new-pm-takaichi-signals-stronger-us-alliance-in-first-trump-call/",
-          "categories": [
-            "ASIA",
-            "REGULATION"
-          ],
-          "tags": [
-            "News"
-          ]
-        },
-        {
-          "id": "53635030",
-          "title": "The Big Whale Has Gone All In: Accelerating Heavy Buying in This Altcoin",
-          "body": "According to on-chain analytics data, an address that has been regularly accumulating Solana (SOL) through over-the-counter (OTC) transactions since late April has significantly increased its purchases in recent days. According to the analysis, the address in question purchased 249,500 SOL (approximately $46.78 million) through the FalconX and Wintermute platforms in the last 4 days alone. This address reportedly purchased a total of 827,000 SOL (approximately $146 million) since the end of Apri",
-          "published_at": 1761428047,
-          "source": "CryptoCompare",
-          "url": "https://en.bitcoinsistemi.com/the-big-whale-has-gone-all-in-accelerating-heavy-buying-in-this-altcoin/",
-          "categories": [
-            "ALTCOIN",
-            "EXCHANGE",
-            "SOL",
-            "TRADING",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Altcoin",
-            "News"
-          ]
-        },
-        {
-          "id": "53634912",
-          "title": "North Korea’s Crypto Theft Reaches $2.83B Since 2024",
-          "body": "A new report by the Multilateral Sanctions Monitoring Team (MSMT) shows that North Korean hackers stole $2.83 billion in cryptocurrency between January 2024 and September 2025. This figure accounts for nearly one-third of the country’s total foreign currency income in 2024. Bybit Exploit Was the Largest Contributor The MSMT, a coalition of 11 countries formed in October 2024, was created to track how North Korea evades international sanctions through cybercrime. Its latest findings reveal that t",
-          "published_at": 1761427736,
-          "source": "CryptoCompare",
-          "url": "https://cryptopotato.com/north-koreas-crypto-theft-reaches-2-83b-since-2024/",
-          "categories": [
-            "ASIA",
-            "ETH",
-            "EXCHANGE",
-            "MACROECONOMICS",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "AA News",
-            "Crypto News",
-            "Hacking",
-            "North Korea"
-          ]
-        },
-        {
-          "id": "53635181",
-          "title": "Sanae Takaichi told Trump the Japan–U.S. alliance is her top priority in their first call since she took office",
-          "body": "Japan’s new Prime Minister Sanae Takaichi held her first official phone call with Trump on Saturday, soon after taking office last week. The call came while Trump was aboard Air Force One, traveling toward Malaysia before heading to Japan and South Korea. Takaichi said she appreciated the congratulations and described the talk as “good and candid.” It was clear from her tone and her own words that she wanted no confusion about her stance on the Japan-U.S. alliance. Takaichi said she intends to p",
-          "published_at": 1761427519,
-          "source": "CryptoCompare",
-          "url": "https://www.cryptopolitan.com/japan-takaichi-trump-alliance-top-priority/",
-          "categories": [
-            "ASIA",
-            "BUSINESS",
-            "EXCHANGE",
-            "MARKET",
-            "MACROECONOMICS",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Economy",
-            "JPY",
-            "USD"
-          ]
-        },
-        {
-          "id": "53634532",
-          "title": "Virtuals Protocol Surges 33% But Bearish Signals Persist Near $1.2 Resistance",
-          "body": "Virtuals Protocol (VIRTUAL) has surged 33.5% in the last 24 hours, breaking above $1 amid a 391% volume spike, signaling short-term bullish momentum. However, bearish technical indicators and market fear",
-          "published_at": 1761426876,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/virtuals-protocol-surges-33-but-bearish-signals-persist-near-1-2-resistance/",
-          "categories": [
-            "BLOCKCHAIN",
-            "MARKET",
-            "TRADING"
-          ],
-          "tags": [
-            "News"
-          ]
-        },
-        {
-          "id": "53634304",
-          "title": "Bitcoin Core Discloses Four Low-Severity Vulnerabilities with Fixes in v30.0 Release",
-          "body": "The Bitcoin Core team has disclosed four new low-severity security advisories for the Bitcoin network in 2025, addressing issues like CPU denial-of-service, rare crashes on 32-bit systems, and disk-filling vulnerabilities",
-          "published_at": 1761426435,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/bitcoin-core-discloses-four-low-severity-vulnerabilities-with-fixes-in-v30-0-release/",
-          "categories": [
-            "BTC",
-            "MARKET",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Analysis",
-            "News",
-            "BTC",
-            "Core"
-          ]
-        },
-        {
-          "id": "53634205",
-          "title": "Pundit Sends Strong Warning to XRP Holders. Here’s why",
-          "body": "A new scam targeting cryptocurrency users has surfaced, disguised as an official communication from Ledger, one of the world’s leading hardware wallet providers. Jungle Inc (@jungleincxrp), a well-known figure in the XRP community and a prominent crypto content creator, was among the first to raise the alarm after sharing an image of the fake letter on X. Warning: a friend just received a letter in the mail from hackers pretending to be from Ledger. You scan the QR code and give them access to y",
-          "published_at": 1761426170,
-          "source": "CryptoCompare",
-          "url": "https://timestabloid.com/pundit-sends-strong-warning-to-xrp-holders-heres-why/",
-          "categories": [
-            "BUSINESS",
-            "WALLET",
-            "XRP",
-            "RESEARCH",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Cryptocurrency",
-            "News",
-            "XRP",
-            "XRP Holders"
-          ]
-        },
-        {
-          "id": "53634136",
-          "title": "Bitcoin Latest Green Candle Sparks Questions – Is A Real Reversal In Sight?",
-          "body": "CryptoWzrd, in his latest daily technical outlook, noted that Bitcoin managed to close in the green, but the candle remains indecisive, signaling that a clear reversal is yet to form. He added that more healthy bullish candles are needed to confirm a shift in momentum. For now, his attention is on the lower timeframes, where he plans to look for the next long opportunity once the current position is secured. Indecisive Daily Close Reflects Market Uncertainty After CPI Data Crypto analyst CryptoW",
-          "published_at": 1761426010,
-          "source": "CryptoCompare",
-          "url": "https://www.newsbtc.com/news/bitcoin/bitcoin-reversal-in-sight/",
-          "categories": [
-            "ALTCOIN",
-            "BTC",
-            "MARKET",
-            "TRADING",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Bitcoin",
-            "altcoins",
-            "bitcoin",
-            "bitcoin dominance",
             "Bitcoin news",
             "bitcoin price",
             "btc",
             "BTC news",
             "btc price",
-            "btc.d",
             "btcusd",
             "BTCUSDT",
-            "CryptoWzrd",
-            "US CPI Data"
+            "CryptosRus",
+            "Daan Crypto Trades",
+            "Luca",
+            "OI",
+            "open interest"
           ]
         },
         {
-          "id": "53634170",
-          "title": "Is VIRTUAL’s 33% rally a trap? Here’s what on-chain signals say",
-          "body": "Despite the bullish technical indicators, the price action showed VIRTUAL bears still have the upper hand.",
-          "published_at": 1761426003,
+          "id": "53792315",
+          "title": "Arbitrum beats Ethereum in inflows: Yet ARB price lags – Here’s why",
+          "body": "Despite record activity, Arbitrum’s token stalls...Can sentiment shift soon?",
+          "published_at": 1761764448,
           "source": "CryptoCompare",
-          "url": "https://ambcrypto.com/is-virtuals-33-rally-a-trap-heres-what-on-chain-signals-say/",
+          "url": "https://ambcrypto.com/arbitrum-beats-ethereum-in-inflows-yet-arb-price-lags-heres-why/",
           "categories": [
             "ALTCOIN",
-            "TRADING"
+            "ETH",
+            "TRADING",
+            "ARB",
+            "CRYPTOCURRENCY"
           ],
           "tags": [
             "Altcoin",
             "News",
             "News 1",
             "Social",
-            "Trading View",
-            "ambcrypto"
+            "Trading View"
           ]
         },
         {
-          "id": "53634093",
-          "title": "Bitcoin Core Drops Four New Security Alerts, What’s at Risk?",
-          "body": "The Bitcoin core team has revealed four new advisories for the Bitcoin network, but the issues have now been fixed in the most recent Bitcoin upgrade.",
-          "published_at": 1761425940,
+          "id": "53792286",
+          "title": "Solana Treasury Expands To New Heights – Here’s How Much Is Now Held By Entities",
+          "body": "As Tuesday drew to a close, the broader cryptocurrency market experienced a bearish move, causing major digital assets such as Solana to lose their renewed bullish momentum. Despite the ongoing fluctuations in the price of SOL, the institutional interest in the leading altcoin continues to grow stronger through the SOL-based treasury. A Significant Portion Of Solana Held In Treasury Reserve In the pursuit of a digital asset-based strategic treasury reserve, Solana continues to demonstrate its po",
+          "published_at": 1761764437,
           "source": "CryptoCompare",
-          "url": "https://u.today/bitcoin-core-drops-four-new-security-alerts-whats-at-risk",
+          "url": "https://bitcoinist.com/solana-treasury-at-new-heights/",
           "categories": [
-            "BTC",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Bitcoin",
-            "BTC"
-          ]
-        },
-        {
-          "id": "53634073",
-          "title": "SEC’s Mike Selig Expected to Lead U.S. Commodities Watchdog, Expansion into Crypto Sector Looms",
-          "body": "Mike Selig from SEC may lead the CFTC with a focus on crypto regulation. This leadership shift signifies a broader mandate for the CFTC into digital currencies. Continue Reading: SEC’s Mike Selig Expected to Lead U.S. Commodities Watchdog, Expansion into Crypto Sector Looms The post SEC’s Mike Selig Expected to Lead U.S. Commodities Watchdog, Expansion into Crypto Sector Looms appeared first on COINTURK NEWS .",
-          "published_at": 1761425900,
-          "source": "CryptoCompare",
-          "url": "https://en.coin-turk.com/secs-mike-selig-expected-to-lead-u-s-commodities-watchdog-expansion-into-crypto-sector-looms/",
-          "categories": [
-            "COMMODITY",
             "REGULATION",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Cryptocurrency Law"
-          ]
-        },
-        {
-          "id": "53634067",
-          "title": "JPMorgan Plans to Accept Bitcoin as Collateral for Accredited Client Loans",
-          "body": "JPMorgan is set to allow accredited institutional and high-net-worth clients to use Bitcoin and Ethereum as collateral for loans, marking a key step in mainstream crypto adoption. This service, starting",
-          "published_at": 1761425853,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/jpmorgan-plans-to-accept-bitcoin-as-collateral-for-accredited-client-loans/",
-          "categories": [
-            "BTC",
-            "ETH",
             "SOL",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Bitcoin",
-            "Ethereum",
-            "News",
-            "BTC",
-            "ETH",
-            "SOL"
-          ]
-        },
-        {
-          "id": "53633988",
-          "title": "Trump Names SEC Crypto Task Force Head Selig as Next Nominee to Run U.S. CFTC",
-          "body": "If confirmed, current SEC official Mike Selig would take over the U.S. commodities watchdog as it's poised to be given wide authority over crypto.",
-          "published_at": 1761425587,
-          "source": "CryptoCompare",
-          "url": "https://www.coindesk.com/policy/2025/10/25/frame-trump-names-sec-crypto-task-force-head-selig-as-next-nominee-to-run-u-s-cftc",
-          "categories": [
-            "REGULATION",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Policy",
-            "U.S. Commodity Futures Trading Commission",
-            "Donald Trump",
-            "Regulation",
-            "News"
-          ]
-        },
-        {
-          "id": "53633838",
-          "title": "NEAR Protocol Faces Community Split Over Potential Inflation Cut After Failed Vote",
-          "body": "The NEAR Protocol community is debating a proposal to cut annual token inflation from 5% to 2.5% to align emissions with network fees, amid concerns over the protocol’s financial sustainability.",
-          "published_at": 1761425414,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/near-protocol-faces-community-split-over-potential-inflation-cut-after-failed-vote/",
-          "categories": [
-            "BLOCKCHAIN",
-            "ETH",
-            "NEAR",
+            "DIGITAL ASSET TREASURY",
             "MACROECONOMICS",
             "CRYPTOCURRENCY"
           ],
           "tags": [
-            "Ethereum",
-            "News",
-            "Core",
-            "etc",
-            "ETH",
-            "NEAR",
-            "SOL"
-          ]
-        },
-        {
-          "id": "53634085",
-          "title": "Near’s emission vote misses threshold, triggering governance crisis",
-          "body": "NEAR Protocol, the Layer 1 blockchain, is facing a major disagreement amongst its community members over inflation reduction. The community is divided about how many new NEAR tokens should be printed every year. For months, people in the community have been talking about cutting the network’s inflation rate from 5% to 2.5%. The goal was to balance NEAR token emissions with generated fees. Near is operating at a loss At the moment , the NEAR Protocol pays around $140 million worth of tokens annua",
-          "published_at": 1761424828,
-          "source": "CryptoCompare",
-          "url": "https://www.cryptopolitan.com/nears-inflation-reduction-plan-stalls/",
-          "categories": [
-            "BLOCKCHAIN",
-            "BUSINESS",
-            "NEAR",
-            "MACROECONOMICS",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "News",
-            "ETH",
-            "HYPE",
-            "NEAR"
-          ]
-        },
-        {
-          "id": "53633466",
-          "title": "Solana Contributor Questions CZ’s Push for Kyrgyzstan CBDC Amid Privacy Concerns",
-          "body": "Kyrgyzstan’s CBDC pilot, supported by Binance founder Changpeng Zhao (CZ), has drawn sharp criticism from Solana contributor Mert Mumtaz, who views central bank digital currencies as a threat to financial",
-          "published_at": 1761424511,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/solana-contributor-questions-czs-push-for-kyrgyzstan-cbdc-amid-privacy-concerns/",
-          "categories": [
-            "BTC",
-            "SOL",
-            "BNB",
-            "MACROECONOMICS",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "News",
-            "BNB",
-            "BTC",
-            "Core",
-            "ETH",
-            "SOL"
-          ]
-        },
-        {
-          "id": "53633284",
-          "title": "Lee Predicts a Strong Crypto Rally by 2025’s End",
-          "body": "Tom Lee predicts a strong crypto rally by 2025's end. Reduced open positions signal potential market recovery. Continue Reading: Lee Predicts a Strong Crypto Rally by 2025’s End The post Lee Predicts a Strong Crypto Rally by 2025’s End appeared first on COINTURK NEWS .",
-          "published_at": 1761424160,
-          "source": "CryptoCompare",
-          "url": "https://en.coin-turk.com/lee-predicts-a-strong-crypto-rally-by-2025s-end/",
-          "categories": [
-            "MARKET",
-            "TRADING",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Cryptocurrency News"
-          ]
-        },
-        {
-          "id": "53633534",
-          "title": "Helius Labs’ CEO calls out Binance's CZ for endorsing and contributing to Kyrgyzstan's CBDC efforts",
-          "body": "Mert Mumtaz, CEO of Helius Labs is one of those who sees CBDC as a step backward, one that puts custody of personal finances in the hands of the government. The Solana network contributor’s latest disapproval came as a vocal reaction to Changpeng Zhao’s support for a Kyrgyzstan government CBDC pilot. Several hours ago, CZ took to X to reveal what he called “updates from Kyrgyzstan.” In the post, he listed updates such as how the country’s national stablecoin has launched on BNB Chain, how the CB",
-          "published_at": 1761423652,
-          "source": "CryptoCompare",
-          "url": "https://www.cryptopolitan.com/helius-labs-ceo-against-kyrgyzstan-cbdc/",
-          "categories": [
-            "BLOCKCHAIN",
-            "EXCHANGE",
-            "REGULATION",
-            "BNB",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "News",
-            "Kyrgyzstan"
-          ]
-        },
-        {
-          "id": "53632960",
-          "title": "JPMorgan Plans to Accept Bitcoin as Collateral for Institutional Loans by Late 2025",
-          "body": "JPMorgan is reversing its anti-crypto stance by allowing institutional clients to use Bitcoin and Ethereum as collateral for loans starting late 2025. This policy shift, despite CEO Jamie Dimon’s past",
-          "published_at": 1761423448,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/jpmorgan-plans-to-accept-bitcoin-as-collateral-for-institutional-loans-by-late-2025/",
-          "categories": [
-            "BTC",
-            "ETH",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Ethereum",
-            "News",
-            "BTC",
-            "ETH"
-          ]
-        },
-        {
-          "id": "53632776",
-          "title": "Generative Music: OpenAI’s Astonishing New Tool Revolutionizes Audio Creation",
-          "body": "BitcoinWorld Generative Music: OpenAI’s Astonishing New Tool Revolutionizes Audio Creation In the fast-evolving digital landscape, where blockchain innovations are constantly redefining ownership and creativity, the latest buzz from OpenAI signals a profound shift in how we perceive and produce audio. Imagine a world where unique musical compositions can be conjured from simple text prompts, ready to be minted as exclusive digital assets or enhance virtual experiences. This isn’t science fiction",
-          "published_at": 1761423010,
-          "source": "CryptoCompare",
-          "url": "https://bitcoinworld.co.in/generative-music-openai-tool/",
-          "categories": [
-            "BLOCKCHAIN",
-            "BTC",
-            "BUSINESS",
-            "MARKET",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "AI News",
-            "AI",
-            "Generative Music",
-            "Music Technology",
-            "OpenAI",
-            "Tech News"
-          ]
-        },
-        {
-          "id": "53632727",
-          "title": "Weak ISM Manufacturing Data May Signal Longer Bitcoin Cycle",
-          "body": "Bitcoin market cycles may extend longer due to persistent weakness in the ISM manufacturing PMI, which has historically signaled cycle peaks. With the index below 50 for seven months, analysts",
-          "published_at": 1761422863,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/weak-ism-manufacturing-data-may-signal-longer-bitcoin-cycle/",
-          "categories": [
-            "BTC",
-            "MARKET",
-            "MACROECONOMICS",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "News",
-            "BTC"
-          ]
-        },
-        {
-          "id": "53632689",
-          "title": "Here’s Why XRP Is Currently Rising, Beating Bitcoin and Top 10 Cryptos",
-          "body": "XRP has once again proven its strength in the digital asset market. The token is trading at $2.61, marking an approximately 5% increase in the last 24 hours and standing out as the best performer among the top ten cryptocurrencies. Bitcoin, the second-best performer, has risen by only 0.86% in the same period. This contrast highlights how XRP’s current momentum is being fueled by a wave of positive developments surrounding Ripple and its growing network of institutional initiatives. Ripple’s Exp",
-          "published_at": 1761422738,
-          "source": "CryptoCompare",
-          "url": "https://timestabloid.com/here-is-why-xrp-currently-rising-beating-bitcoin-and-top-10-cryptos/",
-          "categories": [
-            "BTC",
-            "BUSINESS",
-            "TRADING",
-            "XRP",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Cryptocurrency",
-            "News",
-            "Bitcoin",
-            "XRP",
-            "XRP Price"
-          ]
-        },
-        {
-          "id": "53632626",
-          "title": "Top Trader: When XRP Hits $1000, My 1307 XRP Will be Worth $1.3 Million",
-          "body": "Sometimes, a single social media post can ignite discussions far beyond its playful tone. That’s what happened when popular crypto enthusiast Diep Sanh shared a lighthearted yet thought-provoking statement on X. In his post, Diep Sanh projected that if XRP ever reached $1,000, his 1,307 XRP holdings would be worth $1.3 million, a fortune he pledged to donate almost entirely to charity, keeping only $100,000 “to buy ice cream.” The post resonated widely across the XRP community, blending humor, a",
-          "published_at": 1761422714,
-          "source": "CryptoCompare",
-          "url": "https://timestabloid.com/top-trader-when-xrp-hits-1000-my-1307-xrp-will-be-worth-1-3-million/",
-          "categories": [
-            "BUSINESS",
-            "MARKET",
-            "TRADING",
-            "XRP",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Cryptocurrency",
-            "News",
-            "XRP",
-            "XRP Price",
-            "XRP Price Prediction"
-          ]
-        },
-        {
-          "id": "53632634",
-          "title": "Trump’s Pardon of Binance Founder CZ May Signal Crypto’s Expanding Washington Influence",
-          "body": "President Donald Trump pardoned Changpeng Zhao, known as CZ, the former Binance CEO, after his four-month prison sentence for anti-money laundering violations. This decision highlights the influence of lobbying and",
-          "published_at": 1761422709,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/trumps-pardon-of-binance-founder-cz-may-signal-cryptos-expanding-washington-influence/",
-          "categories": [
-            "EXCHANGE",
-            "REGULATION",
-            "BNB",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "News"
-          ]
-        },
-        {
-          "id": "53632517",
-          "title": "Crypto Market Recap: $100 Billion Swings and XRP’s Late Surge",
-          "body": "The crypto market saw intense volatility over the past week, briefly gaining and losing over $100 billion before ending with a 3.5% rise. Bitcoin and Ethereum: Turbulent Price Action The global crypto economy displayed extreme volatility over the past seven days, witnessing a gain of over $100 billion in total market capitalization, only to have",
-          "published_at": 1761422490,
-          "source": "CryptoCompare",
-          "url": "https://news.bitcoin.com/crypto-market-recap-100-billion-swings-and-xrps-late-surge/",
-          "categories": [
-            "BTC",
-            "MARKET",
-            "TRADING",
-            "XRP",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Markets and Prices",
-            "markets and prices",
-            "trading"
-          ]
-        },
-        {
-          "id": "53632969",
-          "title": "Trump pardoned Changpeng Zhao after lobbying efforts tied to people close to him",
-          "body": "President Donald Trump’s pardon of Changpeng “CZ” Zhao has turned into a full-blown case study in how money and access now move power in Washington. CZ, who just a year ago was serving a four-month prison sentence for allowing money launderers to use his crypto platform Binance, is now walking free and back in the corridors of influence. His company was fined $4 billion, and he personally paid $50 million while stepping down as CEO. Yet this week, his name is cleared, and the man behind one of t",
-          "published_at": 1761422441,
-          "source": "CryptoCompare",
-          "url": "https://www.cryptopolitan.com/trump%e2%80%91are-rewriting-the-k-street-playbook/",
-          "categories": [
-            "BUSINESS",
-            "EXCHANGE",
-            "REGULATION",
-            "BNB",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Business",
-            "Binance"
-          ]
-        },
-        {
-          "id": "53632512",
-          "title": "First U.S. Spot XRP ETF Surpasses $100M in Assets Under Management",
-          "body": "In Brazil, the Hashdex Nasdaq XRP (XRPH11) has accumulated around $52 million in assets, despite launching first.",
-          "published_at": 1761422403,
-          "source": "CryptoCompare",
-          "url": "https://www.coindesk.com/markets/2025/10/25/first-u-s-spot-xrp-etf-surpasses-usd100m-in-assets-under-management",
-          "categories": [
-            "MARKET",
-            "XRP",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Markets",
-            "XRP",
+            "Uncategorized",
+            "Altcoin",
+            "Binance Smart Chain",
+            "BSC",
+            "Dapp",
+            "Decentralized Application",
+            "Decentralized Exchange",
+            "DEX",
             "ETF",
-            "REX ETF",
+            "Ethereum",
+            "Hyperliquid",
+            "SOL",
+            "SOL news",
+            "SOL price",
+            "solana",
+            "Solana news",
+            "Solana price",
+            "Solana Staking Exchange-Traded Fund",
+            "Solana Treasury",
+            "solusd",
+            "SOLUSDT",
+            "Ted Pillows"
+          ]
+        },
+        {
+          "id": "53792324",
+          "title": "Zero Knowledge Proof (ZKP) Reimagines Privacy in the AI Age! Buzz Grows as Whitelist Phase Nears",
+          "body": "The Zero Knowledge Proof (ZKP) ecosystem continues to gain traction among blockchain enthusiasts as conversations expand around its upcoming whitelist initiative. With interest mounting in what many consider one of the best upcoming crypto tokens, the project’s unique approach to combining artificial intelligence (AI) with decentralized computation has become a focal point within crypto communities. Its growing visibility reflects a wider trend of market participants seeking top crypto presales ",
+          "published_at": 1761764433,
+          "source": "CryptoCompare",
+          "url": "https://timestabloid.com/zero-knowledge-proof-zkp-reimagines-privacy-in-the-ai-age/",
+          "categories": [
+            "BLOCKCHAIN",
+            "MARKET",
+            "REGULATION",
+            "SPONSORED",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Finance",
             "News"
           ]
         },
         {
-          "id": "53632968",
-          "title": "Ripple (XRP) and Mutuum Finance (MUTM) Stand Out as the Top Cryptos to Buy Before November 2025",
-          "body": "As the cryptocurrency market is approaching the final months of 2025, investors are looking for the best crypto to purchase today prior to the next significant breakthrough. XRP is continuing to gain institutional attention due to its growing cross-border payment collaborations and growing worldwide adoption from global financial institutions. With it is also Mutuum Finance (MUTM) as a dark horse, a very promising DeFi cryptocurrency in Phase 6 of presale. The tokens cost $0.035 and the phase is",
-          "published_at": 1761422400,
+          "id": "53792261",
+          "title": "Crucial Update: Powell on Labor Market Cooling and Economic Stability",
+          "body": "BitcoinWorld Crucial Update: Powell on Labor Market Cooling and Economic Stability Federal Reserve Chair Jerome Powell recently delivered a crucial update that has many people talking about the economy. He confirmed that the labor market cooling trend is continuing, suggesting no significant shifts in the overall economic outlook. For anyone following the financial world, or simply wondering about their job prospects and the cost of living, understanding this development is key. What Exactly Doe",
+          "published_at": 1761764412,
           "source": "CryptoCompare",
-          "url": "https://www.cryptopolitan.com/ripple-xrp-and-mutuum-finance-mutm-stand-out-as-the-top-cryptos-to-buy-before-november-2025/",
+          "url": "https://bitcoinworld.co.in/powell-labor-market-cooling/",
           "categories": [
             "BUSINESS",
+            "FIAT",
             "MARKET",
             "TRADING",
-            "XRP",
-            "CRYPTOCURRENCY"
+            "MACROECONOMICS"
           ],
           "tags": [
-            "Press Release"
+            "Crypto News",
+            "economic outlook",
+            "Federal Reserve",
+            "Jerome Powell",
+            "labor market",
+            "US economy"
           ]
         },
         {
-          "id": "53632724",
-          "title": "Top crypto price predictions: Jupiter, Hyperliquid, XRP",
-          "body": "The crypto market did relatively well during the weekend as the market capitalization jumped to over $3.77 trillion. Bitcoin remained above $111,000, while other top coins like Ethereum and Solana were up significantly from its lowest level this month. This article provides the forecasts for some notable coins like Jupiter (JUP), Hyperliquid (HYPER), and XRP. Jupiter price prediction Jupiter is a top player in the Solana ecosystem, where it runs one of the biggest perpetual exchanges. It has lau",
-          "published_at": 1761421639,
+          "id": "53792392",
+          "title": "Bitcoin tumbles to $109.2K after Fed 0.25% rate cut and decision to end QT",
+          "body": "Bitcoin price fell to $109,200 despite the Federal Reserve confirming a 0.25% interest rate cut and the end of quantitative easing. Traders expect future rate cuts, so why is BTC falling?",
+          "published_at": 1761764401,
           "source": "CryptoCompare",
-          "url": "https://invezz.com/news/2025/10/25/top-crypto-price-predictions-jupiter-hyperliquid-xrp/",
+          "url": "https://cointelegraph.com/news/bitcoin-tumbles-to-dollar109-2k-after-fed-0-25percent-rate-cut-and-decision-to-end-qt?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
           "categories": [
             "BTC",
-            "MARKET",
+            "FIAT",
             "TRADING",
-            "XRP",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Altcoins",
-            "Crypto",
-            "Trading Ideas",
-            "Bitcoin",
-            "Ethereum"
-          ]
-        },
-        {
-          "id": "53632411",
-          "title": "Core Scientific’s Q3 2025 revenue fell to $81.1 million as it shifted focus from Bitcoin mining",
-          "body": "Core Scientific has reported a decline in third-quarter revenue as the US-based digital infrastructure provider transitions away from Bitcoin mining and toward high-density colocation (HDC) services, while its pending $9 billion all-stock acquisition by CoreWeave continues to hang in the balance. The Nasdaq-listed company saw its total revenue for the fiscal third quarter of 2025 fall to $81.1 million, down from $95.4 million a year earlier. A 55% decline in Bitcoin mined led to digital asset se",
-          "published_at": 1761421530,
-          "source": "CryptoCompare",
-          "url": "https://www.cryptopolitan.com/core-scientific-reports-revenue-drop/",
-          "categories": [
-            "BTC",
-            "BUSINESS",
-            "EXCHANGE",
-            "MINING",
-            "TRADING",
-            "RESEARCH",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "News",
-            "Core Scientific",
-            "CoreWeave"
-          ]
-        },
-        {
-          "id": "53632075",
-          "title": "ISM Manufacturing PMI suggests Bitcoin cycle may extend beyond historical norm",
-          "body": "Bitcoin’s market cycles may stretch longer as ISM manufacturing data remains weak, hinting at extended macro headwinds and slower business recovery.",
-          "published_at": 1761421276,
-          "source": "CryptoCompare",
-          "url": "https://cointelegraph.com/news/ism-manufacturing-pmi-bitcoin-cycle-extended?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-          "categories": [
-            "BTC",
-            "BUSINESS",
-            "MARKET",
             "MACROECONOMICS",
             "CRYPTOCURRENCY"
           ],
@@ -814,36 +172,716 @@
           ]
         },
         {
-          "id": "53631806",
-          "title": "R. Kiyosaki names this crypto as the next big Bitcoin opportunity to take advantage of",
-          "body": "Financial educator Robert Kiyosaki has stressed that Ethereum ( ETH ) has the potential to deliver gains similar to Bitcoin ( BTC ). The Rich Dad Poor Dad author identified Ethereum as the next big opportunity, comparable to Bitcoin when it was priced at $4,000. Indeed, his outlook comes as Ethereum continues to find ways of trading around $5,000 following recent volatility. As of press time, the second-ranked cryptocurrency was trading at $3,958, up 1.2% in the past 24 hours. ETH one-week price",
-          "published_at": 1761420807,
+          "id": "53792266",
+          "title": "Fed Rate Cut and QT End May Bolster Bitcoin in Cautious Crypto Markets",
+          "body": "The U.S. Federal Reserve cut interest rates by 25 basis points to 3.75%-4.00%, ending quantitative tightening by December 1. This first cut since 2023 boosts liquidity for risk assets like",
+          "published_at": 1761764364,
           "source": "CryptoCompare",
-          "url": "https://finbold.com/r-kiyosaki-names-this-crypto-as-the-next-big-bitcoin-opportunity-to-take-advantage-of/",
+          "url": "https://en.coinotag.com/fed-rate-cut-and-qt-end-may-bolster-bitcoin-in-cautious-crypto-markets/",
           "categories": [
             "BTC",
-            "BUSINESS",
             "ETH",
+            "MARKET",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Bitcoin",
+            "Ethereum",
+            "News",
+            "BTC",
+            "ETH",
+            "FLOW"
+          ]
+        },
+        {
+          "id": "53792202",
+          "title": "Bitcoin Plunged Then Recovered During Fed Chair Powell’s Speech! Here’s Why",
+          "body": "Following FED Chairman Jerome Powell's press statement following the 25 basis point interest rate cut, there was a significant drop in the Bitcoin price at first. The decline stemmed from Jerome Powell's statement in December that a rate cut wasn't a certainty. Previously, all financial markets were expecting another 25 basis point cut in December. Powell added that they were unable to access data and see what was ahead due to the government shutdown. You can see all the details of Powell's spee",
+          "published_at": 1761764287,
+          "source": "CryptoCompare",
+          "url": "https://en.bitcoinsistemi.com/bitcoin-plunged-then-recovered-during-fed-chair-powells-speech-heres-why/",
+          "categories": [
+            "BTC",
+            "MARKET",
+            "TRADING",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Bitcoin",
+            "Economy",
+            "News"
+          ]
+        },
+        {
+          "id": "53792147",
+          "title": "December Rate Cut: Powell’s Crucial Warning on Market Certainty",
+          "body": "BitcoinWorld December Rate Cut: Powell’s Crucial Warning on Market Certainty The financial world is abuzz, and for good reason. Federal Reserve Chairman Jerome Powell recently delivered a statement that sent ripples across markets: a December rate cut is far from guaranteed. This declaration introduces a significant layer of uncertainty into economic forecasts and investment strategies, especially for those tracking cryptocurrency markets. Why is a December Rate Cut So Crucial for the Economy? W",
+          "published_at": 1761764110,
+          "source": "CryptoCompare",
+          "url": "https://bitcoinworld.co.in/december-rate-cut-powell/",
+          "categories": [
+            "BUSINESS",
+            "FIAT",
+            "MARKET",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Crypto News",
+            "economic outlook",
+            "Federal Reserve",
+            "interest rates",
+            "Jerome Powell",
+            "monetary policy"
+          ]
+        },
+        {
+          "id": "53792151",
+          "title": "Bank of America Raises Apple Price Target to $320 on AI Potential and iPhone 17 Demand",
+          "body": "Bank of America has raised its price target on Apple stock to $320 from $270, maintaining a buy rating ahead of the company’s fiscal fourth-quarter earnings. This adjustment signals a",
+          "published_at": 1761764103,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/bank-of-america-raises-apple-price-target-to-320-on-ai-potential-and-iphone-17-demand/",
+          "categories": [
+            "BUSINESS",
+            "FIAT",
+            "MARKET",
+            "TRADING"
+          ],
+          "tags": [
+            "Analysis",
+            "News"
+          ]
+        },
+        {
+          "id": "53791968",
+          "title": "Fed cuts rates by 25 bps, ends QT by December — Crypto eyes dovish turn",
+          "body": "The Fed has cut interest rates by 25 basis points and plans to end quantitative tightening by December, marking its first shift toward easing since 2023. crypto traders remain cautious.",
+          "published_at": 1761763839,
+          "source": "CryptoCompare",
+          "url": "https://ambcrypto.com/fed-cuts-rates-by-25-bps-ends-qt-by-december-crypto-eyes-dovish-turn/",
+          "categories": [
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News",
+            "News 1",
+            "Social",
+            "Trading View"
+          ]
+        },
+        {
+          "id": "53791981",
+          "title": "Best Cheap Crypto to Buy Now: Noomez ($NNZ) Presale Price Offers Massive Upside",
+          "body": "The best cheap crypto to buy now is officially live Noomez ($NNZ) . It’s a fully transparent, deflationary presale built across 28 on-chain stages, starting at just $0.00001 and rising with each completed phase. Every step is tracked through the Noom Gauge, which records live sales, burns, and vault unlocks in real time. Backed by an independent audit, locked liquidity, and a fixed 280 billion supply , Noomez shows progress you can actually verify. Guided by Nik’s mission to unite the Noomies an",
+          "published_at": 1761763819,
+          "source": "CryptoCompare",
+          "url": "https://timestabloid.com/best-cheap-crypto-to-buy-now-noomez-nnz-presale-price/",
+          "categories": [
+            "BUSINESS",
+            "REGULATION",
+            "SPONSORED",
             "TRADING",
             "CRYPTOCURRENCY"
           ],
           "tags": [
-            "Cryptocurrency news",
-            "Bitcoin",
-            "BTC",
-            "cryptocurrency",
-            "Ethereum"
+            "Finance",
+            "News"
           ]
         },
         {
-          "id": "53631769",
-          "title": "Here’s What to Expect for XRP Once U.S. Government Reboots",
-          "body": "When the U.S. government resumes operations, the effects could reach beyond Washington and into the cryptocurrency market. One area of focus is the pending review of crypto-based exchange-traded funds (ETFs), where delays caused by the shutdown have stalled decisions on several digital asset products . Among these, XRP is emerging as a potential frontrunner for accelerated approval once regulatory activity restarts. X Finance Bull (@Xfinancebull), a respected crypto commentator, highlighted this",
-          "published_at": 1761420714,
+          "id": "53791854",
+          "title": "Bitwise Solana ETF Sees $69.5 Million Inflows on Debut Day",
+          "body": "The Bitwise Solana ETF (BSOL) launched on October 28, attracting $69.5 million in inflows on its debut day, the highest first-day volume among over 800 ETFs this year. This reflects",
+          "published_at": 1761763577,
           "source": "CryptoCompare",
-          "url": "https://timestabloid.com/heres-what-to-expect-for-xrp-once-u-s-government-reboots/",
+          "url": "https://en.coinotag.com/bitwise-solana-etf-sees-69-5-million-inflows-on-debut-day/",
+          "categories": [
+            "SOL",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Guides",
+            "News",
+            "SOL"
+          ]
+        },
+        {
+          "id": "53791807",
+          "title": "Phenomenal BTC Price Surge: Bitcoin Soars Above $112,000",
+          "body": "BitcoinWorld Phenomenal BTC Price Surge: Bitcoin Soars Above $112,000 The cryptocurrency world is buzzing with extraordinary news! Bitcoin (BTC) has once again captured headlines with a significant move, pushing its value above the remarkable $112,000 threshold. This latest BTC price surge is sending ripples across global markets, sparking excitement and discussion among investors and enthusiasts alike. It marks a pivotal moment, reminding us of Bitcoin’s inherent volatility and its potential fo",
+          "published_at": 1761763510,
+          "source": "CryptoCompare",
+          "url": "https://bitcoinworld.co.in/btc-price-surge-above/",
+          "categories": [
+            "BTC",
+            "BUSINESS",
+            "MARKET",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Crypto News",
+            "BITCOIN",
+            "Crypto news",
+            "CRYPTOCURRENCY",
+            "Investment",
+            "Market Analysis"
+          ]
+        },
+        {
+          "id": "53792388",
+          "title": "Brazilian solar company Thopen is considering Bitcoin mining to utilize its extra power",
+          "body": "Thopen, a Brazilian solar energy company, is exploring Bitcoin mining as a way to utilize the excess energy generated by the country’s growing renewable energy sector. The company’s CEO, Gustavo Ribeiro, shared this new strategic approach during an interview with BN Americas. Ribeiro, who leads Thopen and its main owner, Pontal Energy, told BN Americas on Wednesday, October 29, that they are considering exploring the Bitcoin mining space. When reporters from the news platform asked how Thopen in",
+          "published_at": 1761763500,
+          "source": "CryptoCompare",
+          "url": "https://www.cryptopolitan.com/brazils-thopen-eyes-bitcoin-mining/",
+          "categories": [
+            "BTC",
+            "BUSINESS",
+            "COMMODITY",
+            "MINING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News",
+            "BTC"
+          ]
+        },
+        {
+          "id": "53791706",
+          "title": "Bitwise Solana ETF Hits $69.5 Million Inflows on First Trading Day",
+          "body": "The Solana ETF launched by Bitwise on Tuesday is already off to a good start as it achieves a notable $69.5 million in first-day inflows.",
+          "published_at": 1761763262,
+          "source": "CryptoCompare",
+          "url": "https://u.today/bitwise-solana-etf-hits-695-million-inflows-on-first-trading-day",
+          "categories": [
+            "SOL",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Solana"
+          ]
+        },
+        {
+          "id": "53791684",
+          "title": "Western Union Stablecoin: A Pivotal Move Towards Digital Currency",
+          "body": "BitcoinWorld Western Union Stablecoin: A Pivotal Move Towards Digital Currency The world of finance is constantly evolving, and a significant player is making waves. Western Union, a global leader in money transfers, has taken a crucial step into the digital asset space. The company recently filed for a trademark for WUUSD, a move that hints strongly at their ambitions to launch a Western Union stablecoin . This development could reshape how we think about traditional financial services and thei",
+          "published_at": 1761763210,
+          "source": "CryptoCompare",
+          "url": "https://bitcoinworld.co.in/western-union-stablecoin-filing/",
+          "categories": [
+            "BLOCKCHAIN",
+            "MARKET",
+            "SOL",
+            "TECHNOLOGY",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Crypto News",
+            "CRYPTOCURRENCY",
+            "Digital Currency",
+            "Stablecoin",
+            "Trademark",
+            "Western Union"
+          ]
+        },
+        {
+          "id": "53791690",
+          "title": "China’s AI Push May Undermine US Tech Leadership, Investor Warns",
+          "body": "China’s rapid advancements in artificial intelligence could soon surpass U.S. tech giants, potentially triggering market disruptions and sell-offs in companies like Microsoft and Nvidia, according to UniSuper’s Chief Investment Officer",
+          "published_at": 1761763209,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/chinas-ai-push-may-undermine-us-tech-leadership-investor-warns/",
+          "categories": [
+            "ASIA",
+            "BUSINESS",
+            "MARKET"
+          ],
+          "tags": [
+            "Analysis",
+            "News",
+            "Core"
+          ]
+        },
+        {
+          "id": "53791623",
+          "title": "Company’s Acquisition Strategy Raises Questions in Industry",
+          "body": "A company's strategic acquisition sparks industry discussions amidst fierce competition. Experts examine the potential market impacts, predicting shifts in competitive dynamics. Continue Reading: Company’s Acquisition Strategy Raises Questions in Industry The post Company’s Acquisition Strategy Raises Questions in Industry appeared first on COINTURK NEWS .",
+          "published_at": 1761763103,
+          "source": "CryptoCompare",
+          "url": "https://en.coin-turk.com/companys-acquisition-strategy-raises-questions-in-industry/",
+          "categories": [
+            "MARKET"
+          ],
+          "tags": [
+            "Bitcoin (BTC)"
+          ]
+        },
+        {
+          "id": "53791567",
+          "title": "FED Chair Jerome Powell Speaks Following Interest Rate Decision – LIVE",
+          "body": "The Fed lowered its policy rate by 25 basis points to a range of 3.75%-4.00%. This decision marked the second consecutive rate cut, in line with expectations. However, two FOMC members voted against the decision, signaling a deepening divide within the board. Here are the key highlights from Powell's speech: Current data suggest the outlook has not changed much. The labor market appears to be gradually cooling down. Inflation levels remain slightly high. Current data show the economy growing mod",
+          "published_at": 1761763031,
+          "source": "CryptoCompare",
+          "url": "https://en.bitcoinsistemi.com/fed-chair-jerome-powell-speaks-following-interest-rate-decision-live/",
           "categories": [
             "BUSINESS",
+            "MARKET",
+            "REGULATION",
+            "DIGITAL ASSET TREASURY",
+            "MACROECONOMICS"
+          ],
+          "tags": [
+            "Economy",
+            "News"
+          ]
+        },
+        {
+          "id": "53792198",
+          "title": "Why is Arcblock cryptocurrency down after hitting a two-month high?",
+          "body": "After weeks of strong momentum, Arcblock cryptocurrency (ABT) has seen a sharp pullback, losing nearly 9% in the past 24 hours. Notably, the decline comes just days after ABT surged to a two-month high, fueled by renewed investor excitement around its AI-driven initiatives. Now, traders are weighing whether the dip signals profit-taking or a temporary pause in ArcBlock’s latest rally. From euphoria to correction Yesterday, ABT recorded an impressive 15.3% daily gain, extending its seven-day perf",
+          "published_at": 1761763025,
+          "source": "CryptoCompare",
+          "url": "https://invezz.com/news/2025/10/29/why-is-arcblock-cryptocurrency-down-after-hitting-a-two-month-high/",
+          "categories": [
+            "ALTCOIN",
+            "BUSINESS",
+            "MARKET",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Altcoins",
+            "Crypto"
+          ]
+        },
+        {
+          "id": "53791513",
+          "title": "Democrats Blast Trump’s ‘Corrupt’ CZ Pardon — Claim Crypto Lobby Spent Millions",
+          "body": "Democratic lawmakers are accusing President Donald Trump of political corruption after his controversial decision to pardon former Binance CEO Changpeng “CZ” Zhao, reigniting tensions between the White House and Congress over crypto industry influence in U.S. politics. In a sharply worded letter addressed to Attorney General Pamela Bondi and Treasury Secretary Scott Bessent, a group of Democratic senators, led by Elizabeth Warren, Bernie Sanders, Chris Van Hollen, Jack Reed, and Mazie Hirono, de",
+          "published_at": 1761762915,
+          "source": "CryptoCompare",
+          "url": "https://cryptonews.com/news/democrats-blast-trumps-corrupt-cz-pardon-claim-crypto-lobby-spent-millions/",
+          "categories": [
+            "EXCHANGE",
+            "REGULATION",
+            "BNB",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Blockchain News",
+            "Crypto Regulation News",
+            "CZ",
+            "Donald Trump"
+          ]
+        },
+        {
+          "id": "53791510",
+          "title": "Quantitative Tightening Ends: A Crucial Shift for Global Markets",
+          "body": "BitcoinWorld Quantitative Tightening Ends: A Crucial Shift for Global Markets The financial world is buzzing with a significant announcement: the Federal Reserve has officially concluded its quantitative tightening (QT) program. This expected move marks a crucial pivot in monetary policy, signaling a new phase for global markets and potentially influencing everything from interest rates to investment strategies, including the dynamic cryptocurrency space. Understanding Quantitative Tightening: W",
+          "published_at": 1761762910,
+          "source": "CryptoCompare",
+          "url": "https://bitcoinworld.co.in/quantitative-tightening-ends-fed/",
+          "categories": [
+            "BUSINESS",
+            "FIAT",
+            "MARKET",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Crypto News",
+            "CRYPTOCURRENCY",
+            "economic outlook",
+            "Federal Reserve",
+            "market liquidity",
+            "monetary policy"
+          ]
+        },
+        {
+          "id": "53791337",
+          "title": "Crucial Fed Interest Rate Cut Unveiled: What It Means for Your Investments",
+          "body": "BitcoinWorld Crucial Fed Interest Rate Cut Unveiled: What It Means for Your Investments The financial world recently buzzed with anticipation, and the U.S. Federal Reserve delivered. The Federal Open Market Committee (FOMC) announced a significant Fed interest rate cut of 25 basis points, aligning perfectly with market expectations. This decision lowers the target range for the federal funds rate to between 3.75% and 4.00%, a move that sends ripples across the entire economic landscape, includin",
+          "published_at": 1761762610,
+          "source": "CryptoCompare",
+          "url": "https://bitcoinworld.co.in/fed-interest-rate-cut-impact/",
+          "categories": [
+            "BUSINESS",
+            "FIAT",
+            "MARKET",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Crypto News",
+            "Economic Impact",
+            "Federal Reserve",
+            "FOMC",
+            "interest rates",
+            "monetary policy"
+          ]
+        },
+        {
+          "id": "53791745",
+          "title": "Mutuum Finance (MUTM) Named Best Crypto to Invest in, Presale Stage 6 Approaches Completion With $18M Raised",
+          "body": "While the crypto market is on fire, Mutuum Finance (MUTM) is becoming one of the most popular cryptos to invest in 2025. Mutuum Finance’s own Phase 6 presale already managed to bring in $18.15 million, more than 80% of tokens in this round sold and a window of opportunity quickly running out for buyers to access allocations at the current token price of $0.035. Demand is growing as speculators and early adopters flood in, generating enthusiastic FOMO for what most analysts now call a top crypto ",
+          "published_at": 1761762600,
+          "source": "CryptoCompare",
+          "url": "https://www.cryptopolitan.com/mutuum-finance-mutm-named-best-crypto-to-invest-in-presale-stage-6-approaches-completion-with-18m-raised/",
+          "categories": [
+            "BLOCKCHAIN",
+            "BUSINESS",
+            "TRADING",
+            "TOKEN LISTING AND DELISTING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Press Release"
+          ]
+        },
+        {
+          "id": "53791273",
+          "title": "Michael Saylor Forecasts Bitcoin Hitting $150,000 by End of 2025 on US Regulatory Gains",
+          "body": "Michael Saylor, co-founder of Strategy, predicts Bitcoin will reach $150,000 by the end of 2025, driven by positive US regulatory developments in the digital asset industry over the past year.",
+          "published_at": 1761762424,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/michael-saylor-forecasts-bitcoin-hitting-150000-by-end-of-2025-on-us-regulatory-gains/",
+          "categories": [
+            "BTC",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Bitcoin",
+            "News",
+            "BTC"
+          ]
+        },
+        {
+          "id": "53791226",
+          "title": "Fed MBS Reinvestment: The Crucial Shift Shaping Future Markets",
+          "body": "BitcoinWorld Fed MBS Reinvestment: The Crucial Shift Shaping Future Markets The Federal Reserve has made a pivotal announcement regarding its balance sheet management. After the quantitative tightening (QT) program concludes on December 1, a new era for financial markets begins. This involves a crucial shift: principal repayments from its vast holdings of mortgage-backed securities (MBS) will now be funneled into short-term Treasury securities. This Fed MBS reinvestment strategy is poised to hav",
+          "published_at": 1761762310,
+          "source": "CryptoCompare",
+          "url": "https://bitcoinworld.co.in/fed-mbs-reinvestment-strategy/",
+          "categories": [
+            "BUSINESS",
+            "FIAT",
+            "MARKET",
+            "DIGITAL ASSET TREASURY",
+            "MACROECONOMICS"
+          ],
+          "tags": [
+            "Crypto News",
+            "Federal Reserve",
+            "financial markets",
+            "MBS",
+            "quantitative tightening",
+            "Treasury Securities"
+          ]
+        },
+        {
+          "id": "53791236",
+          "title": "Bank of Canada Cuts Rate to 2.25% Amid US Trade Pressures and Modest Growth Outlook",
+          "body": "The Bank of Canada cut its benchmark interest rate to 2.25% on October 29, 2025, signaling potential relief for risk assets like cryptocurrencies amid economic slowdown and U.S. trade tensions.",
+          "published_at": 1761762310,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/bank-of-canada-cuts-rate-to-2-25-amid-us-trade-pressures-and-modest-growth-outlook/",
+          "categories": [
+            "BTC",
+            "FIAT",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News",
+            "BTC"
+          ]
+        },
+        {
+          "id": "53791188",
+          "title": "Behind the Vault Door: Tether Gold Attestation Report Reveals 375K Troy Ounces of Shine",
+          "body": "This week, Tether—the world’s heavyweight in stablecoin issuance—rolled out its latest attestation report for XAUT, the company’s gold-backed digital token. The glittering takeaway? XAUT’s total market cap just struck $2 billion, claiming nearly 54% of the $3.71 billion tied up in gold-pegged assets. Tether’s XAUT Hits $2 Billion as Gold Token Market Shines at $3.7B",
+          "published_at": 1761762271,
+          "source": "CryptoCompare",
+          "url": "https://news.bitcoin.com/behind-the-vault-door-tether-gold-attestation-report-reveals-375k-troy-ounces-of-shine/",
+          "categories": [
+            "FIAT",
+            "MARKET",
+            "USDT",
+            "XAUT",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Crypto News",
+            "gold",
+            "real-world assets (RWA)",
+            "Tether (USDT)",
+            "tokenization"
+          ]
+        },
+        {
+          "id": "53791276",
+          "title": "Saylor says Bitcoin can surge to $150K by the end of 2025",
+          "body": "Positive regulatory developments in the US over the last 12 months are a good sign for the digital asset industry and markets, the Strategy co-founder said.",
+          "published_at": 1761762221,
+          "source": "CryptoCompare",
+          "url": "https://cointelegraph.com/news/michael-saylor-150-000-bitcoin-end-2025?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+          "categories": [
+            "BTC",
+            "MARKET",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            ""
+          ]
+        },
+        {
+          "id": "53791049",
+          "title": "Experience Real-Time Cryptocurrency Alerts with CryptoAppsy!",
+          "body": "CryptoAppsy offers real-time cryptocurrency data without requiring sign-ups. The app allows personalized tracking with a multi-currency portfolio management tool. Continue Reading: Experience Real-Time Cryptocurrency Alerts with CryptoAppsy! The post Experience Real-Time Cryptocurrency Alerts with CryptoAppsy! appeared first on COINTURK NEWS .",
+          "published_at": 1761762001,
+          "source": "CryptoCompare",
+          "url": "https://en.coin-turk.com/experience-real-time-cryptocurrency-alerts-with-cryptoappsy/",
+          "categories": [
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Bitcoin News"
+          ]
+        },
+        {
+          "id": "53790893",
+          "title": "Fed Rate Cut Leaves Bitcoin Unmoved as US Economy Shows Slowdown Signs",
+          "body": "The Federal Reserve’s 0.25% interest rate cut on Wednesday has had a muted impact on crypto markets, with Bitcoin dropping 3% to $111,700 and Ethereum falling 3.2% to $4,000 amid",
+          "published_at": 1761761725,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/fed-rate-cut-leaves-bitcoin-unmoved-as-us-economy-shows-slowdown-signs/",
+          "categories": [
+            "BTC",
+            "ETH",
+            "FIAT",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News",
+            "BTC"
+          ]
+        },
+        {
+          "id": "53790883",
+          "title": "Urgent Warning: Bitcoin ETF Demand Plummets to Alarming Lows",
+          "body": "BitcoinWorld Urgent Warning: Bitcoin ETF Demand Plummets to Alarming Lows An urgent signal has emerged from the cryptocurrency markets, catching the attention of investors worldwide. Recent data reveals a significant shift in the landscape of institutional investment, specifically concerning Bitcoin ETF demand . For those closely watching the pulse of digital assets, understanding these movements is paramount. What exactly is happening, and what does it mean for the future of Bitcoin? Understand",
+          "published_at": 1761761710,
+          "source": "CryptoCompare",
+          "url": "https://bitcoinworld.co.in/bitcoin-etf-demand-falls/",
+          "categories": [
+            "BTC",
+            "BUSINESS",
+            "MARKET",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Crypto News",
+            "BITCOIN",
+            "Crypto Market",
+            "ETFs",
+            "Investment",
+            "Market Analysis"
+          ]
+        },
+        {
+          "id": "53790996",
+          "title": "Ripple’s David Schwartz Update Triggers Massive Bullish Signals Amid XRP Whale Buying Spree",
+          "body": "The XRP community is on fire after Ripple’s Chief Technology Officer, David “JoelKatz” Schwartz, announced a major new role that could mark a turning point for XRP’s market trajectory.",
+          "published_at": 1761761682,
+          "source": "CryptoCompare",
+          "url": "https://zycrypto.com/ripples-david-schwartz-update-triggers-massive-bullish-signals-amid-xrp-whale-buying-spree/",
+          "categories": [
+            "MARKET",
+            "TECHNOLOGY",
+            "TRADING",
+            "XRP",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Cryptocurrency",
+            "News",
+            "Cryptocurrency News",
+            "Ripple",
+            "XRP News",
+            "XRPUSD",
+            "XRPUSDT"
+          ]
+        },
+        {
+          "id": "53790890",
+          "title": "XRP TD Sequential Sell Signal Hints at Possible Pullback from $2.70 Resistance",
+          "body": "The TD Sequential indicator has issued a sell signal for XRP, indicating potential momentum loss after a recent price breakout above $2.60. This technical pattern, known for its accuracy in",
+          "published_at": 1761761657,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/xrp-td-sequential-sell-signal-hints-at-possible-pullback-from-2-70-resistance/",
+          "categories": [
+            "TRADING",
+            "XRP",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "News",
+            "XRP"
+          ]
+        },
+        {
+          "id": "53790907",
+          "title": "US Federal Reserve Cuts Rates by 25 Basis Points, Bitcoin Price Reacts",
+          "body": "The US Federal Reserve has moved to cut interest rates by a quarter of a percentage point (or 25 basis points) today in a bid to steady an apparently weakening labor market. The cut is a second in a roll and comes amid a month-long government shutdown. At the time of this writing, Bitcoin’s price trades at around $111,400, down over 3% over the past 24 hours. Source: TradingView Liquidations in the derivatives markets remain somewhat elevated at around $560 million for the day, while the total c",
+          "published_at": 1761761571,
+          "source": "CryptoCompare",
+          "url": "https://cryptopotato.com/us-federal-reserve-cuts-rates-by-25-basis-points-bitcoin-price-reacts/",
+          "categories": [
+            "BTC",
+            "FIAT",
+            "TRADING",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Crypto News",
+            "Top News",
+            "Bitcoin (BTC) Price"
+          ]
+        },
+        {
+          "id": "53790763",
+          "title": "Kalshi Trading Volume Hits Unprecedented $4 Billion in October",
+          "body": "BitcoinWorld Kalshi Trading Volume Hits Unprecedented $4 Billion in October The world of financial markets is constantly evolving, and prediction platforms are carving out a significant niche. Recently, Kalshi, a leading regulated prediction market, made headlines with its astonishing performance. The platform’s Kalshi trading volume skyrocketed past an incredible $4 billion in October, marking an unprecedented all-time high. This remarkable achievement signals growing interest and activity in e",
+          "published_at": 1761761411,
+          "source": "CryptoCompare",
+          "url": "https://bitcoinworld.co.in/kalshi-trading-volume-record/",
+          "categories": [
+            "EXCHANGE",
+            "MARKET",
+            "TRADING",
+            "RESEARCH",
+            "MACROECONOMICS"
+          ],
+          "tags": [
+            "Crypto News",
+            "Event-based trading",
+            "financial markets",
+            "Kalshi",
+            "Prediction Market",
+            "Trading volume"
+          ]
+        },
+        {
+          "id": "53790770",
+          "title": "German AfD Proposes Bitcoin as Strategic Asset, Seeks MiCA Exemption and Reserves",
+          "body": "The Alternative for Germany (AfD) party has proposed recognizing Bitcoin as a strategic asset, exempting it from EU MiCA regulations to preserve innovation and sovereignty. This motion highlights Bitcoin’s decentralized",
+          "published_at": 1761761403,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/german-afd-proposes-bitcoin-as-strategic-asset-seeks-mica-exemption-and-reserves/",
+          "categories": [
+            "BTC",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Bitcoin",
+            "News",
+            "BTC",
+            "Core"
+          ]
+        },
+        {
+          "id": "53790766",
+          "title": "Fed’s Rate Cut Sparks New Opportunities in Cryptocurrency Markets",
+          "body": "The Federal Reserve cut interest rates by 25 basis points. Balance sheet reduction will halt from December 1st. Continue Reading: Fed’s Rate Cut Sparks New Opportunities in Cryptocurrency Markets The post Fed’s Rate Cut Sparks New Opportunities in Cryptocurrency Markets appeared first on COINTURK NEWS .",
+          "published_at": 1761761389,
+          "source": "CryptoCompare",
+          "url": "https://en.coin-turk.com/feds-rate-cut-sparks-new-opportunities-in-cryptocurrency-markets/",
+          "categories": [
+            "FIAT",
+            "MARKET",
+            "MACROECONOMICS"
+          ],
+          "tags": [
+            "Economy"
+          ]
+        },
+        {
+          "id": "53790752",
+          "title": "Bitcoin, Ethereum Shrug Off Central Bank’s Interest Rate Cut",
+          "body": "Recent jobs data and other economic indicators have pointed to a slowing economy.",
+          "published_at": 1761761348,
+          "source": "CryptoCompare",
+          "url": "https://decrypt.co/346555/bitcoin-ethereum-fed-interest-rate-cut",
+          "categories": [
+            "BTC",
+            "ETH",
+            "FIAT",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "",
+            "",
+            "Markets"
+          ]
+        },
+        {
+          "id": "53790646",
+          "title": "HOT MOMENTS: FOMC Statement Released Following FED Interest Rate Decision, Contains Crucial Details",
+          "body": "At its October Federal Open Market Committee (FOMC) meeting, the Fed lowered its policy rate by 25 basis points to a range of 3.75-4.00%. This was the Fed's second consecutive rate cut, and the decision fully aligned with market expectations. The FOMC statement noted that economic growth continues at a moderate pace and the unemployment rate remains low, despite slowing hiring. The committee noted that inflation has increased this year but remains high. Related News: BREAKING NEWS: Fed Announces",
+          "published_at": 1761761228,
+          "source": "CryptoCompare",
+          "url": "https://en.bitcoinsistemi.com/hot-moments-fomc-statement-released-following-fed-interest-rate-decision-contains-crucial-details/",
+          "categories": [
+            "BTC",
+            "MARKET",
+            "DIGITAL ASSET TREASURY",
+            "MACROECONOMICS",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Economy",
+            "News"
+          ]
+        },
+        {
+          "id": "53790651",
+          "title": "AVAX Holds Firm at $19 Support, Eyes Potential 9% Gain to $21 Amid Institutional Interest",
+          "body": "AVAX price holds steady near $19, with bulls defending this key support zone amid growing institutional interest, positioning the token for a potential 9% rally to $21 if momentum builds.",
+          "published_at": 1761761183,
+          "source": "CryptoCompare",
+          "url": "https://en.coinotag.com/avax-holds-firm-at-19-support-eyes-potential-9-gain-to-21-amid-institutional-interest/",
+          "categories": [
+            "AVAX",
+            "MARKET",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Analysis",
+            "News",
+            "AVAX"
+          ]
+        },
+        {
+          "id": "53790718",
+          "title": "XRP Skyrockets to $9000 for a Few Seconds. Here’s What Happened",
+          "body": "A jaw-dropping video clip posted on X by crypto analyst John Squire shows XRP momentarily climbing to nearly $9,868 before correcting itself. The fleeting spike has stirred the community and reignited talk of a possible “hidden” valuation. But is this a real market move, or simply another data feed error? The Footage and Initial Reaction Squire’s clip captured a live price feed where XRP’s price streamed at almost $9,900. The episode lasted mere seconds and lacked accompanying trade prints or on",
+          "published_at": 1761761139,
+          "source": "CryptoCompare",
+          "url": "https://timestabloid.com/xrp-skyrockets-to-9000-for-a-few-seconds-heres-what-happened/",
+          "categories": [
+            "EXCHANGE",
             "MARKET",
             "TRADING",
             "XRP",
@@ -857,193 +895,159 @@
           ]
         },
         {
-          "id": "53631731",
-          "title": "Here’s How High The Bitcoin Price Would Be If It Catches Up With The Stock Market",
-          "body": "The US stock market has just achieved a historic milestone, closing at its highest weekly levels ever recorded. The S&P 500 finished the week at 6,791.68 while the US 100 Index reached 25,358.15, both setting new all-time highs. Easing inflation data, strong corporate earnings, and expectations of Federal Reserve rate cuts have all combined to keep investor sentiment bullish. Amid this record-setting environment, crypto analyst Ash Crypto posted an observation on X that asks the question of how ",
-          "published_at": 1761420643,
+          "id": "53790611",
+          "title": "Fed Delivers Expected 25 Basis Point Rate Cut as Markets Await Powell’s Comments",
+          "body": "Headed lower on Wednesday ahead of the news, bitcoin remained so in the minutes following the news at $111,700, down 3% over the past 24 hours.",
+          "published_at": 1761761000,
           "source": "CryptoCompare",
-          "url": "https://www.newsbtc.com/news/bitcoin/how-high-bitcoin-would-be/",
+          "url": "https://www.coindesk.com/markets/2025/10/29/fed-delivers-expected-25-basis-point-rate-cut-as-markets-await-powell-s-comments",
           "categories": [
             "BTC",
-            "BUSINESS",
             "MARKET",
             "MACROECONOMICS",
             "CRYPTOCURRENCY"
           ],
           "tags": [
+            "Markets",
             "Bitcoin",
-            "Ash Crypto",
-            "bitcoin",
-            "Bitcoin news",
-            "bitcoin price",
-            "btc",
-            "BTC news",
-            "btc price",
-            "btcusd",
-            "BTCUSDT",
-            "fed",
-            "federal reserve",
-            "QT",
-            "quantitative tightening",
-            "S&P 500",
-            "US 100 Index",
-            "wall street"
+            "Powell",
+            "Interest Rates",
+            "top news",
+            "Breaking News",
+            "News"
           ]
         },
         {
-          "id": "53631580",
-          "title": "AI Security System’s Alarming Blunder: Doritos Bag Mistaken for Firearm",
-          "body": "BitcoinWorld AI Security System’s Alarming Blunder: Doritos Bag Mistaken for Firearm In an era increasingly defined by digital innovation, the cryptocurrency community understands the critical balance between technological advancement and individual liberties. From blockchain’s promise of decentralization to the ever-present debate on data ownership, the reliability and ethics of advanced systems are paramount. This vigilance extends beyond finance to everyday applications, particularly when an ",
-          "published_at": 1761420310,
+          "id": "53790470",
+          "title": "BREAKING NEWS: Fed Announces Its Much-Anticipated Interest Rate Decision – Here’s Bitcoin’s First Reaction",
+          "body": "The FED cut interest rates by 25 basis points, in line with expectations. At 21:30 (UTC+3) FED Chairman Jerome Powell will hold a press conference. Markets were giving a nearly 100% probability that the Federal Open Market Committee (FOMC) would cut interest rates by 25 basis points for the second consecutive time. Bitcoin's initial reaction was as follows: This move lowered the federal funds rate to a range of 4 to 4.25 percent. However, committee members face significant debate over the pace o",
+          "published_at": 1761760868,
           "source": "CryptoCompare",
-          "url": "https://bitcoinworld.co.in/ai-security-system-blunder/",
+          "url": "https://en.bitcoinsistemi.com/breaking-news-fed-announces-its-much-anticipated-interest-rate-decision-heres-bitcoins-first-reaction/",
           "categories": [
-            "BLOCKCHAIN",
+            "BTC",
             "MARKET",
-            "TECHNOLOGY",
+            "REGULATION",
             "MACROECONOMICS",
             "CRYPTOCURRENCY"
           ],
           "tags": [
-            "AI News",
-            "AI Security",
-            "false positive",
-            "Omnilert",
-            "privacy concerns",
-            "student safety"
+            "Economy",
+            "News"
           ]
         },
         {
-          "id": "53631348",
-          "title": "Key deals this week: United States Antimony, Grindr, Eli Lilly, Hologic and more",
-          "body": "More on M&A tickers, etc. DocGo: Revenue Collapse Overshadows Acquisition, Is Cheap But Still A Hold Blackstone Q3: Distributable Earnings Up +48% (Rating Upgrade) Old Republic International Corporation (ORI) Q3 2025 Earnings Call Transcript UK warehouse raid leads to record haul of illegal weight loss drugs Plymouth Industrial agrees to be acquired by Makarora for $2.1B",
-          "published_at": 1761419710,
+          "id": "53790462",
+          "title": "XRP flashes its fourth ‘sell’ signal – What happens if it’s right again?",
+          "body": "$2.70 becomes the key battleground! Will XRP bulls defend or retreat?",
+          "published_at": 1761760843,
           "source": "CryptoCompare",
-          "url": "https://seekingalpha.com/news/4508433-key-deals-this-week-united-states-antimony-grindr-eli-lilly-hologic-and-more?utm_source=cryptocompare.com&utm_medium=referral&feed_item_type=news",
+          "url": "https://ambcrypto.com/xrp-flashes-its-fourth-sell-signal-what-happens-if-its-right-again/",
           "categories": [
-            "BUSINESS"
-          ],
-          "tags": [
-            "BX",
-            "LLY",
-            "GCT",
-            "ORI",
-            "TPG",
-            "HOLX",
-            "FOUR",
-            "UAMY",
-            "ADVM",
-            "PLYM",
-            "GRND",
-            "DCGO",
-            "WWLNF"
-          ]
-        },
-        {
-          "id": "53631264",
-          "title": "Bitcoin’s Path to $150,000 Possible Amid Extended Market Cycles",
-          "body": "Bitcoin’s potential path to $150,000 in 2025 relies on key metrics like VCDD and SOPR, which highlight support at $92,902 and resistance at $147,937. Recent data shows fading selling pressure",
-          "published_at": 1761419627,
-          "source": "CryptoCompare",
-          "url": "https://en.coinotag.com/bitcoins-path-to-150000-possible-amid-extended-market-cycles/",
-          "categories": [
-            "BTC",
-            "MARKET",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Bitcoin",
-            "Guides",
-            "News",
-            "BTC"
-          ]
-        },
-        {
-          "id": "53631235",
-          "title": "All Eyes on XRP: Will the $2.70 Ceiling Crack or Crush the Momentum?",
-          "body": "Hovering at $2.64, the digital asset XRP stands with a market cap of $156 billion and with a trading volume that hums at around $3.66 billion this weekend, teasing its intraday high of $2.642 with just enough restraint to keep things interesting. XRP Chart Outlook On the 1-hour chart, XRP strutted from $2.43 to $2.642",
-          "published_at": 1761419495,
-          "source": "CryptoCompare",
-          "url": "https://news.bitcoin.com/all-eyes-on-xrp-will-the-2-70-ceiling-crack-or-crush-the-momentum/",
-          "categories": [
-            "MARKET",
-            "TRADING",
+            "ALTCOIN",
             "XRP",
             "CRYPTOCURRENCY"
           ],
           "tags": [
-            "Markets and Prices",
-            "markets and prices",
-            "Ripple XRP",
-            "XRP price"
-          ]
-        },
-        {
-          "id": "53631171",
-          "title": "Cardano Faces Significant Price Drop Threat: What Investors Must Know",
-          "body": "Cardano (ADA) risks a 20% price drop, with technical indicators showing bearish signs. TVL in Cardano's ecosystem fell 20% in 30 days due to structural challenges. Continue Reading: Cardano Faces Significant Price Drop Threat: What Investors Must Know The post Cardano Faces Significant Price Drop Threat: What Investors Must Know appeared first on COINTURK NEWS .",
-          "published_at": 1761419363,
-          "source": "CryptoCompare",
-          "url": "https://en.coin-turk.com/cardano-faces-significant-price-drop-threat-what-investors-must-know/",
-          "categories": [
-            "ADA",
-            "BUSINESS",
-            "TRADING",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Cardano (ADA)"
-          ]
-        },
-        {
-          "id": "53631046",
-          "title": "Credible Crypto: Ripple Will Do Everything to Make XRP Successful. Here’s Why",
-          "body": "Ripple’s recent streak of high-profile acquisitions is painting a clear picture of ambition and intent, a deliberate march toward solidifying its position as the global leader in blockchain-powered finance. Beneath the surface, each acquisition appears to serve a single underlying mission: building an interconnected network where Ripple’s XRP becomes indispensable to global value movement. Credible Crypto’s latest analysis underscores this reality, emphasizing that Ripple has every reason and ev",
-          "published_at": 1761419131,
-          "source": "CryptoCompare",
-          "url": "https://timestabloid.com/credible-crypto-ripple-will-do-everything-to-make-xrp-successful-heres-why/",
-          "categories": [
-            "FIAT",
-            "MARKET",
-            "TRADING",
-            "XRP",
-            "CRYPTOCURRENCY"
-          ],
-          "tags": [
-            "Cryptocurrency",
+            "Altcoin",
             "News",
+            "News 1",
             "Ripple",
-            "XRP"
+            "Social",
+            "Trading View",
+            "New news"
           ]
         },
         {
-          "id": "53630923",
-          "title": "Polymarket Confirms Token Airdrop, But US Launch Is Priority — Details",
-          "body": "According to the firm’s Chief Marketing Officer Matthew Moddaber, Polymarket will launch a cryptocurrency, but floating an app for its United States users is the current priority. This revelation comes after the crypto prediction platform’s founder, Shayne Coplan, teased the potential launch of a “POLY” token. Token Release To Come After US App Launch In a recent interview, Moddaber disclosed that Polymarket will eventually launch a crypto token, which will be accompanied by an airdrop. The comp",
-          "published_at": 1761418849,
+          "id": "53790429",
+          "title": "Is XRP Headed For A 16% Drop? Signal Flashes Familiar Warning",
+          "body": "Crypto analyst Ali Martinez has cautioned that XRP may be approaching another downswing after the Tom DeMark (TD) Sequential flashed a fresh sell signal on the daily timeframe. In a new video and transcript shared alongside a TradingView chart of the Binance XRP/USDT perpetual contract, Martinez said, “XRP could be bound for a correction. The TD Sequential Indicator on the daily chart has been remarkably accurate in calling XRP’s trend reversals over the past three months, and it has just flashe",
+          "published_at": 1761760841,
           "source": "CryptoCompare",
-          "url": "https://bitcoinist.com/polymarket-confirms-toke-airdrop-us-launch-priority/",
+          "url": "https://www.newsbtc.com/xrp-news/xrp-headed-for-16-drop/",
           "categories": [
             "BUSINESS",
-            "COMMODITY",
             "EXCHANGE",
-            "AIRDROP",
+            "XRP",
+            "BNB",
             "CRYPTOCURRENCY"
           ],
           "tags": [
-            "Crypto News",
-            "crypto",
-            "crypto news",
-            "Cryptocurrency",
-            "Poly",
-            "Polymarket",
-            "Token Airdrop"
+            "XRP News",
+            "xrp",
+            "xrp news",
+            "XRP Price",
+            "XRP Price Analysis",
+            "XRP Technical Analysis"
+          ]
+        },
+        {
+          "id": "53791576",
+          "title": "Screx: The Command Center for a Fragmented DeFi World",
+          "body": "Decentralized finance, or DeFi, as it is colloquially called, was designed to be an open, transparent, and user-controlled economy. But as the market expanded, the structure weakened. Visit Website",
+          "published_at": 1761760828,
+          "source": "CryptoCompare",
+          "url": "https://thecryptobasic.com/2025/10/29/screx-the-command-center-for-a-fragmented-defi-world/",
+          "categories": [
+            "MARKET",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Market"
+          ]
+        },
+        {
+          "id": "53790434",
+          "title": "These Two Altcoin ETFs Are About To Start Trading On NASDAQ – It’s Not XRP Or Dogecoin",
+          "body": "Crypto reporter Eleanor Terrett shared that two new altcoin exchange-traded funds (ETFs) are about to start trading on the NASDAQ, beating out Dogecoin and XRP spot ETFs. According to the journalist, everything needed to begin trading is already in place, even though the government is in a shutdown. The legal rules allow these ETFs to go live without government staff needing to approve anything first, so the launches are still moving forward. Litecoin And Hedera ETFs Begin Trading On NASDAQ Terr",
+          "published_at": 1761760827,
+          "source": "CryptoCompare",
+          "url": "https://bitcoinist.com/altcoin-etfs-xrp-or-dogecoin/",
+          "categories": [
+            "ALTCOIN",
+            "DOGE",
+            "LTC",
+            "TRADING",
+            "CRYPTOCURRENCY"
+          ],
+          "tags": [
+            "Altcoins",
+            "Doge",
+            "DOGE news",
+            "doge price",
+            "dogecoin",
+            "Dogecoin news",
+            "dogecoin price",
+            "dogeusd",
+            "dogeusdt",
+            "ETF",
+            "ETF news",
+            "ETFs",
+            "ETFs news",
+            "Hedera",
+            "Hedera ETF",
+            "Hedera news",
+            "litecoin",
+            "litecoin news",
+            "Litecoin price",
+            "LTC",
+            "LTC news",
+            "LTC price",
+            "ltcusd",
+            "LTCUSDT",
+            "ripple",
+            "ripple news",
+            "XRP",
+            "XRP news",
+            "XRP price",
+            "XRPUSD",
+            "XRPUSDT"
           ]
         }
       ],
-      "timestamp": 1761434033255,
+      "timestamp": 1761764874037,
       "ttl": 900
     }
   },
-  "saved_at": 1761434033255
+  "saved_at": 1761764874037
 }

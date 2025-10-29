@@ -187,7 +187,9 @@ class GIODashboardHandler:
                 "❌ Ошибка загрузки dashboard.", parse_mode=ParseMode.HTML
             )
 
-    async def cmd_dashboard_live(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def cmd_dashboard_live(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
         """
         /dashboard live - Dashboard с автообновлением (60 минут)
         """
@@ -219,7 +221,9 @@ class GIODashboardHandler:
             await message.edit_text(dashboard_text, parse_mode="HTML")
 
             # Запускаем автообновление в фоне
-            logger.info(f"✅ Starting live dashboard for user {update.effective_user.id}")
+            logger.info(
+                f"✅ Starting live dashboard for user {update.effective_user.id}"
+            )
             asyncio.create_task(
                 self._auto_update_dashboard(message, update.effective_user.id, symbol)
             )
@@ -251,7 +255,9 @@ class GIODashboardHandler:
 
                     # Пытаемся обновить сообщение
                     await message.edit_text(dashboard_text, parse_mode="HTML")
-                    logger.info(f"🔄 Dashboard updated #{update_count} for user {user_id}")
+                    logger.info(
+                        f"🔄 Dashboard updated #{update_count} for user {user_id}"
+                    )
 
                 except Exception as e:
                     # Игнорируем ошибку "Message is not modified"
@@ -267,7 +273,6 @@ class GIODashboardHandler:
 
         finally:
             logger.info(f"🛑 Live dashboard stopped for user {user_id}")
-
 
     async def _generate_ai_interpretation(self, symbol: str, metrics: dict) -> str:
         """
@@ -401,7 +406,6 @@ class GIODashboardHandler:
                 {"symbol": "SOLUSDT", "volume": 1.5e9},
             ]
 
-
     async def _get_active_signals(self) -> list:
         """Получить активные торговые сигналы"""
         try:
@@ -474,9 +478,8 @@ class GIODashboardHandler:
             # === Funding Rate ===
             if hasattr(self.bot, "bybit_connector"):
                 try:
-                    funding_rate = await self.bot.bybit_connector.get_funding_rate(
-                        symbol
-                    )
+                    funding_rate = self.bot.bybit_connector.get_funding_rate(symbol)
+
                     if funding_rate:
                         metrics["funding"] = float(funding_rate) * 100
                 except Exception as e:
@@ -485,9 +488,8 @@ class GIODashboardHandler:
             # === L/S Ratio ===
             if hasattr(self.bot, "bybit_connector"):
                 try:
-                    ls_ratio = await self.bot.bybit_connector.get_long_short_ratio(
-                        symbol
-                    )
+                    ls_ratio = self.bot.bybit_connector.get_long_short_ratio(symbol)
+
                     if ls_ratio:
                         metrics["ls_ratio"] = float(ls_ratio)
                 except Exception as e:
@@ -1307,9 +1309,8 @@ class GIODashboardHandler:
             funding = 0.0
             if hasattr(self.bot, "binance_client"):
                 try:
-                    funding_data = await self.bot.binance_client.get_funding_rate(
-                        symbol
-                    )
+                    funding_data = self.bot.binance_client.get_funding_rate(symbol)
+
                     funding = float(funding_data.get("lastFundingRate", 0))
                 except Exception as e:
                     logger.debug(f"Funding fetch error: {e}")
@@ -1318,7 +1319,7 @@ class GIODashboardHandler:
             ls_ratio = 1.0
             if hasattr(self.bot, "binance_client"):
                 try:
-                    ls_data = await self.bot.binance_client.get_long_short_ratio(symbol)
+                    ls_data = self.bot.binance_client.get_long_short_ratio(symbol)
                     ls_ratio = float(ls_data.get("longShortRatio", 1.0))
                 except Exception as e:
                     logger.debug(f"L/S Ratio fetch error: {e}")
@@ -1514,7 +1515,7 @@ class GIODashboardHandler:
 
             # Funding
             if hasattr(self.bot, "get_funding_rate"):
-                funding = await self.bot.get_funding_rate(symbol)
+                funding = self.bot.get_funding_rate(symbol)
                 data["funding_rate"] = funding.get("rate", 0) if funding else 0
 
             # OI
@@ -1524,7 +1525,7 @@ class GIODashboardHandler:
 
             # L/S Ratio
             if hasattr(self.bot, "get_long_short_ratio"):
-                ratio = await self.bot.get_long_short_ratio(symbol)
+                ratio = self.bot.get_long_short_ratio(symbol)
                 data["long_short_ratio"] = ratio.get("ratio", 0) if ratio else 0
 
             # CVD

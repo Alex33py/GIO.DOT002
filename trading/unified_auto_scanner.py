@@ -632,9 +632,10 @@ class UnifiedAutoScanner:
             long_short_ratio = 0.0
             try:
                 if hasattr(self.bot, "bybit_connector") and self.bot.bybit_connector:
-                    ls_ratio = await self.bot.bybit_connector.get_long_short_ratio(
+                    ls_ratio = self.bot.bybit_connector.get_long_short_ratio(
                         symbol
                     )
+
                     if ls_ratio:
                         long_short_ratio = float(ls_ratio.get("ratio", 0))
                         logger.debug(

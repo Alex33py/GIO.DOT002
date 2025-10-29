@@ -330,7 +330,29 @@ class GIOCryptoBot:
             logger.info("2️⃣.5 Инициализация Bybit WebSocket Orderbook...")
             from connectors.bybit_orderbook_ws import BybitOrderbookWebSocket
 
-            self.orderbook_ws = BybitOrderbookWebSocket("BTCUSDT", depth=200)
+            self.orderbook_ws_list = []
+            logger.info(f"📊 Создаем Bybit Orderbook WebSocket для {len(TRACKED_SYMBOLS)} пар...")
+
+            for symbol_info in TRACKED_SYMBOLS:
+                # TRACKED_SYMBOLS это список словарей с ключом 'symbol'
+                if isinstance(symbol_info, dict):
+                    symbol = symbol_info.get('symbol', 'BTCUSDT')
+                    enabled = symbol_info.get('enabled', True)
+
+                    if not enabled:
+                        logger.info(f"   ⏭️ {symbol} отключен, пропускаем")
+                        continue
+                else:
+                    symbol = str(symbol_info)
+
+                ws = BybitOrderbookWebSocket(symbol, depth=200)
+                self.orderbook_ws_list.append(ws)
+                logger.info(f"   ✅ Bybit Orderbook WS для {symbol} создан")
+
+            # Оставляем первый WebSocket для обратной совместимости
+            self.orderbook_ws = self.orderbook_ws_list[0] if self.orderbook_ws_list else None
+
+            logger.info(f"✅ Создано {len(self.orderbook_ws_list)} Bybit Orderbook WebSocket")
 
             async def process_orderbook(orderbook):
                 """Обработка L2 стакана заявок"""
@@ -398,9 +420,11 @@ class GIOCryptoBot:
                 except Exception as e:
                     logger.error(f"❌ Ошибка обработки orderbook: {e}")
 
-            self.orderbook_ws.add_callback(process_orderbook)
-            await self.orderbook_ws.start()
-            logger.info("   ✅ Bybit WebSocket Orderbook запущен (depth=200)")
+            # запускаем ВСЕ WebSocket
+            for ws in self.orderbook_ws_list:
+                ws.add_callback(process_orderbook)
+                await ws.start()
+                logger.info(f"   ✅ Bybit WebSocket Orderbook запущен для {ws.symbol} (depth=200)")
 
             # 3. Сценарии и VETO
             logger.info("3️⃣ Инициализация сценариев и VETO...")
@@ -1980,8 +2004,12 @@ class GIOCryptoBot:
             if self.news_connector:
                 await self.news_connector.close()
 
-            if self.orderbook_ws:
-                await self.orderbook_ws.stop()
+            # Останавливаем ВСЕ Bybit Orderbook WebSocket
+            if hasattr(self, 'orderbook_ws_list') and self.orderbook_ws_list:
+                for ws in self.orderbook_ws_list:
+                    await ws.stop()
+                    logger.info(f"🛑 Bybit Orderbook WS для {ws.symbol} остановлен")
+
 
             logger.info(f"{Colors.OKGREEN}✅ Бот успешно остановлен{Colors.ENDC}")
 

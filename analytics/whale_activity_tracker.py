@@ -46,7 +46,7 @@ class WhaleActivityTracker:
         # ✅ ИНИЦИАЛИЗАЦИЯ BATCHER!
         if enable_batcher:
             try:
-                self.whale_log_batcher = WhaleLogBatcher(batch_interval=60)
+                self.whale_log_batcher = WhaleLogBatcher()
                 logger.info("✅ WhaleLogBatcher инициализирован (batch_interval=60s)")
             except Exception as e:
                 logger.warning(f"⚠️ WhaleLogBatcher не инициализирован: {e}")

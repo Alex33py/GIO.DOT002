@@ -14,7 +14,15 @@ from telegram import Update
 from handlers.dashboard_handler import GIODashboardHandler
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.constants import ParseMode
-from config.settings import logger, TELEGRAM_CONFIG, DATA_DIR
+from config.settings import (
+    logger,
+    TELEGRAM_CONFIG,
+    DATA_DIR,
+    GEMINI_API_KEY,
+    SR_DETECTOR_CONFIG,
+    NEWS_SENTIMENT_CONFIG,
+)
+
 from handlers.unified_dashboard import UnifiedDashboardHandler
 import pandas as pd
 import sqlite3
@@ -22,7 +30,8 @@ from handlers.support_resistance_detector import AdvancedSupportResistanceDetect
 
 from telegram.request import HTTPXRequest
 from ai.gemini_interpreter import GeminiInterpreter
-from config.settings import GEMINI_API_KEY
+
+from analytics.news_sentiment import NewsSentimentAnalyzer
 
 
 class TelegramBotHandler:
@@ -48,31 +57,38 @@ class TelegramBotHandler:
             logger.warning(f"⚠️ MarketDashboard not found: {e}")
             self.market_dashboard = None
         self.unified_dashboard_handler = UnifiedDashboardHandler(self)
+        # Advanced Support/Resistance Detector
         self.sr_detector = AdvancedSupportResistanceDetector(
-            atr_multiplier=0.5, volume_threshold=1.5
-        )
-        logger.info("✅ SR Detector initialized")
-
-        # ✅ DEBUG: Проверка GEMINI_API_KEY
-        print(
-            f"🔍 DEBUG: GEMINI_API_KEY = {GEMINI_API_KEY[:20] if GEMINI_API_KEY else 'EMPTY'}"
+            atr_multiplier=SR_DETECTOR_CONFIG["atr_multiplier"],
+            volume_threshold=SR_DETECTOR_CONFIG["volume_threshold"],
         )
         logger.info(
-            f"🔍 DEBUG: GEMINI_API_KEY = {GEMINI_API_KEY[:20] if GEMINI_API_KEY else 'EMPTY'}"
+            f"✅ Advanced S/R Detector: "
+            f"ATR={SR_DETECTOR_CONFIG['atr_multiplier']}, "
+            f"Volume={SR_DETECTOR_CONFIG['volume_threshold']}"
         )
 
+        # ✅ ЕДИНЫЙ экземпляр GeminiInterpreter для всего бота
         if GEMINI_API_KEY:
             try:
-                self.gemini_interpreter = GeminiInterpreter(GEMINI_API_KEY)
-                logger.info("✅ GeminiInterpreter создан успешно")
+                self.gemini = GeminiInterpreter(GEMINI_API_KEY)
+                logger.info(f"✅ Gemini AI: enabled (key: {GEMINI_API_KEY[:20]}...)")
             except Exception as e:
                 logger.error(
                     f"❌ Ошибка создания GeminiInterpreter: {e}", exc_info=True
                 )
-                self.gemini_interpreter = None
+                self.gemini = None
+                logger.warning("⚠️ Gemini AI: disabled (initialization failed)")
         else:
-            logger.warning("⚠️ GEMINI_API_KEY пустой, GeminiInterpreter отключён")
-            self.gemini_interpreter = None
+            logger.warning("⚠️ Gemini AI: disabled (no API key)")
+            self.gemini = None
+
+        # Telegram dashboard handler (old format as fallback)
+        self.dashboard_handler = GIODashboardHandler(bot_instance)
+
+        # News Sentiment Analyzer
+        self.news_analyzer = NewsSentimentAnalyzer(gemini_interpreter=self.gemini)
+        logger.info("✅ News Sentiment Analyzer инициализирован")
 
         logger.info("✅ Unified Dashboard Handler initialized")
 
@@ -88,6 +104,7 @@ class TelegramBotHandler:
 
             if DATABASE_URL and DATABASE_URL.startswith("postgresql"):
                 import psycopg2
+
                 return psycopg2.connect(DATABASE_URL)
             else:
                 db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
@@ -96,7 +113,6 @@ class TelegramBotHandler:
             logger.warning(f"⚠️ PostgreSQL недоступен: {e}, используем SQLite")
             db_path = os.path.join(DATA_DIR, "gio_crypto_bot.db")
             return sqlite3.connect(db_path)
-
 
     async def initialize(self):
         """Инициализация Telegram Application"""
@@ -123,7 +139,6 @@ class TelegramBotHandler:
             self.application.add_handler(
                 CommandHandler("signalstats", self.cmd_signal_stats)
             )
-
             self.application.add_handler(
                 CommandHandler("signalhistory", self.cmd_signal_history)
             )
@@ -149,7 +164,7 @@ class TelegramBotHandler:
             self.application.add_handler(CommandHandler("mtf", self.cmd_mtf))
             self.application.add_handler(CommandHandler("filters", self.cmd_filters))
             self.application.add_handler(CommandHandler("market", self.cmd_market))
-            # self.application.add_handler(CommandHandler("overview", self.cmd_overview))
+            self.application.add_handler(CommandHandler("overview", self.cmd_overview))
             self.application.add_handler(CommandHandler("advanced", self.cmd_advanced))
             # self.application.add_handler(CommandHandler("whale", self.cmd_whale))
             self.application.add_handler(
@@ -162,6 +177,8 @@ class TelegramBotHandler:
                     "dashboard", self.unified_dashboard_handler.handle_dashboard
                 )
             )
+            self.application.add_handler(CommandHandler("news", self.cmd_news))
+            logger.info("   ✅ News sentiment handler зарегистрирован")
             logger.info("✅ Unified Dashboard handler registered with LIVE support")
 
             # Enhanced Overview (объединение /overview + /correlation)
@@ -373,6 +390,7 @@ class TelegramBotHandler:
     <b>📊 Детальный Анализ:</b>
     • /market SYMBOL — Полный анализ актива (Market Intelligence)
     • /advanced SYMBOL — Продвинутые индикаторы (MACD, BB, ATR)
+    • /news [SYMBOL] — Анализ новостей с AI интерпретацией
 
     <b>📈 Обзор Рынка:</b>
     • /overview — Multi-Symbol Overview (8 активов + корреляции)
@@ -1784,17 +1802,10 @@ class TelegramBotHandler:
             bot = self.bot_instance
             signal_gen = getattr(bot, "signal_generator", None)
 
+            # Multi-TF Filter (унифицированное имя)
             multi_tf_filter = None
-            if (
-                hasattr(bot, "multitffilter") and bot.multitffilter
-            ):  # ← ИСПРАВЛЕНО! СНАЧАЛА БЕЗ ПОДЧЕРКИВАНИЯ
-                multi_tf_filter = bot.multitffilter
-            elif (
-                hasattr(bot, "multi_tf_filter") and bot.multi_tf_filter
-            ):  # ← ПОТОМ С ПОДЧЕРКИВАНИЕМ
+            if hasattr(bot, "multi_tf_filter") and bot.multi_tf_filter:
                 multi_tf_filter = bot.multi_tf_filter
-            elif signal_gen and hasattr(signal_gen, "multitffilter"):
-                multi_tf_filter = signal_gen.multitffilter
             elif signal_gen and hasattr(signal_gen, "multi_tf_filter"):
                 multi_tf_filter = signal_gen.multi_tf_filter
 
@@ -1872,18 +1883,10 @@ class TelegramBotHandler:
             else:
                 message += "⚪ *Confirm Filter:* DISABLED\n\n"
 
-            # Multi-TF Filter
+            # Multi-TF Filter (унифицированное имя: multi_tf_filter)
             multi_tf_filter = None
-            if (
-                hasattr(bot, "multitffilter") and bot.multitffilter
-            ):  # ← ИСПРАВЛЕНО! СНАЧАЛА БЕЗ ПОДЧЕРКИВАНИЯ
-                multi_tf_filter = bot.multitffilter
-            elif (
-                hasattr(bot, "multi_tf_filter") and bot.multi_tf_filter
-            ):  # ← ПОТОМ С ПОДЧЕРКИВАНИЕМ
+            if hasattr(bot, "multi_tf_filter") and bot.multi_tf_filter:
                 multi_tf_filter = bot.multi_tf_filter
-            elif signal_gen and hasattr(signal_gen, "multitffilter"):
-                multi_tf_filter = signal_gen.multitffilter
             elif signal_gen and hasattr(signal_gen, "multi_tf_filter"):
                 multi_tf_filter = signal_gen.multi_tf_filter
 
@@ -2239,80 +2242,604 @@ class TelegramBotHandler:
             except:
                 pass
 
-    async def cmd_overview(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Команда /overview - Multi-Symbol Overview"""
-        try:
-            await update.message.reply_text("📊 Загрузка обзора рынка...")
+    async def cmd_news(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        /news [SYMBOL] — Анализ крипто-новостей с AI интерпретацией
 
-            # Список символов для анализа
-            symbols = [
-                "BTCUSDT",
-                "ETHUSDT",
-                "SOLUSDT",
-                "XRPUSDT",
-                "BNBUSDT",
-                "DOGEUSDT",
-                "ADAUSDT",
-                "AVAXUSDT",
+        Examples:
+            /news           — Общие новости рынка
+            /news BTCUSDT   — Новости с фокусом на BTC
+        """
+        try:
+            # Получаем опциональный символ
+            symbol = None
+            if context.args and len(context.args) > 0:
+                symbol = context.args[0].upper()
+                # Добавляем USDT если не указано
+                if not symbol.endswith('USDT'):
+                    symbol = f"{symbol}USDT"
+
+            # Отправляем loading сообщение
+            symbol_text = f" for {symbol}" if symbol else ""
+            loading_msg = await update.message.reply_text(
+                f"📰 Loading news{symbol_text}..."
+            )
+
+            # ===== 1. ПОЛУЧАЕМ НОВОСТИ =====
+            news_list = await self.news_analyzer.get_latest_news(hours=6, limit=10)
+
+            if not news_list:
+                await loading_msg.edit_text("📰 No recent news available")
+                return
+
+            # ===== 2. АНАЛИЗИРУЕМ SENTIMENT КАЖДОЙ НОВОСТИ =====
+            news_list = await self.news_analyzer.analyze_sentiment(news_list)
+
+            # ===== 3. РАССЧИТЫВАЕМ ОБЩИЙ SENTIMENT =====
+            overall = self.news_analyzer.calculate_overall_sentiment(news_list)
+
+            # ===== 4. ГЕНЕРИРУЕМ ДЕТАЛЬНУЮ AI ИНТЕРПРЕТАЦИЮ =====
+            logger.info(f"🤖 Generating detailed AI interpretation for /news{' ' + symbol if symbol else ''}...")
+
+            ai_interpretation = await self.news_analyzer.generate_detailed_ai_interpretation(
+                news_list=news_list,
+                overall=overall,
+                symbol=symbol  # ← ✅ ПЕРЕДАЁМ СИМВОЛ ДЛЯ ФОКУСИРОВКИ
+            )
+
+            # ===== 5. ФОРМИРУЕМ СООБЩЕНИЕ =====
+            symbol_header = f"🎯 Focus: {symbol}\n" if symbol else ""
+
+            # Overall sentiment
+            overall_emoji = (
+                "🟢" if overall["overall"] == "BULLISH"
+                else "🔴" if overall["overall"] == "BEARISH"
+                else "🟡"
+            )
+
+            message_lines = [
+                "📰 CRYPTO NEWS SENTIMENT",
+                f"{symbol_header}{'━' * 30}",
+                "",
+                f"📊 Overall: {overall_emoji} {overall['overall']}",
+                f"├─ Score: {overall['score']:+.2f}",
+                f"├─ Bullish: {overall['bullish_count']} | Bearish: {overall['bearish_count']}",
+                f"└─ Neutral: {overall['neutral_count']}",
+                "",
+                ai_interpretation,  # ← ✅ ДЕТАЛЬНАЯ AI ИНТЕРПРЕТАЦИЯ!
+                "",
+                f"{'━' * 30}",
+                "",
+                "📰 LATEST NEWS:",
+                ""
             ]
 
-            message = "📊 *MULTI-SYMBOL OVERVIEW*\n\n"
-            message += "━━━━━━━━━━━━━━━━━━━━━━\n"
-            message += "💰 *ЦЕНЫ И ИЗМЕНЕНИЯ*\n"
-            message += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            # Топ-5 новостей
+            for news in news_list[:5]:
+                emoji = news.get("sentiment_emoji", "🟡")
+                title = news["title"][:80]  # Обрезаем длинные заголовки
+                source = news.get("source", "Unknown")
 
-            total_volume = 0
+                message_lines.append(f"{emoji} {title}...")
+                message_lines.append(f"└─ {source}")
+                message_lines.append("")
 
-            # Собираем данные по всем символам
-            for symbol in symbols:
-                try:
-                    data = await self.bot_instance.get_market_data(symbol)
-                    if data:
-                        price = data.get("price", 0)
-                        change = data.get("change_24h", 0)
-                        volume = data.get("volume_24h", 0)
+            # Собираем финальное сообщение
+            final_message = "\n".join(message_lines)
 
-                        emoji = "🟢" if change >= 0 else "🔴"
+            # Обновляем сообщение
+            await loading_msg.edit_text(final_message)
 
-                        message += (
-                            f"{emoji} *{symbol.replace('USDT', '')}:* ${price:,.2f} "
-                        )
-                        message += f"({change:+.2f}%)\n"
-
-                        total_volume += volume
-                except Exception as e:
-                    logger.error(f"Error getting data for {symbol}: {e}")
-
-            message += f"\n💎 *Общий объём:* ${total_volume:,.0f}\n\n"
-
-            message += "━━━━━━━━━━━━━━━━━━━━━━\n"
-            message += "📈 *MARKET SENTIMENT*\n"
-            message += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-
-            # Анализ настроений рынка
-            if hasattr(self.bot_instance, "market_sentiment"):
-                sentiment = (
-                    await self.bot_instance.market_sentiment.get_overall_sentiment()
-                )
-                message += f"Настроение: {sentiment.get('overall', 'Neutral')}\n"
-                message += (
-                    f"Индекс страха/жадности: {sentiment.get('fear_greed', 50)}\n"
-                )
-            else:
-                message += "⚠️ Анализ настроений недоступен\n"
-
-            message += "\n━━━━━━━━━━━━━━━━━━━━━━\n"
-            message += "🔗 *КОРРЕЛЯЦИИ*\n"
-            message += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            message += "BTC-ETH: 0.87 (высокая)\n"
-            message += "BTC-SOL: 0.73 (средняя)\n"
-            message += "ETH-SOL: 0.82 (высокая)\n"
-
-            await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+            logger.info(f"✅ /news{' ' + symbol if symbol else ''} command completed successfully")
 
         except Exception as e:
-            logger.error(f"Error in cmd_overview: {e}")
-            await update.message.reply_text(f"❌ Ошибка получения обзора: {str(e)}")
+            logger.error(f"❌ /news command error: {e}", exc_info=True)
+            try:
+                await update.message.reply_text(f"❌ News analysis error: {e}")
+            except:
+                pass
+
+
+    async def _generate_ai_news_interpretation(
+        self, news_data: dict, symbol: str = None
+    ) -> dict:
+        """Генерація AI інтерпретації новин"""
+        try:
+            news_summary = self._prepare_news_summary_for_ai(news_data, symbol)
+
+            if self.gemini:
+                prompt = f"""Проанализируй последние крипто-новости и дай детальный анализ:
+
+    📰 НОВОСТИ:
+    {news_summary}
+
+    {'🎯 ФОКУС: ' + symbol if symbol else '🌐 ОБЩИЙ РЫНОК'}
+
+    Дай ответ в формате (БЕЗ JSON):
+
+    AI SUMMARY:
+    [2-3 предложения об общем настроении]
+
+    MARKET IMPACT:
+    [Bullish/Bearish/Neutral + score 0-100]
+
+    KEY INSIGHTS:
+    • [Insight 1]
+    • [Insight 2]
+    • [Insight 3]
+
+    RISK LEVEL:
+    [Low/Medium/High + объяснение]
+
+    TRADING IMPLICATIONS:
+    [Что означает для трейдеров 2-3 предложения]"""
+
+                try:
+                    ai_response = await self.gemini.analyze_text(prompt)
+                    return self._parse_ai_news_text(ai_response)
+                except Exception as e:
+                    logger.error(f"Gemini AI error: {e}")
+
+            return self._generate_basic_news_interpretation(news_data, symbol)
+
+        except Exception as e:
+            logger.error(f"AI interpretation error: {e}")
+            return None
+
+    def _prepare_news_summary_for_ai(self, news_data: dict, symbol: str = None) -> str:
+        """Підготувати новини для AI"""
+        articles = news_data.get("articles", [])[:8]
+
+        summary_parts = []
+        for i, article in enumerate(articles, 1):
+            title = article.get("title", "N/A")
+            source = article.get("source", "unknown")
+            sentiment = (float(article.get("sentiment") or 0)) or 0
+
+            sent_text = (
+                "BULLISH"
+                if sentiment > 0.3
+                else "BEARISH" if sentiment < -0.3 else "NEUTRAL"
+            )
+            summary_parts.append(
+                f"{i}. [{sent_text}] {title}\n   Source: {source} | Sentiment: {sentiment:.2f}"
+            )
+
+        overall = news_data.get("overall_sentiment", 0)
+        bullish = news_data.get("bullish_count", 0)
+        bearish = news_data.get("bearish_count", 0)
+
+        summary_parts.insert(
+            0,
+            f"📊 СТАТИСТИКА:\n"
+            f"Bullish: {bullish} | Bearish: {bearish}\n"
+            f"Overall: {overall:+.2f}\n",
+        )
+
+        return "\n\n".join(summary_parts)
+
+    def _parse_ai_news_text(self, ai_response: str) -> dict:
+        """Парсинг AI відповіді"""
+        try:
+            import re
+
+            result = {
+                "summary": "",
+                "market_impact": {"sentiment": "Neutral", "score": 50},
+                "key_insights": [],
+                "risk_level": "Medium",
+                "trading_implications": "",
+            }
+
+            # Summary
+            if "AI SUMMARY:" in ai_response:
+                summary_match = re.search(
+                    r"AI SUMMARY:(.*?)(?:MARKET IMPACT:|$)", ai_response, re.DOTALL
+                )
+                if summary_match:
+                    result["summary"] = summary_match.group(1).strip()
+
+            # Market Impact
+            if "MARKET IMPACT:" in ai_response:
+                impact_match = re.search(
+                    r"MARKET IMPACT:(.*?)(?:KEY INSIGHTS:|$)", ai_response, re.DOTALL
+                )
+                if impact_match:
+                    impact_text = impact_match.group(1).strip()
+                    if "Bullish" in impact_text:
+                        result["market_impact"]["sentiment"] = "Bullish"
+                    elif "Bearish" in impact_text:
+                        result["market_impact"]["sentiment"] = "Bearish"
+
+                    score_match = re.search(r"(\d+)", impact_text)
+                    if score_match:
+                        result["market_impact"]["score"] = int(score_match.group(1))
+
+            # Key Insights
+            if "KEY INSIGHTS:" in ai_response:
+                insights_match = re.search(
+                    r"KEY INSIGHTS:(.*?)(?:RISK LEVEL:|$)", ai_response, re.DOTALL
+                )
+                if insights_match:
+                    insights_text = insights_match.group(1).strip()
+                    insights = [
+                        line.strip("• ").strip()
+                        for line in insights_text.split("\n")
+                        if line.strip() and "•" in line
+                    ]
+                    result["key_insights"] = insights[:3]
+
+            # Risk Level
+            if "RISK LEVEL:" in ai_response:
+                risk_match = re.search(
+                    r"RISK LEVEL:(.*?)(?:TRADING IMPLICATIONS:|$)",
+                    ai_response,
+                    re.DOTALL,
+                )
+                if risk_match:
+                    risk_text = risk_match.group(1).strip()
+                    if "High" in risk_text:
+                        result["risk_level"] = "High"
+                    elif "Low" in risk_text:
+                        result["risk_level"] = "Low"
+
+            # Trading Implications
+            if "TRADING IMPLICATIONS:" in ai_response:
+                impl_match = re.search(
+                    r"TRADING IMPLICATIONS:(.*?)$", ai_response, re.DOTALL
+                )
+                if impl_match:
+                    result["trading_implications"] = impl_match.group(1).strip()
+
+            return result
+        except Exception as e:
+            logger.error(f"Parse error: {e}")
+            return None
+
+    def _generate_basic_news_interpretation(
+        self, news_data: dict, symbol: str = None
+    ) -> dict:
+        overall = news_data.get("overall_sentiment", 0)
+        bullish = news_data.get("bullish_count", 0)
+        bearish = news_data.get("bearish_count", 0)
+
+        if overall > 0.3:
+            sentiment = "Bullish"
+            score = int((overall + 1) * 50)
+        elif overall < -0.3:
+            sentiment = "Bearish"
+            score = int((1 + overall) * 50)
+        else:
+            sentiment = "Neutral"
+            score = 50
+
+        insights = []
+        if bullish > bearish:
+            insights.append(
+                f"📈  Преобладают позитивные новости ({bullish} vs {bearish})"
+            )
+        elif bearish > bullish:
+            insights.append(
+                f"📉 Преобладают негативные новости ({bearish} vs {bullish})"
+            )
+
+        if symbol:
+            insights.append(f"🎯 Фокус на {symbol}")
+
+        risk = (
+            "High" if abs(overall) > 0.5 else "Low" if abs(overall) < 0.2 else "Medium"
+        )
+
+        summary = f"Анализ новостей показывает {sentiment.lower()} настроение"
+        implications = f"Рынок {sentiment.lower()}. "
+        if sentiment == "Bullish":
+            implications += "Возможны Long позиции."
+        elif sentiment == "Bearish":
+            implications += "Осторожность или Short."
+        else:
+            implications += "Выжидательная позиция."
+
+        return {
+            "summary": summary,
+            "market_impact": {"sentiment": sentiment, "score": score},
+            "key_insights": insights,
+            "risk_level": risk,
+            "trading_implications": implications,
+        }
+
+    def _format_news_with_ai(
+        self, news_data: dict, ai_interpretation: dict, symbol: str = None
+    ) -> str:
+        lines = ["📰 CRYPTO NEWS SENTIMENT"]
+        if symbol:
+            lines.append(f"🎯 Focus: {symbol}")
+        lines.append("━" * 30 + "\n")
+
+        # Overall sentiment
+        overall = news_data.get("overall_sentiment", 0)
+        emoji = "🟢" if overall > 0.3 else "🔴" if overall < -0.3 else "🟡"
+        text = (
+            "BULLISH" if overall > 0.3 else "BEARISH" if overall < -0.3 else "NEUTRAL"
+        )
+
+        lines.append(f"📊 Overall: {emoji} {text}")
+        lines.append(f"├─ Score: {overall:+.2f}")
+        lines.append(
+            f"├─ Bullish: {news_data.get('bullish_count', 0)} | Bearish: {news_data.get('bearish_count', 0)}"
+        )
+        lines.append(f"└─ Neutral: {news_data.get('neutral_count', 0)}\n")
+
+        # AI INTERPRETATION
+        if ai_interpretation:
+            lines.append("🤖 AI INTERPRETATION")
+            lines.append("━" * 30 + "\n")
+
+            summary = ai_interpretation.get("summary", "")
+            if summary:
+                lines.append(f"📝 Summary:\n{summary}\n")
+
+            impact = ai_interpretation.get("market_impact", {})
+            sentiment = impact.get("sentiment", "Neutral")
+            score = impact.get("score", 50)
+            emoji = (
+                "📈"
+                if sentiment == "Bullish"
+                else "📉" if sentiment == "Bearish" else "➡️"
+            )
+            lines.append(f"{emoji} Market Impact: {sentiment} ({score}/100)\n")
+
+            insights = ai_interpretation.get("key_insights", [])
+            if insights:
+                lines.append("💡 Key Insights:")
+                for insight in insights:
+                    lines.append(f"  • {insight}")
+                lines.append("")
+
+            risk = ai_interpretation.get("risk_level", "Medium")
+            emoji = "🟢" if risk == "Low" else "🟡" if risk == "Medium" else "🔴"
+            lines.append(f"{emoji} Risk: {risk}\n")
+
+            impl = ai_interpretation.get("trading_implications", "")
+            if impl:
+                lines.append(f"🎯 Trading:\n{impl}\n")
+
+            lines.append("━" * 30 + "\n")
+
+        # Latest News
+        lines.append("📰 LATEST NEWS:\n")
+
+        articles = news_data.get("articles", [])[:5]
+        for article in articles:
+            title = article.get("title", "N/A")
+            source = article.get("source", "unknown")
+            sentiment = (float(article.get("sentiment") or 0)) or 0
+            emoji = "🟢" if sentiment > 0.3 else "🔴" if sentiment < -0.3 else "🟡"
+
+            if len(title) > 70:
+                title = title[:67] + "..."
+
+            lines.append(f"{emoji} {title}")
+            lines.append(f"└─ {source}\n")
+
+        return "\n".join(lines)
+
+    async def cmd_overview(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        /overview — Multi-Symbol Overview с Market Sentiment
+
+        Показывает обзор 8 основных пар + общий market sentiment
+        """
+        try:
+            # Отправляем loading сообщение
+            loading_msg = await update.message.reply_text(
+                "📊 Loading market overview for 8 symbols..."
+            )
+
+            # ===== 1. СПИСОК СИМВОЛОВ ДЛЯ АНАЛИЗА =====
+            symbols = [
+                "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT",
+                "BNBUSDT", "DOGEUSDT", "ADAUSDT", "AVAXUSDT"
+            ]
+
+            # ===== 2. СОБИРАЕМ ДАННЫЕ ДЛЯ ВСЕХ ПАР =====
+            pairs_data = {}
+            total_volume = 0
+
+            for symbol in symbols:
+                try:
+                    # Получаем данные через market_dashboard
+                    if hasattr(self.bot_instance, 'market_dashboard'):
+                        data = await self.bot_instance.get_market_data(symbol)
+
+                        if data:
+                            price = data.get('price', 0)
+                            change = data.get('change_24h', 0)
+                            volume = data.get('volume_24h', 0)
+
+                            # Получаем CVD
+                            cvd_data = await self.bot_instance.market_dashboard.get_volume_analysis(symbol)
+                            cvd = cvd_data.get('cvd', 0)
+
+                            pairs_data[symbol] = {
+                                'price': price,
+                                'change': change,
+                                'volume': volume,
+                                'cvd': cvd
+                            }
+
+                            total_volume += volume
+                    else:
+                        logger.warning("⚠️ market_dashboard not available, using fallback")
+
+                except Exception as e:
+                    logger.error(f"❌ Error getting data for {symbol}: {e}")
+                    continue
+
+            if not pairs_data:
+                await loading_msg.edit_text("⚠️ Could not load market data")
+                return
+
+            # ===== 3. ГЕНЕРИРУЕМ MARKET SENTIMENT ANALYSIS =====
+            market_sentiment = await self._generate_market_sentiment(pairs_data)
+
+            # ===== 4. ФОРМАТИРУЕМ СООБЩЕНИЕ =====
+            message_lines = [
+                "📊 MULTI-SYMBOL OVERVIEW",
+                "━━━━━━━━━━━━━━━━━━━━━━",
+                "",
+                "💹 TOP 8 PAIRS:",
+                ""
+            ]
+
+            # Выводим каждую пару
+            for symbol, data in pairs_data.items():
+                emoji = "🟢" if data['change'] >= 0 else "🔴"
+                clean_symbol = symbol.replace("USDT", "")
+
+                message_lines.append(
+                    f"{emoji} {clean_symbol}: ${data['price']:,.2f} ({data['change']:+.2f}%) | CVD: {data['cvd']:+.1f}%"
+                )
+
+            message_lines.extend([
+                "",
+                f"💰 Total Volume: ${total_volume / 1e9:.1f}B",
+                "",
+                "━━━━━━━━━━━━━━━━━━━━━━",
+                "",
+                market_sentiment,  # ← ✅ ДЕТАЛЬНЫЙ MARKET SENTIMENT!
+                "",
+                "━━━━━━━━━━━━━━━━━━━━━━"
+            ])
+
+            final_message = "\n".join(message_lines)
+
+            # Обновляем сообщение
+            await loading_msg.edit_text(final_message)
+
+            logger.info("✅ /overview command completed successfully")
+
+        except Exception as e:
+            logger.error(f"❌ /overview command error: {e}", exc_info=True)
+            try:
+                await update.message.reply_text(f"❌ Overview error: {e}")
+            except:
+                pass
+
+
+    async def _generate_market_sentiment(self, pairs_data: dict) -> str:
+        """
+        Генерирует ДЕТАЛЬНЫЙ Market Sentiment на основе данных всех пар
+
+        Args:
+            pairs_data: Словарь с данными всех пар
+
+        Returns:
+            Форматированный market sentiment анализ
+        """
+        try:
+            if not pairs_data:
+                return "⚠️ Анализ настроений недоступен"
+
+            # ===== 1. СОБИРАЕМ МЕТРИКИ СО ВСЕХ ПАР =====
+            total_cvd = 0
+            bullish_count = 0
+            bearish_count = 0
+            neutral_count = 0
+            positive_change_count = 0
+            negative_change_count = 0
+
+            for symbol, data in pairs_data.items():
+                cvd = data.get('cvd', 0)
+                change = data.get('change', 0)
+
+                total_cvd += cvd
+
+                # Анализ CVD
+                if cvd > 10:
+                    bullish_count += 1
+                elif cvd < -10:
+                    bearish_count += 1
+                else:
+                    neutral_count += 1
+
+                # Анализ изменения цены
+                if change > 0:
+                    positive_change_count += 1
+                elif change < 0:
+                    negative_change_count += 1
+
+            # ===== 2. ОПРЕДЕЛЯЕМ ОБЩИЙ SENTIMENT =====
+            avg_cvd = total_cvd / len(pairs_data) if pairs_data else 0
+
+            # Определяем sentiment на основе CVD и price changes
+            if bullish_count > bearish_count * 1.5 and positive_change_count > negative_change_count:
+                sentiment = "🟢 БЫЧИЙ"
+                emoji = "🚀"
+                description = "Рынок демонстрирует сильную бычью динамику"
+                action = "🚀 Рассмотри лонг-позиции на сильных активах"
+            elif bearish_count > bullish_count * 1.5 and negative_change_count > positive_change_count:
+                sentiment = "🔴 МЕДВЕЖИЙ"
+                emoji = "📉"
+                description = "Рынок под давлением продавцов"
+                action = "⏸️ Осторожно с лонгами, возможны дальнейшие падения"
+            else:
+                sentiment = "🟡 НЕЙТРАЛЬНЫЙ"
+                emoji = "⚪"
+                description = "Рынок в состоянии неопределённости"
+                action = "⏸️ Ожидай более чётких сигналов перед открытием позиций"
+
+            # ===== 3. ГЕНЕРИРУЕМ ВЫВОД =====
+            lines = [
+                "📈 MARKET SENTIMENT",
+                "━━━━━━━━━━━━━━━━━━━━━━",
+                "",
+                f"{emoji} Общий настрой: {sentiment}",
+                f"├─ Средний CVD: {avg_cvd:+.2f}%",
+                f"├─ Бычьих пар: {bullish_count}/8",
+                f"├─ Медвежьих пар: {bearish_count}/8",
+                f"└─ Нейтральных пар: {neutral_count}/8",
+                "",
+                f"📊 Динамика цен:",
+                f"├─ Растут: {positive_change_count}/8",
+                f"└─ Падают: {negative_change_count}/8",
+                "",
+                f"💬 Интерпретация:",
+                description,
+                "",
+                f"🎯 Рекомендация:",
+                action
+            ]
+
+            # ===== 4. ДОБАВЛЯЕМ AI ИНТЕРПРЕТАЦИЮ (ОПЦИОНАЛЬНО) =====
+            if self.gemini:
+                try:
+                    prompt = f"""Проанализируй общий sentiment криптовалютного рынка на основе 8 топовых пар:
+
+    Средний CVD: {avg_cvd:.2f}%
+    Бычьих пар: {bullish_count}/8
+    Медвежьих пар: {bearish_count}/8
+    Растущих: {positive_change_count}/8
+    Падающих: {negative_change_count}/8
+
+    Дай краткую интерпретацию (максимум 2-3 предложения) на русском языке о том, что происходит на рынке и какие торговые возможности это создаёт."""
+
+                    ai_analysis = await self.gemini.analyze_text(prompt)
+
+                    if ai_analysis and len(ai_analysis.strip()) > 20:
+                        lines.extend([
+                            "",
+                            "🤖 AI Analysis:",
+                            ai_analysis.strip()
+                        ])
+                except Exception as e:
+                    logger.warning(f"⚠️ Gemini AI недоступен для market sentiment: {e}")
+
+            return "\n".join(lines)
+
+        except Exception as e:
+            logger.error(f"❌ _generate_market_sentiment error: {e}", exc_info=True)
+            return "⚠️ Анализ настроений временно недоступен"
+
 
     # ==================== WEBHOOK SUPPORT ====================
 

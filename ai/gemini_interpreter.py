@@ -25,6 +25,15 @@ class GeminiInterpreter:
         print("✅ GeminiInterpreter инициализирован (Gemini 2.0 Flash)")
         logger.info("✅ GeminiInterpreter инициализирован (Gemini 2.0 Flash)")
 
+    # ✅ ДОБАВЛЕНО: Context manager support
+    async def __aenter__(self):
+        """Context manager entry"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - автоматически закрывает сессию"""
+        await self.close()
+
     async def get_session(self):
         """Получение HTTP сессии"""
         if not self.session or self.session.closed:
@@ -105,9 +114,135 @@ class GeminiInterpreter:
             logger.error(f"❌ Gemini interpretation error: {e}, возврат fallback")
             return self._get_fallback_interpretation(metrics)
 
+    async def interpret_text(self, prompt: str) -> Optional[str]:
+        """
+        Интерпретация текстового prompt через Gemini 2.0 Flash
+
+        Args:
+            prompt: Текстовый prompt для AI
+
+        Returns:
+            Ответ AI (строка) или None при ошибке
+        """
+        try:
+            if not self.api_key:
+                logger.warning("⚠️ Gemini API key не найден")
+                return None
+
+            # Подготавливаем запрос
+            session = await self.get_session()
+            url = f"{self.base_url}?key={self.api_key}"
+
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.3,
+                    "maxOutputTokens": 50,  # Короткий ответ для sentiment
+                    "topK": 40,
+                    "topP": 0.95,
+                },
+            }
+
+            # Выполняем запрос
+            async with session.post(url, json=payload, timeout=10) as response:
+                if response.status == 200:
+                    data = await response.json()
+
+                    # Извлекаем текст из ответа
+                    if "candidates" in data and len(data["candidates"]) > 0:
+                        text = data["candidates"][0]["content"]["parts"][0]["text"]
+                        result = text.strip()
+
+                        self.request_count += 1
+                        logger.debug(
+                            f"✅ Gemini sentiment получен ({len(result)} символов, запрос #{self.request_count})"
+                        )
+
+                        return result
+                    else:
+                        logger.warning("⚠️ Gemini: пустой ответ")
+                        return None
+
+                elif response.status == 429:
+                    logger.warning("⚠️ Gemini API: Rate limit exceeded (60 RPM)")
+                    return None
+
+                else:
+                    error_text = await response.text()
+                    logger.error(f"❌ Gemini API error {response.status}: {error_text}")
+                    return None
+
+        except Exception as e:
+            logger.error(f"❌ Gemini sentiment error: {e}")
+            return None
+
+    async def analyze_text(self, prompt: str) -> str:
+        """
+        Анализ текста через Gemini 2.0 Flash
+        Используется для /news AI интерпретации
+
+        Args:
+            prompt: Текстовый prompt для анализа
+
+        Returns:
+            str: Ответ от Gemini AI
+        """
+        try:
+            if not self.api_key:
+                logger.warning("⚠️ Gemini API key не найден")
+                return ""
+
+            # Подготавливаем запрос
+            session = await self.get_session()
+            url = f"{self.base_url}?key={self.api_key}"
+
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.4,
+                    "maxOutputTokens": 500,  # Больше токенов для детального анализа новостей
+                    "topK": 40,
+                    "topP": 0.95,
+                },
+            }
+
+            # Выполняем запрос
+            async with session.post(url, json=payload, timeout=20) as response:
+                if response.status == 200:
+                    data = await response.json()
+
+                    # Извлекаем текст из ответа
+                    if "candidates" in data and len(data["candidates"]) > 0:
+                        text = data["candidates"][0]["content"]["parts"][0]["text"]
+                        result = text.strip()
+
+                        self.request_count += 1
+                        logger.debug(
+                            f"✅ Gemini analyze_text получен ({len(result)} символов, запрос #{self.request_count})"
+                        )
+
+                        return result
+                    else:
+                        logger.warning("⚠️ Gemini analyze_text: пустой ответ")
+                        return ""
+
+                elif response.status == 429:
+                    logger.warning("⚠️ Gemini API: Rate limit exceeded (60 RPM)")
+                    return ""
+
+                else:
+                    error_text = await response.text()
+                    logger.error(f"❌ Gemini API error {response.status}: {error_text}")
+                    return ""
+
+        except Exception as e:
+            logger.error(f"❌ Gemini analyze_text error: {e}")
+            return ""
+
+
     def _create_prompt(self, metrics: Dict) -> str:
         """Создание prompt для Gemini"""
-        scenario = metrics.get("scenario", "UNKNOWN")  # ← ✅ ДОБАВЛЕНО!
+        scenario = metrics.get("scenario", "UNKNOWN")
         symbol = metrics.get("symbol", "UNKNOWN")
         cvd = metrics.get("cvd", 0)
         funding_rate = metrics.get("funding_rate", 0)
@@ -210,7 +345,7 @@ class GeminiInterpreter:
                 "💡 РЕКОМЕНДАЦИЯ: ⏸️ Ожидание подтверждения перед открытием позиций."
             )
 
-        # ✅ ФОРМИРУЕМ ИТОГОВОЕ СООБЩЕНИЕ (ВСЁ В ОДНУ СТРОКУ С ДВОЙНЫМИ ПРОБЕЛАМИ)
+        # ✅ ФОРМИРУЕМ ИТОГОВОЕ СООБЩЕНИЕ
         return f"{cvd_text} {funding_text} {ls_text}   {recommendation}"
 
     async def close(self):
